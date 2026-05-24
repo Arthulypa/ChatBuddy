@@ -1,7 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, set, push, onChildAdded, onChildChanged, onValue, update, get, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
+// CONFIGURAÇÃO DO FIREBASE (Suas credenciais oficiais)
 const firebaseConfig = {
   apiKey: "AIzaSyDwW6loRrGTJqXdYkbhv-0srz7VKKfykh4",
   authDomain: "chatbuddy-96a61.firebaseapp.com",
@@ -13,27 +10,310 @@ const firebaseConfig = {
   measurementId: "G-7GX1YR6HQL"
 };
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-const auth = getAuth(app);
-const googleProvider = new GoogleAuthProvider();
+// Inicializa o Firebase (Formato clássico/compat)
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const database = firebase.database();
 
-// Variáveis de Controle Global
+// SELEÇÃO DE ELEMENTOS DA INTERFACE (DOM)
+const loginPage = document.getElementById('login-page');
+const registerPage = document.getElementById('register-page');
+const profilePage = document.getElementById('profile-page');
+const chatPage = document.getElementById('chat-page');
+
+const btnToRegister = document.getElementById('btn-to-register');
+const btnToLogin = document.getElementById('btn-to-login');
+const btnLogin = document.getElementById('btn-login');
+const btnRegister = document.getElementById('btn-register');
+const btnSaveProfile = document.getElementById('btn-save-profile');
+const btnSendMessage = document.getElementById('btn-send');
+const btnLogout = document.getElementById('btn-logout');
+const btnOpenNewChat = document.getElementById('btn-new-chat');
+const btnCloseModal = document.getElementById('btn-close-modal');
+const btnStartChat = document.getElementById('btn-start-chat');
+
+const emailLoginInput = document.getElementById('email-login');
+const passwordLoginInput = document.getElementById('password-login');
+const emailRegInput = document.getElementById('email-reg');
+const passwordRegInput = document.getElementById('password-reg');
+const displayNameInput = document.getElementById('display-name');
+const usernameInput = document.getElementById('username');
+const messageInput = document.getElementById('message-input');
+const searchContactInput = document.getElementById('search-contact');
+
+const currentUserNameHTML = document.getElementById('current-user-name');
+const currentUserTagHTML = document.getElementById('current-user-tag');
+const activeChatNameHTML = document.getElementById('active-chat-name');
+const activeChatStatusHTML = document.getElementById('active-chat-status');
+
+const chatsListContainer = document.getElementById('chats-list');
+const messagesContainer = document.getElementById('messages-container');
+const contactsModal = document.getElementById('contacts-modal');
+const contactsListContainer = document.getElementById('contacts-list');
+
+// VARIÁVEIS DE CONTROLE DE ESTADO
 let currentUser = null;
 let activeChatId = null;
-let activeTargetUid = null;
-let selectedMessageId = null;
-let pressTimer = null;
+let activeRecipientId = null;
 
-// --- ELEMENTOS DE INTERFACE ---
-const DOM = {
-  authScreen: document.getElementById('auth-screen'),
-  appScreen: document.getElementById('app-screen'),
-  authForm: document.getElementById('auth-form'),
-  authActions: document.getElementById('auth-actions'),
-  profileSetup: document.getElementById('profile-setup'),
-  conversationsList: document.getElementById('conversations-list'),
-  messageFlow: document.getElementById('message-flow'),
+// NAVEGAÇÃO ENTRE TELAS
+function showPage(page) {
+  if(loginPage) loginPage.classList.add('hidden');
+  if(registerPage) registerPage.classList.add('hidden');
+  if(profilePage) profilePage.classList.add('hidden');
+  if(chatPage) chatPage.classList.add('hidden');
+  if(page) page.classList.remove('hidden');
+}
+
+if(btnToRegister) btnToRegister.addEventListener('click', () => showPage(registerPage));
+if(btnToLogin) btnToLogin.addEventListener('click', () => showPage(loginPage));
+
+// MONITORAMENTO DO ESTADO DO USUÁRIO (LOGIN/LOGOUT)
+auth.onAuthStateChanged(user => {
+  if (user) {
+    currentUser = user;
+    database.ref('users/' + user.uid).once('value').then(snapshot => {
+      if (snapshot.exists() && snapshot.val().username) {
+        loadChatSystem();
+      } else {
+        showPage(profilePage);
+      }
+    });
+  } else {
+    currentUser = null;
+    showPage(loginPage);
+  }
+});
+
+// FLUXO DE CADASTRO (CRIAR CONTA)
+if(btnRegister) {
+  btnRegister.addEventListener('click', () => {
+    const email = emailRegInput.value.trim();
+    const password = passwordRegInput.value.trim();
+
+    if(!email || !password) return alert('Preencha todos os campos!');
+
+    auth.createUserWithEmailAndPassword(email, password)
+      .catch(error => alert('Erro ao criar conta: ' + error.message));
+  });
+}
+
+// FLUXO DE LOGIN (ENTRAR)
+if(btnLogin) {
+  btnLogin.addEventListener('click', () => {
+    const email = emailLoginInput.value.trim();
+    const password = passwordLoginInput.value.trim();
+
+    if(!email || !password) return alert('Preencha todos os campos!');
+
+    auth.signInWithEmailAndPassword(email, password)
+      .catch(error => alert('Erro ao entrar: ' + error.message));
+  });
+}
+
+// SALVAR PERFIL (DISPLAY NAME E USERNAME)
+if(btnSaveProfile) {
+  btnSaveProfile.addEventListener('click', () => {
+    const displayName = displayNameInput.value.trim();
+    const username = usernameInput.value.trim().toLowerCase().replace(/\s+/g, '');
+
+    if(!displayName || !username) return alert('Preencha os dados do perfil!');
+
+    database.ref('usernames/' + username).once('value').then(snapshot => {
+      if(snapshot.exists() && snapshot.val() !== currentUser.uid) {
+        alert('Este nome de usuário já está em uso!');
+      } else {
+        database.ref('users/' + currentUser.uid).update({
+          uid: currentUser.uid,
+          displayName: displayName,
+          username: username,
+          status: 'Online'
+        });
+        database.ref('usernames/' + username).set(currentUser.uid);
+        
+        loadChatSystem();
+      }
+    });
+  });
+}
+
+// LOGOUT (SAIR)
+if(btnLogout) {
+  btnLogout.addEventListener('click', () => {
+    if(currentUser) {
+      database.ref('users/' + currentUser.uid).update({ status: 'Offline' });
+    }
+    auth.signOut();
+  });
+}
+
+// CARREGAR O SISTEMA PRINCIPAL DE CHAT
+function loadChatSystem() {
+  showPage(chatPage);
+  
+  database.ref('users/' + currentUser.uid).on('value', snapshot => {
+    const data = snapshot.val();
+    if(data) {
+      if(currentUserNameHTML) currentUserNameHTML.innerText = data.displayName;
+      if(currentUserTagHTML) currentUserTagHTML.innerText = '@' + data.username;
+    }
+  });
+
+  listenToMyChats();
+}
+
+// MODAL DE NOVOS CONTATOS
+if(btnOpenNewChat) {
+  btnOpenNewChat.addEventListener('click', () => {
+    if(contactsModal) contactsModal.classList.remove('hidden');
+    loadContactsList();
+  });
+}
+if(btnCloseModal) btnCloseModal.addEventListener('click', () => {
+  if(contactsModal) contactsModal.classList.add('hidden');
+});
+
+function loadContactsList() {
+  database.ref('users').once('value', snapshot => {
+    if(!contactsListContainer) return;
+    contactsListContainer.innerHTML = '';
+    snapshot.forEach(childSnapshot => {
+      const user = childSnapshot.val();
+      if(user.uid !== currentUser.uid) {
+        const item = document.createElement('div');
+        item.className = 'contact-item';
+        item.innerHTML = `
+          <div class="avatar">${user.displayName.charAt(0).toUpperCase()}</div>
+          <div class="contact-info">
+            <p class="name">${user.displayName}</p>
+            <p class="username">@${user.username}</p>
+          </div>
+        `;
+        item.onclick = () => startConversaCom(user.uid, user.displayName);
+        contactsListContainer.appendChild(item);
+      }
+    });
+  });
+}
+
+// INICIAR OU ABRIR UMA CONVERSA
+function startConversaCom(recipientId, recipientName) {
+  if(contactsModal) contactsModal.classList.add('hidden');
+  
+  const chatId = currentUser.uid < recipientId ? 
+    `${currentUser.uid}_${recipientId}` : `${recipientId}_${currentUser.uid}`;
+    
+  activeChatId = chatId;
+  activeRecipientId = recipientId;
+
+  database.ref(`users/${currentUser.uid}/my_chats/${chatId}`).set({ recipientId: recipientId });
+  database.ref(`users/${recipientId}/my_chats/${chatId}`).set({ recipientId: currentUser.uid });
+
+  openChatRoom(chatId, recipientName, recipientId);
+}
+
+// ESCUTAR E ATUALIZAR A LISTA DE CONVERSAS ATIVAS (BARRA LATERAL)
+function listenToMyChats() {
+  database.ref(`users/${currentUser.uid}/my_chats`).on('value', snapshot => {
+    if(!chatsListContainer) return;
+    chatsListContainer.innerHTML = '';
+    if(!snapshot.exists()) {
+      chatsListContainer.innerHTML = '<p class="empty-state">Nenhuma conversa ainda.</p>';
+      return;
+    }
+
+    snapshot.forEach(childSnapshot => {
+      const chatId = childSnapshot.key;
+      const chatData = childSnapshot.val();
+      
+      database.ref(`users/${chatData.recipientId}`).once('value', userSnap => {
+        const user = userSnap.val();
+        if(user) {
+          const chatItem = document.createElement('div');
+          chatItem.className = `chat-item ${activeChatId === chatId ? 'active' : ''}`;
+          chatItem.innerHTML = `
+            <div class="avatar">${user.displayName.charAt(0).toUpperCase()}</div>
+            <div class="chat-item-details">
+              <p class="name">${user.displayName}</p>
+              <p class="preview">Clique para conversar...</p>
+            </div>
+          `;
+          chatItem.onclick = () => openChatRoom(chatId, user.displayName, user.uid);
+          chatsListContainer.appendChild(chatItem);
+        }
+      });
+    });
+  });
+}
+
+// ABRIR UMA SALA DE CHAT E CARREGAR MENSAGENS
+function openChatRoom(chatId, recipientName, recipientId) {
+  activeChatId = chatId;
+  activeRecipientId = recipientId;
+
+  if(activeChatNameHTML) activeChatNameHTML.innerText = recipientName;
+  
+  database.ref(`users/${recipientId}/status`).on('value', snap => {
+    if(activeChatStatusHTML) activeChatStatusHTML.innerText = snap.val() || 'Offline';
+  });
+
+  database.ref(`chats/${chatId}/messages`).off();
+  database.ref(`chats/${chatId}/messages`).on('value', snapshot => {
+    if(!messagesContainer) return;
+    messagesContainer.innerHTML = '';
+    
+    snapshot.forEach(childSnapshot => {
+      const msg = childSnapshot.val();
+      const msgId = childSnapshot.key;
+      
+      const msgElement = document.createElement('div');
+      msgElement.className = `message ${msg.senderId === currentUser.uid ? 'sent' : 'received'}`;
+      
+      if(msg.isDeleted) {
+        msgElement.innerHTML = `<p class="deleted-text"><em>Mensagem apagada</em></p>`;
+      } else {
+        msgElement.innerHTML = `
+          <p class="text-content">${msg.text}</p>
+          <span class="time-stamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+        `;
+        
+        if(msg.senderId === currentUser.uid) {
+          msgElement.onclick = () => {
+            if(confirm('Deseja apagar esta mensagem?')) {
+              database.ref(`chats/${chatId}/messages/${msgId}`).update({ isDeleted: true });
+            }
+          };
+        }
+      }
+      messagesContainer.appendChild(msgElement);
+    });
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  });
+}
+
+// ENVIAR MENSAGEM
+function sendMessage() {
+  if(!messageInput) return;
+  const text = messageInput.value.trim();
+  if(!text || !activeChatId) return;
+
+  const msgRef = database.ref(`chats/${activeChatId}/messages`).push();
+  msgRef.set({
+    senderId: currentUser.uid,
+    text: text,
+    timestamp: firebase.database.ServerValue.TIMESTAMP,
+    isDeleted: false
+  });
+
+  messageInput.value = '';
+}
+
+if(btnSendMessage) btnSendMessage.addEventListener('click', sendMessage);
+if(messageInput) {
+  messageInput.addEventListener('keypress', (e) => {
+    if(e.key === 'Enter') sendMessage();
+  });
+}
   mainInput: document.getElementById('main-input'),
   btnSend: document.getElementById('btn-send'),
   modalContacts: document.getElementById('modal-contacts'),
