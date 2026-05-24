@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Messenger Premium</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="auth-screen" class="auth-container">
+    <div id="auth-card" class="auth-card">
+      <div class="auth-logo">🔮</div>
+      <h2 id="auth-title">Messenger</h2>
+      <p id="auth-desc">Private, fast, beautiful messaging.</p>
+      
+      <div id="auth-actions" class="auth-actions">
+        <button id="btn-goto-register" class="btn-primary">Create account</button>
+        <button id="btn-goto-login" class="btn-secondary">Sign In</button>
+      </div>
+
+      <form id="auth-form" class="hidden">
+        <button type="button" id="btn-google-auth" class="btn-google">
+          <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/web-24dp/logo_googleg_color_24dp.png" alt="Google">
+          Continue with Google
+        </button>
+        <div class="divider"><span>or</span></div>
+        <input type="email" id="auth-email" placeholder="Email address" required>
+        <input type="password" id="auth-password" placeholder="Password" required>
+        <button type="submit" id="btn-submit-form" class="btn-primary">Continue</button>
+        <p class="toggle-footer">Already have an account? <span id="auth-toggle-mode">Sign in</span></p>
+      </form>
+
+      <div id="profile-setup" class="hidden">
+        <h3>Welcome!</h3>
+        <p>Choose your username and display name to get started.</p>
+        <input type="text" id="setup-displayname" placeholder="Display Name">
+        <input type="text" id="setup-username" placeholder="Username (ex: janedoe)">
+        <span id="setup-error" class="error-text"></span>
+        <button id="btn-save-setup" class="btn-primary">Continue</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="app-screen" class="app-container hidden">
+    
+    <aside id="sidebar" class="sidebar">
+      <div class="sidebar-header">
+        <div class="header-top">
+          <h1>Messenger</h1>
+          <button id="btn-new-chat" class="icon-btn-add">+</button>
+        </div>
+        <div class="search-bar">
+          <input type="text" id="search-chats" placeholder="Buscar conversas...">
+        </div>
+        <div class="tab-selectors">
+          <button class="tab-btn active" data-tab="chats">Chats</button>
+          <button class="tab-btn" data-tab="requests">Pedidos</button>
+        </div>
+        <div class="sidebar-stats">
+          <span id="chat-count">0 Chats</span> • <span id="online-count">0 Online</span>
+        </div>
+      </div>
+      
+      <div id="conversations-list" class="conversations-list"></div>
+
+      <div class="sidebar-footer">
+        <div class="user-profile-summary">
+          <div id="my-avatar" class="avatar-circle">TE</div>
+          <div class="user-meta">
+            <span id="my-name">Carregando...</span>
+            <span id="my-username">@username</span>
+          </div>
+        </div>
+        <button id="btn-open-settings" class="settings-gear-btn">⚙️</button>
+      </div>
+    </aside>
+
+    <main id="chat-area" class="chat-area empty">
+      <div id="chat-empty-state" class="chat-empty-state">
+        <div class="empty-icon">🚀</div>
+        <h3>Suas mensagens</h3>
+        <p>Selecione uma conversa para começar</p>
+      </div>
+
+      <div id="chat-active-state" class="chat-active-container hidden">
+        <header class="chat-view-header">
+          <button id="btn-back-sidebar" class="back-arrow-btn">←</button>
+          <div class="target-user-profile">
+            <div id="target-avatar" class="avatar-circle"></div>
+            <div class="target-meta">
+              <h3 id="target-name">Nome</h3>
+              <span id="target-status" class="status-indicator">Offline</span>
+            </div>
+          </div>
+          <div class="header-call-actions">
+            <button class="call-action-btn" id="call-audio">📞</button>
+            <button class="call-action-btn" id="call-video">📹</button>
+            <button class="call-action-btn" id="chat-options">⋮</button>
+          </div>
+        </header>
+
+        <div id="message-flow" class="message-flow"></div>
+
+        <footer class="chat-view-footer">
+          <label for="file-upload" class="attach-btn">📎</label>
+          <input type="file" id="file-upload" accept="image/*,video/*" class="hidden">
+          <div class="input-wrapper">
+            <input type="text" id="main-input" placeholder="Mensagem...">
+            <button id="emoji-picker-btn" class="input-emoji-btn">😀</button>
+          </div>
+          <button id="btn-send" class="send-action-btn">
+            <svg viewBox="0 0 24 24" width="20" height="20"><path fill="currentColor" d="M2,21L23,12L2,3V10L17,12L2,14V21Z"/></svg>
+          </button>
+        </footer>
+      </div>
+    </main>
+  </div>
+
+  <div id="modal-contacts" class="modal-overlay hidden">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>New message</h3>
+        <button class="close-modal-btn" id="close-contacts">×</button>
+      </div>
+      <p class="modal-subtitle">Search for contacts to start a conversation.</p>
+      <input type="text" id="search-contact-input" placeholder="Type a name or username...">
+      <div id="contacts-result-list" class="modal-list scrollable"></div>
+      <div class="modal-footer">
+        <button id="btn-start-chat" class="btn-primary" disabled>Start Chat</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="context-menu" class="context-menu hidden">
+    <div class="reaction-row">
+      <span class="react-emoji" data-emoji="👍">👍</span>
+      <span class="react-emoji" data-emoji="❤️">❤️</span>
+      <span class="react-emoji" data-emoji="😂">😂</span>
+      <span class="react-emoji" data-emoji="😮">😮</span>
+      <span class="react-emoji" data-emoji="😥">😥</span>
+      <span class="react-emoji" data-emoji="👏">👏</span>
+    </div>
+    <ul class="context-actions-list">
+      <li id="ctx-copy">📋 Copiar texto</li>
+      <li id="ctx-info">ℹ️ Informações</li>
+      <li id="ctx-edit">✏️ Editar mensagem</li>
+      <li id="ctx-delete" class="danger">🗑️ Apagar mensagem</li>
+    </ul>
+  </div>
+
+</body>
+</html>
