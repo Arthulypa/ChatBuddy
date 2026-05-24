@@ -3,13 +3,14 @@ import { getDatabase, ref, set, push, onChildAdded, onChildChanged, onValue, upd
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const firebaseConfig = {
-  apiKey: "SUA_API_KEY",
-  authDomain: "SEU_PROJETO.firebaseapp.com",
-  databaseURL: "https://SEU_PROJETO-default-rtdb.firebaseio.com",
-  projectId: "SEU_PROJETO",
-  storageBucket: "SEU_PROJETO.appspot.com",
-  messagingSenderId: "SEU_ID",
-  appId: "SEU_APP_ID"
+  apiKey: "AIzaSyDwW6loRrGTJqXdYkbhv-0srz7VKKfykh4",
+  authDomain: "chatbuddy-96a61.firebaseapp.com",
+  databaseURL: "https://chatbuddy-96a61-default-rtdb.firebaseio.com",
+  projectId: "chatbuddy-96a61",
+  storageBucket: "chatbuddy-96a61.firebasestorage.app",
+  messagingSenderId: "1051493485478",
+  appId: "1:1051493485478:web:1f6a94ef63e665fa539d67",
+  measurementId: "G-7GX1YR6HQL"
 };
 
 const app = initializeApp(firebaseConfig);
