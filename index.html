@@ -5,12 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ChatBuddy Premium</title>
     <link rel="stylesheet" href="style.css">
+    <!-- Firebase SDK Legacy -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 </head>
 <body>
 
+    <!-- PÁGINA DE LOGIN -->
     <div id="login-page" class="view-page">
         <div class="auth-container">
             <h1>ChatBuddy</h1>
@@ -25,6 +27,7 @@
         </div>
     </div>
 
+    <!-- PÁGINA DE REGISTRO -->
     <div id="register-page" class="view-page hidden">
         <div class="auth-container">
             <h1>Criar Conta</h1>
@@ -46,6 +49,7 @@
         </div>
     </div>
 
+    <!-- PÁGINA DE CRIAÇÃO INICIAL DE PERFIL -->
     <div id="profile-page" class="view-page hidden">
         <div class="auth-container">
             <h1>Configurar Perfil</h1>
@@ -66,6 +70,7 @@
         </div>
     </div>
 
+    <!-- PÁGINA PRINCIPAL (Lista de Conversas) -->
     <div id="chat-page" class="view-page hidden">
         <header class="app-header">
             <div class="header-user-info">
@@ -80,10 +85,11 @@
         <div id="chats-list" class="chats-list-container"></div>
     </div>
 
+    <!-- TELA DE SALA DE CHAT ATIVA -->
     <div id="chat-room-screen" class="sub-screen hidden">
         <header class="chat-room-header">
             <button id="btn-back-to-list" class="icon-btn">Voltar</button>
-            <div class="chat-target-meta" id="btn-contact-meta-wrapper">
+            <div class="chat-target-meta" id="btn-contact-menu">
                 <img id="active-chat-avatar" src="" alt="">
                 <div class="target-text-details">
                     <h3 id="active-chat-name">Carregando...</h3>
@@ -91,22 +97,11 @@
                 </div>
                 <div id="active-chat-online-badge" class="online-indicator-dot hidden"></div>
             </div>
-            <div class="header-call-actions">
-                <button id="btn-start-call" class="icon-btn text-link">Ligar</button>
-            </div>
         </header>
 
         <div id="messages-container" class="messages-viewport"></div>
 
-        <div id="reply-preview-bar" class="reply-context-box hidden">
-            <div class="reply-vertical-line"></div>
-            <div class="reply-preview-text-nodes">
-                <span id="reply-preview-user">Respondendo</span>
-                <p id="reply-preview-body">Conteúdo da mensagem...</p>
-            </div>
-            <button id="btn-close-reply-preview" class="close-reply-btn">X</button>
-        </div>
-
+        <!-- Barra de Digitação e Gravação -->
         <footer class="chat-input-bar">
             <button id="btn-attach" class="icon-btn text-link">Mídia</button>
             <input type="file" id="media-file-input" accept="image/*" class="hidden">
@@ -123,18 +118,7 @@
         </footer>
     </div>
 
-    <div id="call-overlay-screen" class="call-view-overlay hidden">
-        <div class="call-card">
-            <img id="call-user-avatar" src="" alt="">
-            <h2 id="call-user-name">Usuário</h2>
-            <p id="call-status-label">Chamando...</p>
-            <div class="call-controls-row">
-                <button id="btn-toggle-mute-mic" class="call-action-btn">Mudo</button>
-                <button id="btn-hangup-call" class="call-action-btn hangup">Desligar</button>
-            </div>
-        </div>
-    </div>
-
+    <!-- TELA DE CONFIGURAÇÕES COMPLETAS -->
     <div id="settings-screen" class="sub-screen hidden">
         <header class="chat-room-header">
             <button id="btn-back-settings" class="icon-btn">Voltar</button>
@@ -181,6 +165,7 @@
         </div>
     </div>
 
+    <!-- MODAL DE CONTATOS -->
     <div id="contacts-modal" class="modal-overlay hidden">
         <div class="modal-card">
             <div class="modal-header">
@@ -191,6 +176,7 @@
         </div>
     </div>
 
+    <!-- POPUP DETALHES DO CONTATO -->
     <div id="contact-info-sheet" class="modal-overlay hidden">
         <div class="modal-card bottom-sheet">
             <div class="sheet-header">
@@ -216,6 +202,7 @@
         </div>
     </div>
 
+    <!-- MENU BLUR OVERLAY -->
     <div id="blur-overlay" class="blur-screen-overlay hidden">
         <div id="focused-message-wrapper"></div>
         <div class="context-action-menu">
@@ -225,6 +212,7 @@
         </div>
     </div>
 
+    <!-- NOTIFICAÇÃO POPUP GLOBAL -->
     <div id="popup-notification" class="floating-popup-toast hidden">
         <div class="popup-inner-content">
             <img id="popup-avatar" src="" alt="">
@@ -235,6 +223,7 @@
         </div>
     </div>
 
+    <!-- LIGHTBOX PARA VER FOTO AMPLIADA -->
     <div id="lightbox-overlay" class="lightbox-container hidden" onclick="this.classList.add('hidden')">
         <div class="lightbox-close">Fechar</div>
         <img id="lightbox-img" src="" alt="Foto Ampliada">
@@ -242,4 +231,4 @@
 
 </body>
     </html>
-    
+                                                     
