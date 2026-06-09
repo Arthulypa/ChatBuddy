@@ -2,7 +2,7 @@
 <html lang="pt-br" translate="no">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ChatBuddy - Neon Edition</title>
     <meta name="google" content="notranslate">
     <link rel="stylesheet" href="style.css">
@@ -10,7 +10,7 @@
 </head>
 <body>
 
-    <!-- 1. TELA DE LOGIN -->
+    <!-- TELA DE LOGIN -->
     <div id="login-page" class="auth-container">
         <div class="auth-box page-transition">
             <div class="logo-container">
@@ -35,7 +35,7 @@
         </div>
     </div>
 
-    <!-- 2. TELA DE REGISTRO -->
+    <!-- TELA DE REGISTRO -->
     <div id="register-page" class="auth-container hidden">
         <div class="auth-box page-transition">
             <div class="logo-container">
@@ -60,11 +60,11 @@
         </div>
     </div>
 
-    <!-- TELA DE VALIDAÇÃO DE EMAIL / PIN -->
+    <!-- TELA DE VALIDAÇÃO -->
     <div id="verification-page" class="auth-container hidden">
         <div class="auth-box page-transition">
             <h2>Verificação de Segurança</h2>
-            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;" id="verification-desc">Insira as credenciais para continuar.</p>
+            <p id="verification-desc">Insira as credenciais para continuar.</p>
             <div class="input-group" id="email-verify-group">
                 <label>Código enviado por e-mail</label>
                 <input type="text" id="email-code-input" placeholder="Digite o código">
@@ -77,126 +77,206 @@
         </div>
     </div>
 
-    <!-- 3. TELA DE CONFIGURAÇÃO DE PERFIL -->
+    <!-- TELA DE CONFIGURAÇÃO DE PERFIL INICIAL -->
     <div id="profile-page" class="auth-container hidden">
         <div class="auth-box page-transition">
             <h2>Setup Profile</h2>
             <div class="input-group">
-                <label>Display Name</label>
+                <label>Nickname (Apelido)</label>
                 <input type="text" id="display-name" placeholder="Ex: Arthur">
             </div>
             <div class="input-group">
-                <label>Username</label>
+                <label>Username (Único)</label>
                 <input type="text" id="username" placeholder="Ex: arthur123">
             </div>
             <button id="btn-save-profile" class="btn-primary">SALVAR PERFIL</button>
         </div>
     </div>
 
-    <!-- 4. TELA PRINCIPAL DO CHAT -->
-    <div id="chat-page" class="chat-container hidden">
-        <aside class="sidebar page-transition">
-            <header class="sidebar-header">
-                <div class="user-profile-summary">
-                    <h3 id="current-user-name">Carregando...</h3>
-                    <p id="current-user-tag">@username</p>
-                </div>
-                <div style="display: flex; gap: 8px;">
-                    <button id="btn-open-settings" class="btn-settings-icon">⚙️</button>
-                    <button id="btn-logout" class="btn-logout">Sair</button>
-                </div>
-            </header>
-            <div class="search-bar">
-                <input type="text" id="search-contact" placeholder="Buscar transmissão...">
+    <!-- TELA PRINCIPAL DO APP (ESTILO WHATSAPP) -->
+    <div id="chat-page" class="app-container hidden">
+        
+        <!-- BARRA SUPERIOR FIXA -->
+        <header class="app-top-bar">
+            <h2 class="app-title">ChatBuddy</h2>
+            <div class="top-bar-actions">
+                <button id="btn-main-settings" class="icon-btn">⚙️</button>
+                <button id="btn-logout" class="icon-btn logout-color">🚪</button>
             </div>
-            <div id="chats-list" class="chats-list"></div>
-            <button id="btn-new-chat" class="btn-fab">+</button>
-        </aside>
+        </header>
 
-        <main class="chat-area page-transition">
+        <!-- SISTEMA DE ABAS ESTILO WHATSAPP -->
+        <nav class="app-tabs">
+            <div class="tab-item active" id="tab-chats">Conversas</div>
+            <div class="tab-item" id="tab-status">Status</div>
+            <div class="tab-item" id="tab-calls">Chamadas</div>
+        </nav>
+
+        <!-- CONTEÚDO PRINCIPAL DAS ABAS -->
+        <div class="tab-content-container">
+            <!-- ABA CONVERSAS -->
+            <div id="content-chats" class="tab-pane">
+                <div class="search-bar">
+                    <input type="text" id="search-contact" placeholder="Pesquisar ou iniciar uma nova conversa...">
+                </div>
+                <div id="chats-list" class="chats-list"></div>
+                <button id="btn-new-chat" class="btn-fab">+</button>
+            </div>
+
+            <!-- ABA STATUS (MOCK) -->
+            <div id="content-status" class="tab-pane hidden">
+                <div class="empty-state">Nenhum status atualizado recentemente.</div>
+            </div>
+
+            <!-- ABA CHAMADAS (MOCK) -->
+            <div id="content-calls" class="tab-pane hidden">
+                <div class="empty-state">Histórico de chamadas limpo.</div>
+            </div>
+        </div>
+
+        <!-- TELA INTEIRA DA SALA DE CONVERSA (ABRE POR CIMA) -->
+        <div id="chat-room-screen" class="chat-room-screen hidden">
             <header class="chat-header">
+                <button id="btn-back-to-list" class="back-btn">⬅️</button>
                 <div class="active-user-info">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <h2 id="active-chat-name">Selecione um canal</h2>
+                    <div class="header-name-row">
+                        <h2 id="active-chat-name">Usuário</h2>
                         <span id="blocked-badge" class="badge-blocked hidden">BLOQUEADO</span>
                     </div>
-                    <p id="active-chat-status"></p>
+                    <p id="active-chat-status">offline</p>
                 </div>
-                <button id="btn-block-user" class="btn-block hidden">Bloquear Usuário</button>
+                <button id="btn-block-user" class="btn-block">Bloquear</button>
             </header>
-            <div id="messages-container" class="messages-container">
-                <p class="chat-placeholder">Abra o terminal clicando no botão "+" para buscar usuários.</p>
+
+            <!-- BARRA DE SELEÇÃO MÚLTIPLA -->
+            <div id="multi-select-bar" class="multi-select-bar hidden">
+                <span id="select-count">1 selecionada</span>
+                <div class="multi-actions">
+                    <button id="btn-multi-delete-me" class="action-text-btn">Apagar para mim</button>
+                    <button id="btn-multi-delete-all" class="action-text-btn danger">Apagar para todos</button>
+                    <button id="btn-cancel-select" class="action-text-btn">Cancelar</button>
+                </div>
             </div>
+
+            <div id="messages-container" class="messages-container"></div>
+
+            <!-- FOOTER DE ENVIO ESTILO WHATSAPP -->
             <footer class="chat-footer">
-                <input type="text" id="message-input" placeholder="Digite sua mensagem criptografada...">
-                <button id="btn-send" class="btn-send">ENVIAR</button>
+                <div class="footer-input-row">
+                    <!-- BOTÃO DE ANEXOS MÚLTIPLOS -->
+                    <button id="btn-attach" class="attach-btn">📎</button>
+                    <input type="file" id="media-file-input" class="hidden" accept="image/*,video/*,audio/*,.pdf,.zip,.rar,.doc,.docx">
+                    
+                    <input type="text" id="message-input" placeholder="Mensagem">
+                    <button id="btn-sticker" class="sticker-btn">😀</button>
+                </div>
+                <button id="btn-send" class="btn-send-round">➤</button>
             </footer>
-        </main>
+        </div>
     </div>
 
-    <!-- MODAL DE CONTATOS -->
+    <!-- TELA COMPLETA DE CONFIGURAÇÕES (ESTILO NOVA ABA DO WHATSAPP) -->
+    <div id="settings-screen" class="settings-screen hidden">
+        <header class="settings-screen-header">
+            <button id="btn-back-settings" class="back-btn">⬅️</button>
+            <h2>Configurações</h2>
+        </header>
+        <div class="settings-screen-body">
+            <!-- SEÇÃO PERFIL CUSTOMIZÁVEL -->
+            <div class="settings-profile-card">
+                <div class="avatar big" id="settings-avatar-char">A</div>
+                <div class="profile-inputs">
+                    <div class="inline-input">
+                        <label>Nickname:</label>
+                        <input type="text" id="set-nickname">
+                        <button id="btn-update-nickname" class="save-inline-btn">Mudar</button>
+                    </div>
+                    <small id="nick-time-info">Máx 2 mudanças por dia</small>
+                    
+                    <div class="inline-input">
+                        <label>Username:</label>
+                        <input type="text" id="set-username">
+                        <button id="btn-update-username" class="save-inline-btn">Mudar</button>
+                    </div>
+                    <small id="user-time-info">1 vez a cada 7 dias</small>
+                </div>
+            </div>
+
+            <!-- OPÇÕES ESTILO WHATSAPP -->
+            <div class="settings-menu-list">
+                <div class="menu-list-item">
+                    <span class="menu-icon">🔑</span>
+                    <div class="menu-text">
+                        <h4>Conta</h4>
+                        <p>Notificações de segurança, mudar número.</p>
+                    </div>
+                </div>
+                <div class="menu-list-item">
+                    <span class="menu-icon">🔒</span>
+                    <div class="menu-text">
+                        <h4>Privacidade</h4>
+                        <p>Bloqueados, mensagens temporárias.</p>
+                    </div>
+                </div>
+                <div class="menu-list-item">
+                    <span class="menu-icon">🛡️</span>
+                    <div class="menu-text">
+                        <h4>Verificação em duas etapas</h4>
+                        <p>Proteja sua conta com um PIN numérico.</p>
+                    </div>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-2fa">
+                        <span class="slider-round"></span>
+                    </label>
+                </div>
+                <div id="pin-setup-group" class="pin-setup-box hidden">
+                    <input type="password" id="new-pin2" placeholder="Digite o PIN de 6 dígitos" maxlength="6">
+                    <button id="btn-save-pin" class="btn-primary-sm">Salvar PIN</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BLUR OVERLAY DE SELEÇÃO DE MENSAGEM (ESTILO IPHONE) -->
+    <div id="blur-overlay" class="blur-overlay hidden">
+        <div class="focused-message-container" id="focused-message-container"></div>
+        <div class="iphone-context-menu" id="iphone-context-menu">
+            <div class="reactions-row">
+                <span class="react-btn">👍</span><span class="react-btn">❤️</span><span class="react-btn">😂</span>
+                <span class="react-btn">😮</span><span class="react-btn">😢</span><span class="react-btn">🙏</span>
+            </div>
+            <div class="context-item" id="ctx-reply">↩️ Responder</div>
+            <div class="context-item" id="ctx-edit">✏️ Editar Mensagem</div>
+            <div class="context-item" id="ctx-select-multiple">✔️ Selecionar várias</div>
+            <div class="context-item" id="ctx-delete-for-me">🗑️ Apagar para mim</div>
+            <div class="context-item danger hidden" id="ctx-delete-for-all">💥 Apagar para todos</div>
+        </div>
+    </div>
+
+    <!-- MODAL DE NOVAS CONVERSAS -->
     <div id="contacts-modal" class="modal hidden">
         <div class="modal-content page-transition">
             <div class="modal-header">
-                <h3>Conectar a um usuário</h3>
+                <h3>Iniciar conversa</h3>
                 <button id="btn-close-modal" class="btn-close">&times;</button>
             </div>
             <div id="contacts-list" class="contacts-list"></div>
         </div>
     </div>
 
-    <!-- MODAL DE CONFIGURAÇÕES ESTILO WHATSAPP -->
-    <div id="settings-modal" class="modal hidden">
-        <div class="modal-content page-transition">
-            <div class="modal-header">
-                <h3>Configurações</h3>
-                <button id="btn-close-settings" class="btn-close">&times;</button>
-            </div>
-            <div class="settings-options">
-                <div class="settings-item">
-                    <h4>🔒 Privacidade</h4>
-                    <p>Gerencie quem vê seus dados de rede.</p>
-                </div>
-                <div class="settings-item">
-                    <h4>👤 Conta</h4>
-                    <p>Altere os metadados do seu terminal numérico.</p>
-                </div>
-                <div class="settings-item">
-                    <h4>🔑 Verificação em duas etapas</h4>
-                    <p>Adicione segurança extra exigindo um PIN de 6 dígitos.</p>
-                    <label class="switch">
-                        <input type="checkbox" id="toggle-2fa">
-                        <span class="slider-round"></span>
-                    </label>
-                    <div id="pin-setup-group" class="hidden" style="margin-top: 10px;">
-                        <input type="password" id="new-pin2" placeholder="Definir PIN de 6 dígitos" maxlength="6" style="padding: 8px; border-radius: 4px; background: var(--bg-input); border: 1px solid #224; color: #fff; width: 100%;">
-                        <button id="btn-save-pin" class="btn-primary" style="padding: 6px; font-size: 11px; margin-top: 5px;">Salvar PIN</button>
-                    </div>
-                </div>
-            </div>
+    <!-- CONTROLLER DE AUDIO / FIGURINHAS MOCK -->
+    <div id="sticker-panel" class="sticker-panel hidden">
+        <div class="sticker-header"><h4>Figurinhas</h4><button id="btn-close-stickers">×</button></div>
+        <div class="stickers-grid">
+            <span class="sticker-item">🚀</span><span class="sticker-item">🔥</span><span class="sticker-item">👾</span>
+            <span class="sticker-item">💀</span><span class="sticker-item">👑</span><span class="sticker-item">💎</span>
         </div>
     </div>
 
-    <!-- MENU DE CONTEXTO FLUTUANTE (MENSAGEM) -->
-    <div id="message-context-menu" class="context-menu hidden">
-        <div class="reactions-row">
-            <span class="react-btn">👍</span>
-            <span class="react-btn">❤️</span>
-            <span class="react-btn">😂</span>
-            <span class="react-btn">😮</span>
-            <span class="react-btn">😢</span>
-            <span class="react-btn">🙏</span>
-        </div>
-        <div class="context-item" id="ctx-edit">✏️ Editar Mensagem</div>
-        <div class="context-item" id="ctx-delete-for-me">🗑️ Apagar para mim</div>
-        <div class="context-item danger hidden" id="ctx-delete-for-all">💥 Apagar para todos</div>
-    </div>
-
-    <!-- Scripts do Firebase v10 Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="script.js"></script>
 </body>
-                </html>
-                
+    </html>
+    
