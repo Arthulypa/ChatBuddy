@@ -7,7 +7,10 @@ const firebaseConfig = {
   storageBucket: "chatbuddy-96a61.firebasestorage.app",
 };
 
-firebase.initializeApp(firebaseConfig);
+// Inicializa o Firebase apenas se não tiver sido inicializado ainda
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
 const auth = firebase.auth();
 const database = firebase.database();
 
@@ -18,7 +21,6 @@ let base64AvatarString = "";
 let base64OwnSettingsAvatar = "";
 let selectedMessageText = "";
 let selectedMessageId = "";
-let silencedUsers = {};
 
 const viewPages = {
     login: document.getElementById('login-page'),
@@ -27,9 +29,22 @@ const viewPages = {
     chat: document.getElementById('chat-page')
 };
 
+// Altera as telas de forma segura
 function changeView(target) {
-    Object.keys(viewPages).forEach(k => viewPages[k].classList.add('hidden'));
-    viewPages[target].classList.remove('hidden');
+    Object.keys(viewPages).forEach(k => {
+        if (viewPages[k]) viewPages[k].classList.add('hidden');
+    });
+    if (viewPages[target]) {
+        viewPages[target].classList.remove('hidden');
+    }
+}
+
+// Função utilitária para registrar eventos prevenindo quebras silenciosas no DOM
+function safeAddEvent(id, event, callback) {
+    const el = document.getElementById(id);
+    if (el) {
+        el.addEventListener(event, callback);
+    }
 }
 
 function bindImageLoader(inputId, callback) {
@@ -44,37 +59,93 @@ function bindImageLoader(inputId, callback) {
     });
 }
 
-// Configuração loaders de fotos
+// Configuração loaders de fotos de perfil de forma isolada
 bindImageLoader('initial-avatar-file', (res) => {
     base64AvatarString = res;
     const imgEl = document.getElementById('initial-avatar-preview');
-    imgEl.src = res;
-    imgEl.classList.remove('hidden');
-    document.getElementById('initial-avatar-placeholder').classList.add('hidden');
+    if (imgEl) {
+        imgEl.src = res;
+        imgEl.classList.remove('hidden');
+    }
+    const placeholder = document.getElementById('initial-avatar-placeholder');
+    if (placeholder) placeholder.classList.add('hidden');
 });
 
 bindImageLoader('settings-avatar-file', (res) => {
     base64OwnSettingsAvatar = res;
-    document.getElementById('settings-avatar-preview').src = res;
+    const imgSet = document.getElementById('settings-avatar-preview');
+    if (imgSet) imgSet.src = res;
 });
 
-// AUTENTICAÇÃO
-document.getElementById('btn-login').addEventListener('click', () => {
+// ESCUTA DE AUTENTICAÇÃO ATIVA (PERSISTÊNCIA DE LOGIN)
+auth.onAuthStateChanged(user => {
+    if (user) {
+        currentUser = user;
+        database.ref('users/' + user.uid).once('value').then(snap => {
+            if (snap.exists() && snap.val().username) {
+                changeView('chat');
+                setupPresenceSystem(user.uid);
+                loadChatList();
+                loadOwnProfileSettingsData(snap.val());
+            } else {
+                changeView('profile');
+            }
+        }).catch(err => {
+            console.error("Erro ao buscar dados do nó de usuário:", err);
+            changeView('profile');
+        });
+    } else {
+        changeView('login');
+    }
+});
+
+// SISTEMA DE PRESENÇA EM TEMPO REAL
+function setupPresenceSystem(userId) {
+    const userStatusRef = database.ref(`users/${userId}`);
+    const connectedRef = database.ref(".info/connected");
+    connectedRef.on("value", (snap) => {
+        if (snap.val() === false) return;
+        userStatusRef.onDisconnect().update({ status: "offline", lastSeen: firebase.database.ServerValue.TIMESTAMP })
+        .then(() => {
+            userStatusRef.update({ status: "online", lastSeen: firebase.database.ServerValue.TIMESTAMP });
+        });
+    });
+}
+
+// CARREGA SEUS PRÓPRIOS DADOS NA TELA DE CONFIGURAÇÃO (ABAS)
+function loadOwnProfileSettingsData(data) {
+    const preview = document.getElementById('settings-avatar-preview');
+    const nick = document.getElementById('settings-nickname');
+    const userAt = document.getElementById('settings-username');
+    const bio = document.getElementById('settings-bio');
+
+    if (preview) preview.src = data.avatar || "https://via.placeholder.com/150";
+    if (nick) nick.value = data.nickname || "";
+    if (userAt) userAt.value = (data.username || "").replace('@','');
+    if (bio) bio.value = data.bio || "";
+    base64OwnSettingsAvatar = data.avatar || "";
+}
+
+// MAPEAMENTO SEGURO DE EVENTOS DE BOTÕES DE CLIQUE
+safeAddEvent('btn-login', 'click', () => {
     const email = document.getElementById('email-login').value.trim();
     const pass = document.getElementById('password-login').value;
     if(!email || !pass) return alert("Preencha todos os campos!");
     auth.signInWithEmailAndPassword(email, pass).catch(err => alert("Erro: " + err.message));
 });
 
-document.getElementById('btn-send-code').addEventListener('click', () => {
+safeAddEvent('btn-send-code', 'click', () => {
     const email = document.getElementById('email-reg').value.trim();
     const pass = document.getElementById('password-reg').value;
     if(!email || !pass) return alert("Insira credenciais válidas.");
-    document.getElementById('reg-step-1').classList.add('hidden');
-    document.getElementById('reg-step-2').classList.remove('hidden');
+    
+    const step1 = document.getElementById('reg-step-1');
+    const step2 = document.getElementById('reg-step-2');
+    if(step1) step1.classList.add('hidden');
+    if(step2) step2.classList.remove('hidden');
 });
 
-document.getElementById('btn-verify-and-register').addEventListener('click', () => {
+safeAddEvent('btn-verify-and-register', 'click', () => {
     const code = document.getElementById('verification-code-input').value.trim();
     if(code !== "123456") return alert("Código ChatBuddy inválido!");
     const email = document.getElementById('email-reg').value.trim();
@@ -84,7 +155,7 @@ document.getElementById('btn-verify-and-register').addEventListener('click', () 
         .catch(err => alert("Erro: " + err.message));
 });
 
-document.getElementById('btn-google-login').addEventListener('click', () => {
+safeAddEvent('btn-google-login', 'click', () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider)
         .then((result) => {
@@ -96,7 +167,6 @@ document.getElementById('btn-google-login').addEventListener('click', () => {
                         nickname: user.displayName || "Usuário Google",
                         username: '@' + (user.email.split('@')[0]),
                         bio: "Disponível no ChatBuddy",
-                        wlstwrus: "Disponível no ChatBuddy 🚀",
                         avatar: user.photoURL || "https://via.placeholder.com/150",
                         status: "online",
                         lastSeen: firebase.database.ServerValue.TIMESTAMP
@@ -109,7 +179,7 @@ document.getElementById('btn-google-login').addEventListener('click', () => {
         .catch(err => alert("Erro no Login Google: " + err.message));
 });
 
-document.getElementById('btn-save-profile').addEventListener('click', () => {
+safeAddEvent('btn-save-profile', 'click', () => {
     const nick = document.getElementById('display-name').value.trim();
     const userAt = document.getElementById('username').value.trim().replace('@','');
     const bio = document.getElementById('user-bio').value.trim() || "Disponível no ChatBuddy";
@@ -126,47 +196,7 @@ document.getElementById('btn-save-profile').addEventListener('click', () => {
     }).then(() => changeView('chat'));
 });
 
-// PRESENÇA REAL-TIME
-function setupPresenceSystem(userId) {
-    const userStatusRef = database.ref(`users/${userId}`);
-    const connectedRef = database.ref(".info/connected");
-    connectedRef.on("value", (snap) => {
-        if (snap.val() === false) return;
-        userStatusRef.onDisconnect().update({ status: "offline", lastSeen: firebase.database.ServerValue.TIMESTAMP })
-        .then(() => {
-            userStatusRef.update({ status: "online", lastSeen: firebase.database.ServerValue.TIMESTAMP });
-        });
-    });
-}
-
-auth.onAuthStateChanged(user => {
-    if (user) {
-        currentUser = user;
-        database.ref('users/' + user.uid).once('value').then(snap => {
-            if (snap.exists() && snap.val().username) {
-                changeView('chat');
-                setupPresenceSystem(user.uid);
-                loadChatList();
-                loadOwnProfileSettingsData(snap.val());
-            } else {
-                changeView('profile');
-            }
-        });
-    } else {
-        changeView('login');
-    }
-});
-
-// CARREGA SEUS PRÓPRIOS DADOS NA TELA DE CONFIGURAÇÃO (ABAS)
-function loadOwnProfileSettingsData(data) {
-    document.getElementById('settings-avatar-preview').src = data.avatar || "https://via.placeholder.com/150";
-    document.getElementById('settings-nickname').value = data.nickname || "";
-    document.getElementById('settings-username').value = (data.username || "").replace('@','');
-    document.getElementById('settings-bio').value = data.bio || "";
-    base64OwnSettingsAvatar = data.avatar || "";
-}
-
-document.getElementById('btn-update-own-profile').addEventListener('click', () => {
+safeAddEvent('btn-update-own-profile', 'click', () => {
     const newNick = document.getElementById('settings-nickname').value.trim();
     const newUsr = document.getElementById('settings-username').value.trim().replace('@','');
     const newBio = document.getElementById('settings-bio').value.trim();
@@ -181,7 +211,7 @@ document.getElementById('btn-update-own-profile').addEventListener('click', () =
     }).then(() => alert("Perfil atualizado com sucesso!"));
 });
 
-// INTERFACES DAS ABAS DE CONFIGURAÇÃO
+// INTERFACES DAS ABAS DE CONFIGURAÇÃO INTERNA
 document.querySelectorAll('.settings-nav-item').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.settings-nav-item').forEach(b => b.classList.remove('active'));
@@ -189,11 +219,12 @@ document.querySelectorAll('.settings-nav-item').forEach(btn => {
         
         const target = btn.getAttribute('data-target');
         document.querySelectorAll('.settings-pane-content').forEach(pane => pane.classList.add('hidden'));
-        document.getElementById(target).classList.remove('hidden');
+        const paneTarget = document.getElementById(target);
+        if (paneTarget) paneTarget.classList.remove('hidden');
     });
 });
 
-// SISTEMA DE ARRASTAR PARA RESPONDER + CLIQUE LONGO
+// SISTEMA DE EVENTOS LONG PRESS E BALÕES
 function applyLongPress(element, actionCallback) {
     let timer;
     const start = () => timer = setTimeout(() => actionCallback(), 600);
@@ -215,24 +246,30 @@ function buildTicks(status) {
     return '';
 }
 
-// INTERFACE DA SALA DE CONVERSA
+// ABERTURA DE SALA DE CHAT E MONITORAÇÃO REATIVA
 function openChatRoom(chatId, recipientData) {
     activeChatId = chatId;
     activeRecipientId = recipientData.uid;
     
-    document.getElementById('active-chat-name').innerText = recipientData.nickname;
-    document.getElementById('active-chat-avatar').src = recipientData.avatar;
-    document.getElementById('chat-room-screen').classList.remove('hidden');
+    const nameEl = document.getElementById('active-chat-name');
+    const avatarEl = document.getElementById('active-chat-avatar');
+    const roomEl = document.getElementById('chat-room-screen');
+
+    if(nameEl) nameEl.innerText = recipientData.nickname;
+    if(avatarEl) avatarEl.src = recipientData.avatar;
+    if(roomEl) roomEl.classList.remove('hidden');
 
     database.ref(`users/${recipientData.uid}`).on('value', rSnap => {
         const rUser = rSnap.val();
-        if(!rUser) return;
-        document.getElementById('active-chat-status').innerText = rUser.status === 'online' ? "online" : "offline";
+        const statusEl = document.getElementById('active-chat-status');
+        if(!rUser || !statusEl) return;
+        statusEl.innerText = rUser.status === 'online' ? "online" : "offline";
     });
     
     database.ref(`chats/${chatId}/messages`).off();
     database.ref(`chats/${chatId}/messages`).on('value', snap => {
         const box = document.getElementById('messages-container');
+        if(!box) return;
         box.innerHTML = '';
         
         snap.forEach(child => {
@@ -245,13 +282,11 @@ function openChatRoom(chatId, recipientData) {
             let ticks = data.senderId === currentUser.uid ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
             card.innerHTML = content + ticks;
             
-            // Elemento indicador do gesto iOS
             const indicator = document.createElement('div');
             indicator.className = 'reply-drag-indicator';
             indicator.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M10 21L3 12l7-9M3 12h18"/></svg>';
             card.appendChild(indicator);
 
-            // Mecanismo Drag to Reply
             let startX = 0, currentX = 0, isDragging = false;
             card.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; isDragging = true; }, { passive: true });
             card.addEventListener('touchmove', (e) => {
@@ -270,8 +305,10 @@ function openChatRoom(chatId, recipientData) {
                 card.classList.remove('dragged');
                 if (currentX < -45) {
                     const inputField = document.getElementById('message-input');
-                    inputField.value = `Replying to: "${data.text || 'Mídia'}" ➔ `;
-                    inputField.focus();
+                    if (inputField) {
+                        inputField.value = `Replying to: "${data.text || 'Mídia'}" ➔ `;
+                        inputField.focus();
+                    }
                 }
                 currentX = 0;
             });
@@ -282,9 +319,12 @@ function openChatRoom(chatId, recipientData) {
                 const clone = card.cloneNode(true);
                 if(clone.querySelector('.reply-drag-indicator')) clone.querySelector('.reply-drag-indicator').remove();
                 const wrapper = document.getElementById('focused-message-wrapper');
-                wrapper.innerHTML = '';
-                wrapper.appendChild(clone);
-                document.getElementById('blur-overlay').classList.remove('hidden');
+                if (wrapper) {
+                    wrapper.innerHTML = '';
+                    wrapper.appendChild(clone);
+                }
+                const blurEl = document.getElementById('blur-overlay');
+                if(blurEl) blurEl.classList.remove('hidden');
             });
             box.appendChild(card);
         });
@@ -292,37 +332,49 @@ function openChatRoom(chatId, recipientData) {
     });
 }
 
-// POPUP DE INFORMAÇÕES DO CONTATO (DETALHES E MÍDIAS COLETADAS)
-document.getElementById('btn-open-recipient-info').addEventListener('click', () => {
+// POPUP DE INFORMAÇÕES DO CONTATO (DETALHES E GALERIA DE MÍDIAS)
+safeAddEvent('btn-open-recipient-info', 'click', () => {
+    if (!activeRecipientId) return;
     database.ref('users/' + activeRecipientId).once('value').then(s => {
         const u = s.val();
-        document.getElementById('sheet-contact-nick').innerText = u.nickname;
-        document.getElementById('sheet-contact-user').innerText = u.username;
-        document.getElementById('sheet-contact-avatar').src = u.avatar;
-        document.getElementById('sheet-contact-bio').innerText = u.bio || "Sem biografia definida.";
+        if(!u) return;
+        const nick = document.getElementById('sheet-contact-nick');
+        const user = document.getElementById('sheet-contact-user');
+        const avatar = document.getElementById('sheet-contact-avatar');
+        const bio = document.getElementById('sheet-contact-bio');
+
+        if(nick) nick.innerText = u.nickname;
+        if(user) user.innerText = u.username;
+        if(avatar) avatar.src = u.avatar;
+        if(bio) bio.innerText = u.bio || "Sem biografia definida.";
         
-        // Ativa painel default
         switchPopupPanel('details');
-        document.getElementById('contact-info-sheet').classList.remove('hidden');
+        const sheet = document.getElementById('contact-info-sheet');
+        if(sheet) sheet.classList.remove('hidden');
     });
 });
 
-// Gerenciador de sub-abas do Popup de contato
 function switchPopupPanel(type) {
+    const tabDetails = document.getElementById('popup-tab-details');
+    const tabGallery = document.getElementById('popup-tab-gallery');
+    const panelDetails = document.getElementById('popup-panel-details');
+    const panelGallery = document.getElementById('popup-panel-gallery');
+
     if(type === 'details') {
-        document.getElementById('popup-tab-details').classList.add('active');
-        document.getElementById('popup-tab-gallery').classList.remove('active');
-        document.getElementById('popup-panel-details').classList.remove('hidden');
-        document.getElementById('popup-panel-gallery').classList.add('hidden');
+        if(tabDetails) tabDetails.classList.add('active');
+        if(tabGallery) tabGallery.classList.remove('active');
+        if(panelDetails) panelDetails.classList.remove('hidden');
+        if(panelGallery) panelGallery.classList.add('hidden');
     } else {
-        document.getElementById('popup-tab-details').classList.remove('active');
-        document.getElementById('popup-tab-gallery').classList.add('active');
-        document.getElementById('popup-panel-details').classList.add('hidden');
-        document.getElementById('popup-panel-gallery').classList.remove('hidden');
+        if(tabDetails) tabDetails.classList.remove('active');
+        if(tabGallery) tabGallery.classList.add('active');
+        if(panelDetails) panelDetails.classList.add('hidden');
+        if(panelGallery) panelGallery.classList.remove('hidden');
         
-        // Coleta e injeta mídias trocadas dinamicamente
         const grid = document.getElementById('popup-media-grid');
+        if(!grid) return;
         grid.innerHTML = '';
+        
         database.ref(`chats/${activeChatId}/messages`).once('value', snap => {
             let foundMedia = false;
             snap.forEach(c => {
@@ -340,30 +392,34 @@ function switchPopupPanel(type) {
     }
 }
 
-document.getElementById('popup-tab-details').addEventListener('click', () => switchPopupPanel('details'));
-document.getElementById('popup-tab-gallery').addEventListener('click', () => switchPopupPanel('gallery'));
+safeAddEvent('popup-tab-details', 'click', () => switchPopupPanel('details'));
+safeAddEvent('popup-tab-gallery', 'click', () => switchPopupPanel('gallery'));
 
-// Botões de Ação do Contato
-document.getElementById('btn-customize-nickname').addEventListener('click', () => {
+safeAddEvent('btn-customize-nickname', 'click', () => {
     const newName = prompt("Defina um apelido local para este contato:");
     if(newName && newName.trim() !== "") {
-        document.getElementById('sheet-contact-nick').innerText = newName;
-        document.getElementById('active-chat-name').innerText = newName;
+        const nick = document.getElementById('sheet-contact-nick');
+        const actName = document.getElementById('active-chat-name');
+        if(nick) nick.innerText = newName;
+        if(actName) actName.innerText = newName;
     }
 });
 
-document.getElementById('btn-sheet-block').addEventListener('click', () => {
-    alert("Usuário bloqueado com sucesso nas diretrizes do dispositivo!");
-    document.getElementById('contact-info-sheet').classList.add('hidden');
-    document.getElementById('chat-room-screen').classList.add('hidden');
+safeAddEvent('btn-sheet-block', 'click', () => {
+    alert("Usuário bloqueado com sucesso!");
+    const sheet = document.getElementById('contact-info-sheet');
+    const room = document.getElementById('chat-room-screen');
+    if(sheet) sheet.classList.add('hidden');
+    if(room) room.classList.add('hidden');
 });
 
-document.getElementById('btn-sheet-report').addEventListener('click', () => {
-    alert("Perfil denunciado à central de moderação do ChatBuddy!");
-    document.getElementById('contact-info-sheet').classList.add('hidden');
+safeAddEvent('btn-sheet-report', 'click', () => {
+    alert("Perfil denunciado à central de moderação!");
+    const sheet = document.getElementById('contact-info-sheet');
+    if(sheet) sheet.classList.add('hidden');
 });
 
-// ENVIO DE MENSAGENS E ARQUIVOS
+// SISTEMA DE ENVIO DE TEXTOS E IMAGENS
 function pushMessage(text, imgBase64 = null) {
     if(!text.trim() && !imgBase64) return;
     const ref = database.ref(`chats/${activeChatId}/messages`).push();
@@ -380,59 +436,43 @@ function pushMessage(text, imgBase64 = null) {
         setTimeout(() => ref.update({ status: 'delivered' }), 500);
         setTimeout(() => ref.update({ status: 'read' }), 1000);
     });
-    document.getElementById('message-input').value = '';
+    const inputField = document.getElementById('message-input');
+    if(inputField) inputField.value = '';
 }
 
-document.getElementById('message-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') pushMessage(e.target.value); });
-document.getElementById('btn-attach').addEventListener('click', () => document.getElementById('media-file-input').click());
-document.getElementById('media-file-input').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => pushMessage("", ev.target.result);
-    reader.readAsDataURL(file);
+const msgInput = document.getElementById('message-input');
+if(msgInput) {
+    msgInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') pushMessage(e.target.value); });
+}
+
+safeAddEvent('btn-attach', 'click', () => {
+    const mediaInput = document.getElementById('media-file-input');
+    if(mediaInput) mediaInput.click();
 });
 
-// FUNÇÕES DE MENU DE CONTEXTO DAS BALÕES
-document.getElementById('ctx-info-msg').addEventListener('click', () => {
+const mediaFileInput = document.getElementById('media-file-input');
+if(mediaFileInput) {
+    mediaFileInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => pushMessage("", ev.target.result);
+        reader.readAsDataURL(file);
+    });
+}
+
+// MENU DE CONTEXTO DAS MENSAGENS (REATIVO)
+safeAddEvent('ctx-info-msg', 'click', () => {
     database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).once('value').then(snap => {
         const data = snap.val();
         if(!data) return;
-        document.getElementById('info-sent-time').innerText = new Date(data.timestamp).toLocaleTimeString();
-        document.getElementById('info-read-time').innerText = data.status === 'read' ? new Date(data.timestamp + 1000).toLocaleTimeString() : "Pendente";
-        document.getElementById('blur-overlay').classList.add('hidden');
-        document.getElementById('msg-info-modal').classList.remove('hidden');
-    });
-});
-document.getElementById('btn-close-msg-info').addEventListener('click', () => document.getElementById('msg-info-modal').classList.add('hidden'));
-document.getElementById('ctx-edit-msg').addEventListener('click', () => {
-    const n = prompt("Editar:", selectedMessageText);
-    if(n) database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).update({ text: n + " (editada)" });
-    document.getElementById('blur-overlay').classList.add('hidden');
-});
-document.getElementById('ctx-delete-single').addEventListener('click', () => {
-    if(confirm("Deletar mensagem?")) database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).remove();
-    document.getElementById('blur-overlay').classList.add('hidden');
-});
-document.getElementById('ctx-copy-direct').addEventListener('click', () => {
-    navigator.clipboard.writeText(selectedMessageText);
-    document.getElementById('blur-overlay').classList.add('hidden');
-});
+        const sentTime = document.getElementById('info-sent-time');
+        const readTime = document.getElementById('info-read-time');
+        const blurEl = document.getElementById('blur-overlay');
+        const infoMod = document.getElementById('msg-info-modal');
 
-// CARREGADOR DE LISTA PRINCIPAL
-function loadChatList() {
-    database.ref('users').on('value', snap => {
-        const parent = document.getElementById('chats-list');
-        parent.innerHTML = '';
-        snap.forEach(child => {
-            const user = child.val();
-            if(user.uid === currentUser.uid) return;
-            const row = document.createElement('div');
-            row.className = "chat-item-row";
-            row.innerHTML = `<img src="${user.avatar}">
-                             <div class="chat-item-info">
-                                <div class="chat-item-header"><h4>${user.nickname}</h4></div>
-                                <p>${user.username}</p>
-                             </div>`;
-            row.addEventListener('click', () => {
-                const combinedId = currentUser.uid < user.uid ?
+        if(sentTime) sentTime.innerText = new Date(data.timestamp).toLocaleTimeString();
+        if(readTime) readTime.innerText = data.status === 'read' ? new Date(data.timestamp + 1000).toLocaleTimeString() : "Pendente";
+        if(blurEl) blurEl.classList.add('hidden');
+        if(infoMod) infoMod.classList.remove('hidden');
+    });
