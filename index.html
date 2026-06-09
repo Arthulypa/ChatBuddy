@@ -6,7 +6,7 @@
     <title>ChatBuddy - Ultra Premium iOS</title>
     <meta name="google" content="notranslate">
     <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght=300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
 
@@ -112,7 +112,7 @@
     <div id="chat-page" class="app-container hidden">
         <header class="app-top-bar glass-premium">
             <h2 class="app-title">ChatBuddy</h2>
-            <button id="btn-main-settings" class="config-icon-btn">
+            <button id="btn-main-settings" style="background:none; border:none; cursor:pointer; padding:4px; display:flex; align-items:center;">
                 <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5z"/></svg>
             </button>
         </header>
@@ -207,8 +207,7 @@
 
     <div id="blur-overlay" class="blur-overlay hidden">
         <div class="focused-container">
-            <div id="focused-message-wrapper" class="focused-message-wrapper">
-                </div>
+            <div id="focused-message-wrapper" class="focused-message-wrapper"></div>
             <div class="iphone-context-menu glass-premium">
                 <div class="context-item" id="ctx-info-msg">
                     <svg viewBox="0 0 24 24" class="mono-icon-light" style="width:16px; margin-right:8px;"><path fill="currentColor" d="M11 9h2V7h-2v2zm1 11c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm0-18C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm-1 13h2v-4h-2v4z"/></svg> Dados da Mensagem (Info)
@@ -271,5 +270,5 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="script.js"></script>
 </body>
-        </html>
-    
+            </html>
+                    
