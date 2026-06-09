@@ -1,4 +1,4 @@
-// INSIRA SUAS CREDENCIAIS DO BANCO DO FIREBASE CHATBUDDY AQUI
+// CONFIGURAÇÃO DO BANCO DO FIREBASE CHATBUDDY
 const firebaseConfig = {
   apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfykh4",
   authDomain: "chatbuddy-96a61.firebaseapp.com",
@@ -79,9 +79,30 @@ document.getElementById('btn-verify-and-register').addEventListener('click', () 
         .catch(err => alert("Erro: " + err.message));
 });
 
+// ARRUNADO: LOGIN DO GOOGLE COM CRIÇÃO DE PERFIL E PERSISTÊNCIA INTEGRADA
 document.getElementById('btn-google-login').addEventListener('click', () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(err => alert(err.message));
+    auth.signInWithPopup(provider)
+        .then((result) => {
+            const user = result.user;
+            database.ref('users/' + user.uid).once('value').then(snap => {
+                if (!snap.exists()) {
+                    database.ref('users/' + user.uid).set({
+                        uid: user.uid,
+                        nickname: user.displayName || "Usuário Google",
+                        username: '@' + (user.email.split('@')[0]),
+                        bio: "Disponível no ChatBuddy",
+                        wlstwrus: "Disponível no ChatBuddy 🚀",
+                        avatar: user.photoURL || "https://via.placeholder.com/150",
+                        status: "online",
+                        lastSeen: firebase.database.ServerValue.TIMESTAMP
+                    }).then(() => changeView('chat'));
+                } else {
+                    changeView('chat');
+                }
+            });
+        })
+        .catch(err => alert("Erro no Login Google: " + err.message));
 });
 
 document.getElementById('btn-save-profile').addEventListener('click', () => {
@@ -208,6 +229,7 @@ function formatLastSeen(timestamp) {
     return "offline há algum tempo";
 }
 
+// SALA DE CHAT ATUALIZADA COM COMPATIBILIDADE DE GESTO SLIDE-TO-REPLY
 function openChatRoom(chatId, recipientData) {
     activeChatId = chatId;
     activeRecipientId = recipientData.uid;
@@ -249,12 +271,59 @@ function openChatRoom(chatId, recipientData) {
             let ticks = data.senderId === currentUser.uid ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
             card.innerHTML = content + ticks;
             
-            // EXECUÇÃO DO CLIQUE LONGO COM MANTENÇÃO DO LADO DA MENSAGEM
+            // Injeta o elemento visual da setinha de resposta do iOS
+            const indicator = document.createElement('div');
+            indicator.className = 'reply-drag-indicator';
+            indicator.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M10 21L3 12l7-9M3 12h18"/></svg>';
+            card.appendChild(indicator);
+
+            // SISTEMA DE ARRASTAR PARA RESPONDER
+            let startX = 0;
+            let currentX = 0;
+            let isDragging = false;
+
+            card.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+                isDragging = true;
+            }, { passive: true });
+
+            card.addEventListener('touchmove', (e) => {
+                if (!isDragging) return;
+                currentX = e.touches[0].clientX - startX;
+
+                if (currentX < 0) {
+                    let dragOffset = Math.max(currentX, -60);
+                    card.style.transform = `translateX(${dragOffset}px)`;
+                    card.classList.add('dragged');
+                    
+                    if (dragOffset === -60 && navigator.vibrate) {
+                        navigator.vibrate(10);
+                    }
+                }
+            }, { passive: true });
+
+            card.addEventListener('touchend', () => {
+                isDragging = false;
+                card.style.transform = '';
+                card.classList.remove('dragged');
+
+                if (currentX < -45) {
+                    const inputField = document.getElementById('message-input');
+                    inputField.value = `Replying to: "${data.text || 'Mídia'}" ➔ `;
+                    inputField.focus();
+                }
+                currentX = 0;
+            });
+            
+            // MANTÉM CLIQUE LONGO FUNCIONANDO PERFEITAMENTE
             applyLongPress(card, () => {
                 selectedMessageText = data.text || "";
                 selectedMessageId = data.id;
                 
                 const clone = card.cloneNode(true);
+                const oldInd = clone.querySelector('.reply-drag-indicator');
+                if(oldInd) oldInd.remove();
+
                 const wrapper = document.getElementById('focused-message-wrapper');
                 wrapper.innerHTML = '';
                 wrapper.appendChild(clone);
@@ -398,29 +467,4 @@ document.getElementById('btn-back-to-list').addEventListener('click', () => {
 document.getElementById('btn-main-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.remove('hidden'));
 document.getElementById('btn-back-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.add('hidden'));
 document.getElementById('btn-logout').addEventListener('click', () => { auth.signOut().then(() => window.location.reload()); });
-document.getElementById('btn-to-register').addEventListener('click', () => changeView('register'));
-document.getElementById('btn-to-login').addEventListener('click', () => changeView('login'));
-document.getElementById('btn-contact-menu').addEventListener('click', () => document.getElementById('btn-open-recipient-info').click());
-
-document.getElementById('btn-new-chat').addEventListener('click', () => {
-    database.ref('users').once('value').then(snap => {
-        const list = document.getElementById('contacts-list-modal');
-        list.innerHTML = '';
-        snap.forEach(c => {
-            const u = c.val();
-            if(u.uid === currentUser.uid) return;
-            const item = document.createElement('div');
-            item.className = "chat-item-row";
-            item.innerHTML = `<img src="${u.avatar}"><div><h4>${u.nickname}</h4></div>`;
-            item.addEventListener('click', () => {
-                document.getElementById('contacts-modal').classList.add('hidden');
-                const combinedId = currentUser.uid < u.uid ? currentUser.uid + "_" + u.uid : u.uid + "_" + currentUser.uid;
-                openChatRoom(combinedId, u);
-            });
-            list.appendChild(item);
-        });
-        document.getElementById('contacts-modal').classList.remove('hidden');
-    });
-});
-document.getElementById('btn-close-modal').addEventListener('click', () => document.getElementById('contacts-modal').classList.add('hidden'));
-                                                           
+document.getElementById('btn-to-register').addE
