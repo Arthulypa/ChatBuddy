@@ -1,7 +1,6 @@
-// ATENÇÃO: Verifique se esses dados batem EXATAMENTE com o seu Firebase Console!
-// Corrigido com as letras maiúsculas exatas do seu Console (W e H)
+// CONFIGURAÇÃO DO FIREBASE CORRIGIDA (Letras maiúsculas W e H ajustadas!)
 const firebaseConfig = {
-  apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfyH4",
+  apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfyH4", 
   authDomain: "chatbuddy-96a61.firebaseapp.com",
   databaseURL: "https://chatbuddy-96a61-default-rtdb.firebaseio.com",
   projectId: "chatbuddy-96a61",
@@ -63,20 +62,20 @@ function showPage(page) {
   });
   if(page) {
     page.classList.remove('hidden');
-    // Força a reinicialização da animação do box interno
     const box = page.querySelector('.page-transition');
     if(box) {
         box.style.animation = 'none';
-        box.offsetHeight; // Truque do navegador para resetar reflow
+        box.offsetHeight; // Força reflow do CSS
         box.style.animation = null;
     }
   }
 }
 
+// Vinculação de eventos para navegação entre telas de login/cadastro
 if(btnToRegister) btnToRegister.addEventListener('click', () => showPage(registerPage));
 if(btnToLogin) btnToLogin.addEventListener('click', () => showPage(loginPage));
 
-// Monitor de Sessão
+// Monitor de Sessão do Firebase
 auth.onAuthStateChanged(user => {
   if (user) {
     currentUser = user;
@@ -115,13 +114,10 @@ if(btnLogin) {
   });
 }
 
-// FUNÇÃO ATUALIZADA: Login / Cadastro com Google
+// Login / Cadastro com Google
 function loginComGoogle() {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider)
-      .then((result) => {
-          // O fluxo do onAuthStateChanged cuidará de checar se o perfil existe
-      })
       .catch((error) => {
           alert('Erro na autenticação Google: ' + error.message);
       });
@@ -193,7 +189,7 @@ function loadContactsList() {
       const user = childSnapshot.val();
       if(user.uid !== currentUser.uid) {
         const item = document.createElement('div');
-        item.className = 'chat-item'; // Aproveita o estilo da lista
+        item.className = 'chat-item';
         item.innerHTML = `
           <div class="avatar">${user.displayName ? user.displayName.charAt(0).toUpperCase() : '?'}</div>
           <div class="chat-item-details">
@@ -259,6 +255,57 @@ function openChatRoom(chatId, recipientName, recipientId) {
   database.ref(`chats/${chatId}/messages`).off();
   database.ref(`chats/${chatId}/messages`).on('value', snapshot => {
     if(!messagesContainer) return;
+    messagesContainer.innerHTML = '';
+    snapshot.forEach(childSnapshot => {
+      const msg = childSnapshot.val();
+      const msgId = childSnapshot.key;
+      const msgElement = document.createElement('div');
+      msgElement.className = `message ${msg.senderId === currentUser.uid ? 'sent' : 'received'}`;
+      if(msg.isDeleted) {
+        msgElement.innerHTML = `<p class="deleted-text"><em>[MENSAGEM DELETADA]</em></p>`;
+      } else {
+        msgElement.innerHTML = `
+          <p class="text-content">${msg.text}</p>
+          <span class="time-stamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+        `;
+        if(msg.senderId === currentUser.uid) {
+          msgElement.onclick = () => {
+            if(confirm('Apagar registro da mensagem?')) {
+              database.ref(`chats/${chatId}/messages/${msgId}`).update({ isDeleted: true });
+            }
+          };
+        }
+      }
+      messagesContainer.appendChild(msgElement);
+    });
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  });
+}
+
+function sendMessage() {
+  if(!messageInput) return;
+  const text = messageInput.value.trim();
+  if(!text || !activeChatId) return;
+  const msgRef = database.ref(`chats/${activeChatId}/messages`).push();
+  msgRef.set({
+    senderId: currentUser.uid,
+    text: text,
+    timestamp: firebase.database.ServerValue.TIMESTAMP,
+    isDeleted: false
+  });
+  messageInput.value = '';
+}
+
+if(btnSendMessage) btnSendMessage.addEventListener('click', sendMessage);
+if(messageInput) {
+  messageInput.addEventListener('keypress', (e) => {
+    if(e.key === 'Enter') sendMessage();
+  });
+}
+
+// ASSEGURA QUE A TELA DE LOGIN APARECERÁ NO INÍCIO CASO O MONITOR DO FIREBASE DEMORE
+showPage(loginPage);
+  if(!messagesContainer) return;
     messagesContainer.innerHTML = '';
     snapshot.forEach(childSnapshot => {
       const msg = childSnapshot.val();
