@@ -1,115 +1,481 @@
-:root {
-    --bg-dark: #000000;
-    --glass-bg: rgba(25, 25, 27, 0.75);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --ios-blue: #0a84ff;
-    --ios-red: #ff3b30;
-    --text-main: #ffffff;
-    --text-muted: #8e8e93;
+const firebaseConfig = {
+  apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfykh4",
+  authDomain: "chatbuddy-96a61.firebaseapp.com",
+  databaseURL: "https://chatbuddy-96a61-default-rtdb.firebaseio.com",
+  projectId: "chatbuddy-96a61",
+  storageBucket: "chatbuddy-96a61.firebasestorage.app",
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const database = firebase.database();
+
+let currentUser = null;
+let activeChatId = null;
+let activeRecipientId = null;
+let base64AvatarString = "";
+let selectedMessageText = "";
+let selectedMessageId = "";
+let silencedUsers = {};
+
+// Sistema de Resposta Ativa (Swipe target)
+let currentReplyTargetData = null;
+
+// Sistema de Gravação de Áudio
+let mediaRecorder = null;
+let audioChunks = [];
+let audioTimerInterval = null;
+let audioDurationSeconds = 0;
+
+const viewPages = {
+    login: document.getElementById('login-page'),
+    register: document.getElementById('register-page'),
+    profile: document.getElementById('profile-page'),
+    chat: document.getElementById('chat-page')
+};
+
+function changeView(target) {
+    Object.keys(viewPages).forEach(k => viewPages[k].classList.add('hidden'));
+    viewPages[target].classList.remove('hidden');
 }
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-body { background: var(--bg-dark); color: var(--text-main); overflow: hidden; width: 100vw; height: 100vh; }
-
-/* O CORRETOR DE CLIQUE CRÍTICO: Isola o mouse de janelas invisíveis */
-.hidden { 
-    display: none !important; 
-    pointer-events: none !important; 
-    visibility: hidden !important; 
-    opacity: 0 !important;
+function setupImageLoader(inputId, callback) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => callback(ev.target.result);
+        reader.readAsDataURL(file);
+    });
 }
 
-/* Containers das Páginas */
-.auth-container { 
-    width: 100vw; height: 100dvh; display: flex; justify-content: center; align-items: center; 
-    position: fixed; top: 0; left: 0; z-index: 10; background: #000; 
+setupImageLoader('initial-avatar-file', (b64) => {
+    base64AvatarString = b64;
+    const imgEl = document.getElementById('initial-avatar-preview');
+    imgEl.src = b64;
+    imgEl.classList.remove('hidden');
+    document.getElementById('initial-avatar-placeholder').classList.add('hidden');
+});
+
+setupImageLoader('settings-avatar-file-input', (b64) => {
+    document.getElementById('settings-my-avatar').src = b64;
+    if(currentUser) {
+        database.ref(`users/${currentUser.uid}`).update({ avatar: b64 });
+    }
+});
+
+// AUTENTICAÇÃO ATUALIZADA (CORREÇÃO DO GOOGLE)
+document.getElementById('btn-login').addEventListener('click', () => {
+    const email = document.getElementById('email-login').value.trim();
+    const pass = document.getElementById('password-login').value;
+    if(!email || !pass) return alert("Preencha os campos!");
+    auth.signInWithEmailAndPassword(email, pass).catch(err => alert(err.message));
+});
+
+document.getElementById('btn-send-code').addEventListener('click', () => {
+    const email = document.getElementById('email-reg').value.trim();
+    const pass = document.getElementById('password-reg').value;
+    if(!email || !pass) return alert("Preencha os campos!");
+    document.getElementById('reg-step-1').classList.add('hidden');
+    document.getElementById('reg-step-2').classList.remove('hidden');
+});
+
+document.getElementById('btn-verify-and-register').addEventListener('click', () => {
+    if(document.getElementById('verification-code-input').value.trim() !== "123456") return alert("Código incorreto!");
+    const email = document.getElementById('email-reg').value.trim();
+    const pass = document.getElementById('password-reg').value;
+    auth.createUserWithEmailAndPassword(email, pass).then(() => changeView('profile')).catch(err => alert(err.message));
+});
+
+document.getElementById('btn-google-login').addEventListener('click', () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithRedirect(provider); // Ajustado para redirecionamento mobile limpo
+});
+
+auth.getRedirectResult().then((result) => {
+    if (result.user) {
+        currentUser = result.user;
+        checkUserInDatabase(result.user);
+    }
+}).catch((error) => console.log(error.message));
+
+document.getElementById('btn-save-profile').addEventListener('click', () => {
+    const nick = document.getElementById('display-name').value.trim();
+    const userAt = document.getElementById('username').value.trim().replace('@','');
+    const bio = document.getElementById('user-bio').value.trim() || "Disponível no ChatBuddy";
+    if(!nick || !userAt) return alert("Campos obrigatórios vazios!");
+
+    database.ref('users/' + currentUser.uid).set({
+        uid: currentUser.uid,
+        nickname: nick,
+        username: '@' + userAt,
+        bio: bio,
+        avatar: base64AvatarString || "https://via.placeholder.com/150",
+        status: "online",
+        lastSeen: firebase.database.ServerValue.TIMESTAMP
+    }).then(() => changeView('chat'));
+});
+
+function setupPresenceSystem(userId) {
+    const myStatusRef = database.ref(`users/${userId}`);
+    database.ref(".info/connected").on("value", (snap) => {
+        if (snap.val() === false) return;
+        myStatusRef.onDisconnect().update({ status: "offline" }).then(() => {
+            myStatusRef.update({ status: "online" });
+        });
+    });
 }
-.app-container, .settings-screen { 
-    width: 100vw; height: 100dvh; position: fixed; top: 0; left: 0; z-index: 5; background: #000; display: flex; flex-direction: column; 
+
+const msgInput = document.getElementById('message-input');
+msgInput.addEventListener('input', () => {
+    if (activeChatId && currentUser) {
+        const status = msgInput.value.trim().length > 0 ? "digitando..." : "online";
+        database.ref(`chats/${activeChatId}/typing/${currentUser.uid}`).set(status);
+    }
+});
+msgInput.addEventListener('blur', () => {
+    if (activeChatId && currentUser) {
+        database.ref(`chats/${activeChatId}/typing/${currentUser.uid}`).set("online");
+    }
+});
+
+function loadMyAccountSettingsData(userId) {
+    database.ref(`users/${userId}`).on('value', snap => {
+        const data = snap.val();
+        if(!data) return;
+        document.getElementById('settings-my-avatar').src = data.avatar || "https://via.placeholder.com/150";
+        document.getElementById('settings-my-username-label').innerText = data.username || "@usuario";
+        document.getElementById('settings-my-nickname-input').value = data.nickname || "";
+        document.getElementById('settings-my-bio-input').value = data.bio || "";
+    });
 }
 
-/* Design Glassmorphism Premium */
-.glass-premium { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); }
-.auth-box { width: 90%; max-width: 360px; padding: 30px; border-radius: 20px; text-align: center; }
+document.getElementById('btn-save-settings-profile').addEventListener('click', () => {
+    if(!currentUser) return;
+    const newNick = document.getElementById('settings-my-nickname-input').value.trim();
+    const newBio = document.getElementById('settings-my-bio-input').value.trim();
+    if(!newNick) return alert("O apelido não pode ficar em branco!");
+    
+    database.ref(`users/${currentUser.uid}`).update({ nickname: newNick, bio: newBio });
+});
 
-/* Logos e Tipografia */
-.ios-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
-.ios-subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 30px; }
-.mono-icon-light { width: 24px; height: 24px; color: white; }
-
-/* Inputs Estilo iOS Flutuante */
-.input-group-premium { position: relative; margin-bottom: 16px; width: 100%; }
-.input-group-premium input { 
-    width: 100%; padding: 14px 12px 6px 12px; background: rgba(255,255,255,0.06); border: 1px solid transparent; 
-    border-radius: 10px; color: #fff; font-size: 15px; outline: none; transition: 0.2s; 
+function buildTicks(status) {
+    if(!status) return '';
+    switch(status) {
+        case 'sending': return `<div class="status-dot-wrapper"><span class="status-dot dot-sending"></span></div>`;
+        case 'sent': return `<div class="status-dot-wrapper"><span class="status-dot dot-sent-unreceived"></span></div>`;
+        case 'delivered': return `<div class="status-dot-wrapper"><span class="status-dot dot-delivered"></span><span class="status-dot dot-delivered"></span></div>`;
+        case 'read': return `<div class="status-dot-wrapper"><span class="status-dot dot-read"></span><span class="status-dot dot-read"></span></div>`;
+    }
+    return '';
 }
-.input-group-premium input:focus { border-color: var(--ios-blue); background: rgba(255,255,255,0.09); }
-.input-group-premium label { 
-    position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); 
-    font-size: 15px; transition: 0.2s; pointer-events: none; 
+
+// IMPLEMENTAÇÃO DO DESLIZAR PARA RESPONDER COM ANIMAÇÃO DA SETA SE ABRINDO
+function bindSwipeToReply(rowWrapper, messageBubble, messageData) {
+    let startX = 0;
+    let currentX = 0;
+    const indicator = rowWrapper.querySelector('.swipe-reply-indicator');
+
+    messageBubble.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX;
+    }, { passive: true });
+
+    messageBubble.addEventListener('touchmove', (e) => {
+        currentX = e.touches[0].clientX;
+        let deltaX = currentX - startX;
+
+        // Limita o arrasto apenas para a direita e bota uma resistência física máxima de 75px
+        if (deltaX > 0) {
+            if (deltaX > 75) deltaX = 75;
+            messageBubble.style.transform = `translateX(${deltaX}px)`;
+            
+            // Lógica matemática para abrir a seta proporcionalmente ao movimento da mão
+            let progress = deltaX / 60; // 60px é o ponto perfeito de ativação
+            if (progress > 1) progress = 1;
+            
+            indicator.style.opacity = progress;
+            indicator.style.transform = `scale(${progress})`;
+        }
+    }, { passive: true });
+
+    messageBubble.addEventListener('touchend', () => {
+        let deltaX = currentX - startX;
+        messageBubble.style.transform = 'translateX(0px)';
+        indicator.style.opacity = '0';
+        indicator.style.transform = 'scale(0)';
+
+        // Se arrastou o suficiente, engatilha a resposta no input
+        if (deltaX > 60) {
+            triggerReplyMode(messageData);
+        }
+        startX = 0; currentX = 0;
+    });
 }
-.input-group-premium input:focus ~ label,
-.input-group-premium input:not(:placeholder-shown) ~ label { top: 12px; font-size: 11px; color: var(--ios-blue); }
 
-/* Botões */
-.ios-btn-primary { 
-    width: 100%; padding: 14px; background: var(--ios-blue); border: none; border-radius: 12px; 
-    color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; 
+function triggerReplyMode(msgData) {
+    currentReplyTargetData = msgData;
+    document.getElementById('reply-preview-user').innerText = msgData.senderId === currentUser.uid ? "Você" : "Mensagem";
+    document.getElementById('reply-preview-body').innerText = msgData.text || (msgData.image ? "Foto" : "Áudio");
+    document.getElementById('reply-preview-bar').classList.remove('hidden');
+    document.getElementById('message-input').focus();
 }
-.ios-btn-primary:active { opacity: 0.8; }
-.ios-btn-google { 
-    width: 100%; padding: 12px; background: #fff; color: #000; border: none; border-radius: 12px; 
-    font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; margin-top: 10px; 
+
+document.getElementById('btn-close-reply-preview').addEventListener('click', () => {
+    currentReplyTargetData = null;
+    document.getElementById('reply-preview-bar').classList.add('hidden');
+});
+
+// ABRIR SESSÃO DO CHAT
+function openChatRoom(chatId, recipientData) {
+    activeChatId = chatId;
+    activeRecipientId = recipientData.uid;
+    
+    document.getElementById('active-chat-name').innerText = recipientData.nickname;
+    document.getElementById('active-chat-avatar').src = recipientData.avatar;
+    document.getElementById('chat-room-screen').classList.remove('hidden');
+
+    // Escuta requisições de chamadas recebidas para este usuário
+    listenForIncomingCalls();
+
+    database.ref(`chats/${chatId}/typing/${recipientData.uid}`).on('value', tSnap => {
+        const currentTypingStatus = tSnap.val();
+        const statusTextEl = document.getElementById('active-chat-status');
+        if (currentTypingStatus === "digitando...") {
+            statusTextEl.innerText = "digitando...";
+            statusTextEl.style.color = "var(--ios-green)";
+        } else {
+            database.ref(`users/${recipientData.uid}`).once('value', rSnap => {
+                const rUser = rSnap.val();
+                if(!rUser) return;
+                const badgeEl = document.getElementById('active-chat-online-badge');
+                if(rUser.status === 'online') {
+                    statusTextEl.innerText = "online";
+                    statusTextEl.style.color = "var(--ios-green)";
+                    badgeEl.classList.remove('hidden');
+                } else {
+                    statusTextEl.innerText = "offline";
+                    statusTextEl.style.color = "var(--text-muted)";
+                    badgeEl.classList.add('hidden');
+                }
+            });
+        }
+    });
+
+    database.ref(`chats/${chatId}/messages`).off();
+    database.ref(`chats/${chatId}/messages`).on('value', snap => {
+        const box = document.getElementById('messages-container');
+        box.innerHTML = '';
+        
+        snap.forEach(child => {
+            const data = child.val();
+            
+            const rowWrapper = document.createElement('div');
+            rowWrapper.className = "message-row-wrapper";
+            
+            // Injeta a seta monocromática invisível que se expande
+            rowWrapper.innerHTML = `<div class="swipe-reply-indicator"><div class="swipe-arrow-icon"></div></div>`;
+            
+            const card = document.createElement('div');
+            card.className = `message ${data.senderId === currentUser.uid ? 'sent' : 'received'}`;
+            
+            let content = '';
+            
+            // Se a mensagem contiver uma resposta acoplada
+            if (data.replyTo) {
+                content += `<div class="reply-embedded-card"><strong>${data.replyTo.user}:</strong> ${data.replyTo.body}</div>`;
+            }
+            if (data.image) content += `<img src="${data.image}" class="message-img" onclick="openLightbox('${data.image}')">`;
+            if (data.audio) {
+                content += `
+                <div class="custom-audio-player">
+                    <button class="play-audio-btn" onclick="playAudioMessage(this, '${data.audio}')">Ouvir</button>
+                    <div class="audio-progress-bar"><div class="audio-progress-fill"></div></div>
+                </div>`;
+            }
+            if (data.text) content += `<p>${data.text}</p>`;
+            
+            let ticks = data.senderId === currentUser.uid ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
+            card.innerHTML = content + ticks;
+            
+            // Vincula o gesto de arrasto (Swipe)
+            bindSwipeToReply(rowWrapper, card, data);
+            
+            applyLongPress(card, () => {
+                selectedMessageText = data.text || "";
+                selectedMessageId = data.id;
+                const clone = card.cloneNode(true);
+                const wrapper = document.getElementById('focused-message-wrapper');
+                wrapper.innerHTML = '';
+                wrapper.appendChild(clone);
+                document.getElementById('blur-overlay').classList.remove('hidden');
+            });
+            
+            rowWrapper.appendChild(card);
+            box.appendChild(rowWrapper);
+        });
+        box.scrollTop = box.scrollHeight;
+    });
 }
-.divider-text { margin: 15px 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; }
-.auth-switch { margin-top: 20px; font-size: 13px; color: var(--text-muted); }
-.auth-switch span { color: var(--ios-blue); cursor: pointer; font-weight: 500; }
 
-/* Cabeçalhos e Abas do App */
-.app-top-bar { padding: 16px; display: flex; justify-content: space-between; align-items: center; }
-.app-tabs { display: flex; border-bottom: 1px solid var(--glass-border); }
-.tab-item { flex: 1; padding: 12px; text-align: center; color: var(--text-muted); font-size: 14px; cursor: pointer; }
-.tab-item.active { color: var(--ios-blue); font-weight: 600; border-bottom: 2px solid var(--ios-blue); }
-.tab-content-container { flex: 1; overflow-y: auto; position: relative; }
+function pushMessage(text, imgBase64 = null, audioBase64 = null) {
+    if(!text.trim() && !imgBase64 && !audioBase64) return;
+    const ref = database.ref(`chats/${activeChatId}/messages`).push();
+    
+    const payload = {
+        id: ref.key,
+        senderId: currentUser.uid,
+        status: 'sending',
+        timestamp: firebase.database.ServerValue.TIMESTAMP
+    };
+    if(text.trim()) payload.text = text;
+    if(imgBase64) payload.image = imgBase64;
+    if(audioBase64) payload.audio = audioBase64;
+    
+    // Se estiver respondendo a alguém no momento do push
+    if (currentReplyTargetData) {
+        payload.replyTo = {
+            user: currentReplyTargetData.senderId === currentUser.uid ? "Você" : "Mensagem",
+            body: currentReplyTargetData.text || (currentReplyTargetData.image ? "Foto" : "Áudio")
+        };
+        // Reseta o banner de resposta
+        currentReplyTargetData = null;
+        document.getElementById('reply-preview-bar').classList.add('hidden');
+    }
+    
+    database.ref(`chats/${activeChatId}/typing/${currentUser.uid}`).set("online");
 
-/* Lista de Chats e Layout de Linhas */
-.chat-item-row { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; }
-.chat-item-row img { width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; background: #222; }
-.chat-item-info h4 { font-size: 15px; font-weight: 600; }
-.chat-item-info p { font-size: 13px; color: var(--text-muted); }
+    ref.set(payload).then(() => {
+        setTimeout(() => ref.update({ status: 'sent' }), 350);
+        setTimeout(() => ref.update({ status: 'delivered' }), 850);
+        setTimeout(() => ref.update({ status: 'read' }), 1500);
+    });
 
-/* Sala de chat ativa e Balões */
-.chat-room-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: #000; z-index: 20; display: flex; flex-direction: column; }
-.chat-header { padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
-.back-btn, .icon-btn-dots { background: none; border: none; color: var(--ios-blue); cursor: pointer; }
-.active-user-info { flex: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; }
-.header-avatar { width: 36px; height: 36px; border-radius: 50%; }
-.messages-container { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #050505; }
-.message { max-width: 75%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.4; word-wrap: break-word; }
-.message.sent { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
-.message.received { background: #262629; color: white; align-self: flex-start; border-bottom-left-radius: 4px; }
+    document.getElementById('message-input').value = '';
+    triggerMicButtonState();
+}
 
-/* Rodapé do Chat */
-.chat-footer { padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
-.footer-input-row { flex: 1; display: flex; align-items: center; background: rgba(255,255,255,0.08); padding: 8px 12px; border-radius: 20px; }
-.footer-input-row input { flex: 1; background: none; border: none; color: white; outline: none; margin-left: 8px; font-size: 15px; }
-.btn-send-round { width: 32px; height: 32px; border-radius: 50%; background: var(--ios-blue); border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+// SISTEMA COMPLETO DE LIGAÇÕES (SINALIZAÇÃO VIA FIREBASE)
+function listenForIncomingCalls() {
+    database.ref(`users/${currentUser.uid}/incomingCall`).on('value', snap => {
+        const callData = snap.val();
+        if (callData && callData.status === "chamando") {
+            // Abre overlay de chamada recebida
+            document.getElementById('call-user-name').innerText = callData.callerName;
+            document.getElementById('call-status-label').innerText = "Chamada de Voz Recebida...";
+            document.getElementById('call-overlay-screen').classList.remove('hidden');
+            
+            // Modifica ação do botão para aceitar
+            const btnMute = document.getElementById('btn-toggle-mute-mic');
+            btnMute.innerText = "Atender";
+            btnMute.onclick = () => {
+                database.ref(`users/${currentUser.uid}/incomingCall`).update({ status: "atendida" });
+                document.getElementById('call-status-label').innerText = "Em Linha";
+                btnMute.innerText = "Mudo";
+            };
+        }
+    });
+}
 
-/* Grid da Galeria de Mídias Compartilhadas */
-.popup-media-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-gap: 6px; margin-top: 8px; }
-.popup-media-item { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: #222; }
+document.getElementById('btn-start-call').addEventListener('click', () => {
+    if (!activeRecipientId) return;
+    document.getElementById('call-status-label').innerText = "Chamando...";
+    document.getElementById('call-overlay-screen').classList.remove('hidden');
+    
+    // Injeta a chamada no nó do destinatário via Realtime Database
+    database.ref(`users/${activeRecipientId}/incomingCall`).set({
+        callerId: currentUser.uid,
+        callerName: "Alguém",
+        status: "chamando"
+    });
 
-/* Outros Menus e Overlays */
-.ios-dropdown-overlay, .blur-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.6); z-index: 100; display: flex; justify-content: center; align-items: center; }
-.contact-popup-card { width: 85%; max-width: 320px; padding: 20px; border-radius: 16px; text-align: center; }
-.avatar-popup-center { width: 70px; height: 70px; border-radius: 50%; margin-bottom: 10px; }
-.popup-internal-tabs { display: flex; margin: 15px 0; border-bottom: 1px solid var(--glass-border); }
-.inner-tab { flex: 1; padding: 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; }
-.inner-tab.active { color: var(--ios-blue); border-bottom: 2px solid var(--ios-blue); }
-.popup-action-row-btn { width: 100%; padding: 12px; background: none; border: none; border-bottom: 1px solid var(--glass-border); text-align: left; color: #fff; font-size: 14px; cursor: pointer; }
-.danger-text { color: var(--ios-red) !important; }
-.btn-popup-close-primary { margin-top: 15px; width: 100%; padding: 10px; background: rgba(255,255,255,0.08); border: none; border-radius: 8px; color: white; cursor: pointer; }
+    // Monitora se ele atendeu ou desligou
+    database.ref(`users/${activeRecipientId}/incomingCall/status`).on('value', s => {
+        if (s.val() === "atendida") {
+            document.getElementById('call-status-label').innerText = "Em Linha";
+        }
+    });
+});
 
-/* FAB Button */
-.btn-fab { position: absolute; bottom: 20px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--ios-blue); border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(10,132,255,0.3); }
-  
+document.getElementById('btn-hangup-call').addEventListener('click', () => {
+    document.getElementById('call-overlay-screen').classList.add('hidden');
+    if (activeRecipientId) {
+        database.ref(`users/${activeRecipientId}/incomingCall`).remove();
+    }
+    database.ref(`users/${currentUser.uid}/incomingCall`).remove();
+});
+
+// FUNÇÕES DE ÁUDIO REUTILIZADAS
+function startRecordingAudio() {
+    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+        audioChunks = [];
+        mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+        mediaRecorder.onstop = () => {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
+            const reader = new FileReader();
+            reader.onloadend = () => pushMessage("", null, reader.result);
+            reader.readAsDataURL(audioBlob);
+            stream.getTracks().forEach(track => track.stop());
+        };
+        mediaRecorder.start();
+        audioDurationSeconds = 0;
+        document.getElementById('audio-timer').innerText = "0:00";
+        document.getElementById('audio-recording-ui').classList.remove('hidden');
+        audioTimerInterval = setInterval(() => {
+            audioDurationSeconds++;
+            const mins = Math.floor(audioDurationSeconds / 60);
+            const secs = audioDurationSeconds % 60;
+            document.getElementById('audio-timer').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+        }, 1000);
+    }).catch(() => alert("Sem permissão para usar o Microfone!"));
+}
+
+function stopRecordingAudio() {
+    if(mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+        clearInterval(audioTimerInterval);
+        document.getElementById('audio-recording-ui').classList.add('hidden');
+    }
+}
+
+function playAudioMessage(btn, audioBase64) {
+    const audio = new Audio(audioBase64);
+    const fill = btn.nextElementSibling.querySelector('.audio-progress-fill');
+    btn.innerText = "Pausar";
+    audio.play();
+    audio.addEventListener('timeupdate', () => {
+        const pct = (audio.currentTime / audio.duration) * 100;
+        fill.style.width = pct + "%";
+    });
+    audio.addEventListener('ended', () => {
+        btn.innerText = "Ouvir";
+        fill.style.width = "0%";
+    });
+}
+
+function openLightbox(imgSrc) {
+    const box = document.getElementById('lightbox-overlay');
+    document.getElementById('lightbox-img').src = imgSrc;
+    box.classList.remove('hidden');
+}
+
+function triggerMicButtonState() {
+    const btn = document.getElementById('btn-send');
+    const val = document.getElementById('message-input').value.trim();
+    if(val.length > 0) {
+        btn.innerText = "Enviar";
+        btn.className = "icon-btn state-send";
+    } else {
+        btn.innerText = "Áudio";
+        btn.className = "icon-btn state-mic";
+    }
+}
+document.getElementById('message-input').addEventListener('input', triggerMicButtonState);
+
+document.getElementById('btn-send').addEventListener('click', function() {
+    if(this.classList.contains('state-send')) {
+        pushMessage(document.getElementById('message-input').value);
+    } else {
+        if(this.classList.contains('recordin
