@@ -1,4 +1,4 @@
-// CONFIGURAÇÃO DO FIREBASE
+// CONFIGURAÇÃO DO FIREBASE (COMPAT)
 const firebaseConfig = {
   apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfykh4", 
   authDomain: "chatbuddy-96a61.firebaseapp.com",
@@ -14,469 +14,359 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const database = firebase.database();
 
-// Elementos Mapeados
+// Mapeamento Dom
 const loginPage = document.getElementById('login-page');
 const registerPage = document.getElementById('register-page');
 const verificationPage = document.getElementById('verification-page');
 const profilePage = document.getElementById('profile-page');
 const chatPage = document.getElementById('chat-page');
 
-// Elementos de Verificação/Segurança
-const emailCodeInput = document.getElementById('email-code-input');
-const pin2Input = document.getElementById('pin2-input');
-const btnVerifySubmit = document.getElementById('btn-verify-submit');
-const emailVerifyGroup = document.getElementById('email-verify-group');
-const pin2VerifyGroup = document.getElementById('pin2-verify-group');
-const verificationDesc = document.getElementById('verification-desc');
+// Telas e Abas
+const chatRoomScreen = document.getElementById('chat-room-screen');
+const settingsScreen = document.getElementById('settings-screen');
+const blurOverlay = document.getElementById('blur-overlay');
+const focusedMsgContainer = document.getElementById('focused-message-container');
+const multiSelectBar = document.getElementById('multi-select-bar');
 
-// Modais e Botões de Ação
-const btnOpenSettings = document.getElementById('btn-open-settings');
-const settingsModal = document.getElementById('settings-modal');
-const btnCloseSettings = document.getElementById('btn-close-settings');
-const toggle2FA = document.getElementById('toggle-2fa');
-const pinSetupGroup = document.getElementById('pin-setup-group');
-const newPin2 = document.getElementById('new-pin2');
-const btnSavePin = document.getElementById('btn-save-pin');
-const btnBlockUser = document.getElementById('btn-block-user');
-const blockedBadge = document.getElementById('blocked-badge');
-
-// Menu de Contexto
-const messageContextMenu = document.getElementById('message-context-menu');
-const ctxEdit = document.getElementById('ctx-edit');
-const ctxDeleteForMe = document.getElementById('ctx-delete-for-me');
-const ctxDeleteForAll = document.getElementById('ctx-delete-for-all');
-
-const btnToRegister = document.getElementById('btn-to-register');
-const btnToLogin = document.getElementById('btn-to-login');
-const btnLogin = document.getElementById('btn-login');
-const btnRegister = document.getElementById('btn-register');
-const btnGoogleLogin = document.getElementById('btn-google-login');
-const btnGoogleReg = document.getElementById('btn-google-reg');
-const btnSaveProfile = document.getElementById('btn-save-profile');
-const btnSendMessage = document.getElementById('btn-send');
-const btnLogout = document.getElementById('btn-logout');
-const btnOpenNewChat = document.getElementById('btn-new-chat');
-const btnCloseModal = document.getElementById('btn-close-modal');
-
-const emailLoginInput = document.getElementById('email-login');
-const passwordLoginInput = document.getElementById('password-login');
-const emailRegInput = document.getElementById('email-reg');
-const passwordRegInput = document.getElementById('password-reg');
-const displayNameInput = document.getElementById('display-name');
-const usernameInput = document.getElementById('username');
-const messageInput = document.getElementById('message-input');
-
-const currentUserNameHTML = document.getElementById('current-user-name');
-const currentUserTagHTML = document.getElementById('current-user-tag');
-const activeChatNameHTML = document.getElementById('active-chat-name');
-const activeChatStatusHTML = document.getElementById('active-chat-status');
-
-const chatsListContainer = document.getElementById('chats-list');
 const messagesContainer = document.getElementById('messages-container');
-const contactsModal = document.getElementById('contacts-modal');
-const contactsListContainer = document.getElementById('contacts-list');
+const messageInput = document.getElementById('message-input');
+const mediaFileInput = document.getElementById('media-file-input');
+const stickerPanel = document.getElementById('sticker-panel');
+
+// inputs de Configurações Inline
+const setNickname = document.getElementById('set-nickname');
+const setUsername = document.getElementById('set-username');
 
 let currentUser = null;
 let activeChatId = null;
 let activeRecipientId = null;
 let selectedMessageId = null;
-let tempVerificationCode = null;
-let pendingUserCredentials = null;
+let selectedMessageElement = null;
 
-// Sistema de Navegação
+// Lógica de Seleção Múltipla
+let isMultiSelectMode = false;
+let selectedMessagesList = [];
+
+// Navegação simplificada
 function showPage(page) {
-    const pages = [loginPage, registerPage, verificationPage, profilePage, chatPage];
-    pages.forEach(p => { if(p) p.classList.add('hidden'); });
-    if(page) page.classList.remove('hidden');
+    [loginPage, registerPage, verificationPage, profilePage, chatPage].forEach(p => p.classList.add('hidden'));
+    page.classList.remove('hidden');
 }
 
-if(btnToRegister) btnToRegister.addEventListener('click', () => showPage(registerPage));
-if(btnToLogin) btnToLogin.addEventListener('click', () => showPage(loginPage));
-
-// Monitoramento da Sessão do Firebase
-auth.onAuthStateChanged(user => {
-  if (user) {
-    currentUser = user;
-    database.ref('users/' + user.uid).once('value').then(snapshot => {
-      if (snapshot.exists() && snapshot.val().username) {
-         // Checa se tem 2FA ativo
-         if(snapshot.val().pin2Active) {
-             solicitarPin2();
-         } else {
-             loadChatSystem();
-         }
-      } else {
-        showPage(profilePage);
-      }
+// Handler de Abas do WhatsApp
+document.querySelectorAll('.tab-item').forEach(tab => {
+    tab.addEventListener('click', (e) => {
+        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+        e.target.classList.add('active');
+        if(e.target.id === 'tab-chats') document.getElementById('content-chats').classList.remove('hidden');
+        if(e.target.id === 'tab-status') document.getElementById('content-status').classList.remove('hidden');
+        if(e.target.id === 'tab-calls') document.getElementById('content-calls').classList.remove('hidden');
     });
-  } else {
-    currentUser = null;
-    showPage(loginPage);
-  }
 });
 
-// Registro por Email com Simulação de Envio de Código Segura
-if(btnRegister) {
-  btnRegister.addEventListener('click', () => {
-    const email = emailRegInput.value.trim();
-    const password = passwordRegInput.value.trim();
-    if(!email || !password) return alert('Preencha os campos!');
-    
-    // Gerar código de 6 dígitos aleatório
-    tempVerificationCode = Math.floor(100000 + Math.random() * 900000).toString();
-    pendingUserCredentials = { email, password, action: 'register' };
-    
-    alert(`[Simulação SMS/Email] Código de verificação enviado para ${email}: ${tempVerificationCode}`);
-    
-    verificationDesc.innerText = `Enviamos uma chave de acesso para o endereço ${email}.`;
-    emailVerifyGroup.classList.remove('hidden');
-    pin2VerifyGroup.classList.add('hidden');
-    showPage(verificationPage);
-  });
-}
-
-// Login por Email
-if(btnLogin) {
-  btnLogin.addEventListener('click', () => {
-    const email = emailLoginInput.value.trim();
-    const password = passwordLoginInput.value.trim();
-    if(!email || !password) return alert('Preencha os campos!');
-    
-    pendingUserCredentials = { email, password, action: 'login' };
-    auth.signInWithEmailAndPassword(email, password)
-      .catch(error => alert('Erro: ' + error.message));
-  });
-}
-
-// Submissão do código de verificação
-if(btnVerifySubmit) {
-    btnVerifySubmit.addEventListener('click', () => {
-        // Modo Verificação de E-mail Cadastro
-        if(pendingUserCredentials && pendingUserCredentials.action === 'register') {
-            if(emailCodeInput.value.trim() === tempVerificationCode) {
-                auth.createUserWithEmailAndPassword(pendingUserCredentials.email, pendingUserCredentials.password)
-                    .catch(error => alert(error.message));
+// Auth Listener
+auth.onAuthStateChanged(user => {
+    if (user) {
+        currentUser = user;
+        database.ref('users/' + user.uid).once('value').then(snapshot => {
+            if (snapshot.exists() && snapshot.val().username) {
+                showPage(chatPage);
+                loadChatSystem();
             } else {
-                alert('Código incorreto!');
+                showPage(profilePage);
             }
-        } 
-        // Modo login PIN 2 Etapas
-        else {
-            database.ref('users/' + currentUser.uid + '/pin2').once('value').then(snap => {
-                if(snap.val() === pin2Input.value.trim()) {
-                    loadChatSystem();
-                } else {
-                    alert('Código PIN Inválido!');
-                }
-            });
-        }
-    });
-}
-
-function solicitarPin2() {
-    verificationDesc.innerText = "Sua conta possui verificação de duas etapas ativada.";
-    emailVerifyGroup.classList.add('hidden');
-    pin2VerifyGroup.classList.remove('hidden');
-    showPage(verificationPage);
-}
-
-// Login com Google
-function loginComGoogle() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).catch(e => alert(e.message));
-}
-if(btnGoogleLogin) btnGoogleLogin.addEventListener('click', loginComGoogle);
-if(btnGoogleReg) btnGoogleReg.addEventListener('click', loginComGoogle);
-
-// Salvar Perfil
-if(btnSaveProfile) {
-  btnSaveProfile.addEventListener('click', () => {
-    const displayName = displayNameInput.value.trim();
-    const username = usernameInput.value.trim().toLowerCase().replace(/\s+/g, '');
-    if(!displayName || !username) return alert('Preencha os dados!');
-    
-    database.ref('usernames/' + username).once('value').then(snapshot => {
-      if(snapshot.exists() && snapshot.val() !== currentUser.uid) {
-        alert('Nome de usuário em uso!');
-      } else {
-        database.ref('users/' + currentUser.uid).update({
-          uid: currentUser.uid,
-          displayName: displayName,
-          username: username,
-          status: 'Online'
         });
-        database.ref('usernames/' + username).set(currentUser.uid);
-        loadChatSystem();
-      }
-    });
-  });
-}
+    } else {
+        showPage(loginPage);
+    }
+});
 
-if(btnLogout) {
-  btnLogout.addEventListener('click', () => {
-    if(currentUser) database.ref('users/' + currentUser.uid).update({ status: 'Offline' });
-    auth.signOut();
-  });
-}
+// Entrada de Perfil Inicial
+document.getElementById('btn-save-profile').addEventListener('click', () => {
+    const nick = document.getElementById('display-name').value.trim();
+    const user = document.getElementById('username').value.trim().toLowerCase();
+    if(!nick || !user) return alert('Campos obrigatórios!');
+    
+    database.ref('users/' + currentUser.uid).set({
+        uid: currentUser.uid, displayName: nick, username: user, status: 'Online',
+        lastNickUpdate: 0, lastUserUpdate: 0, nickCountToday: 0, nickDayTimestamp: 0
+    });
+    database.ref('usernames/' + user).set(currentUser.uid);
+    showPage(chatPage);
+});
 
 function loadChatSystem() {
-  showPage(chatPage);
-  database.ref('users/' + currentUser.uid).update({ status: 'Online' });
-  listenToMyChats();
-}
-
-// Configurações e 2FA
-if(btnOpenSettings) btnOpenSettings.addEventListener('click', () => settingsModal.classList.remove('hidden'));
-if(btnCloseSettings) btnCloseSettings.addEventListener('click', () => settingsModal.classList.add('hidden'));
-
-if(toggle2FA) {
-    toggle2FA.addEventListener('change', (e) => {
-        if(e.target.checked) {
-            pinSetupGroup.classList.remove('hidden');
-        } else {
-            database.ref('users/' + currentUser.uid).update({ pin2Active: false, pin2: null });
-            pinSetupGroup.classList.add('hidden');
-            alert('Verificação em duas etapas desligada.');
+    // Configura os inputs da tela cheia de configurações
+    database.ref('users/' + currentUser.uid).on('value', snap => {
+        const data = snap.val();
+        if(data) {
+            setNickname.value = data.displayName || '';
+            setUsername.value = data.username || '';
+            document.getElementById('settings-avatar-char').innerText = data.displayName ? data.displayName.charAt(0).toUpperCase() : 'B';
         }
     });
+    listenToMyChats();
 }
 
-if(btnSavePin) {
-    btnSavePin.addEventListener('click', () => {
-        const pin = newPin2.value.trim();
-        if(pin.length < 6) return alert('O PIN precisa ter 6 números!');
+// Abrir e fechar configurações estilo Nova Aba do WhatsApp
+document.getElementById('btn-main-settings').addEventListener('click', () => settingsScreen.classList.remove('hidden'));
+document.getElementById('btn-back-settings').addEventListener('click', () => settingsScreen.classList.add('hidden'));
+
+// --- LOGICA DE CONTROLE DE TEMPO DE USERNAME E NICKNAME ---
+document.getElementById('btn-update-nickname').addEventListener('click', () => {
+    const novoNick = setNickname.value.trim();
+    if(!novoNick) return;
+    
+    const agora = Date.now();
+    database.ref('users/' + currentUser.uid).once('value').then(snap => {
+        let u = snap.val();
+        let hoje = new Date().setHours(0,0,0,0);
+        
+        let contagem = u.nickDayTimestamp === hoje ? (u.nickCountToday || 0) : 0;
+        if(contagem >= 2) return alert('Limite atingido! Você só pode alterar o apelido 2 vezes por dia.');
+        
         database.ref('users/' + currentUser.uid).update({
-            pin2Active: true,
-            pin2: pin
+            displayName: novoNick,
+            nickCountToday: contagem + 1,
+            nickDayTimestamp: hoje
         });
-        alert('PIN de verificação configurado com sucesso!');
-        pinSetupGroup.classList.add('hidden');
+        alert('Nickname atualizado com sucesso!');
     });
-}
+});
 
-// Sistema de Bloqueio de Usuários
-if(btnBlockUser) {
-    btnBlockUser.addEventListener('click', () => {
-        if(!activeRecipientId) return;
-        const ref = database.ref(`users/${currentUser.uid}/blocked/${activeRecipientId}`);
-        ref.once('value').then(snap => {
-            if(snap.exists()) {
-                ref.remove();
-                btnBlockUser.innerText = "Bloquear Usuário";
-                btnBlockUser.classList.remove('blocked-active');
-                blockedBadge.classList.add('hidden');
-            } else {
-                ref.set(true);
-                btnBlockUser.innerText = "Desbloquear";
-                btnBlockUser.classList.add('blocked-active');
-                blockedBadge.classList.remove('hidden');
-            }
-        });
-    });
-}
-
-function verificarStatusBloqueio(recipientId) {
-    database.ref(`users/${currentUser.uid}/blocked/${recipientId}`).on('value', snap => {
-        if(snap.exists()) {
-            blockedBadge.classList.remove('hidden');
-            btnBlockUser.innerText = "Desbloquear";
-            btnBlockUser.classList.add('blocked-active');
-        } else {
-            blockedBadge.classList.add('hidden');
-            btnBlockUser.innerText = "Bloquear Usuário";
-            btnBlockUser.classList.remove('blocked-active');
+document.getElementById('btn-update-username').addEventListener('click', () => {
+    const novoUser = setUsername.value.trim().toLowerCase().replace(/\s+/g, '');
+    if(!novoUser) return;
+    
+    const agora = Date.now();
+    database.ref('users/' + currentUser.uid).once('value').then(snap => {
+        let u = snap.val();
+        const seteDias = 7 * 24 * 60 * 60 * 1000;
+        
+        if(agora - (u.lastUserUpdate || 0) < seteDias) {
+            const restante = Math.ceil((seteDias - (agora - u.lastUserUpdate)) / (1000 * 60 * 60 * 24));
+            return alert(`Você precisa esperar mais ${restante} dias para mudar o username novamente.`);
         }
+        
+        database.ref('usernames/' + novoUser).once('value').then(userSnap => {
+            if(userSnap.exists()) return alert('Este username já está sendo usado!');
+            
+            database.ref('usernames/' + u.username).remove();
+            database.ref('usernames/' + novoUser).set(currentUser.uid);
+            database.ref('users/' + currentUser.uid).update({
+                username: novoUser,
+                lastUserUpdate: agora
+            });
+            alert('Username atualizado!');
+        });
     });
-}
+});
 
-if(btnOpenNewChat) btnOpenNewChat.addEventListener('click', () => { contactsModal.classList.remove('hidden'); loadContactsList(); });
-if(btnCloseModal) btnCloseModal.addEventListener('click', () => contactsModal.classList.add('hidden'));
-
-function loadContactsList() {
-  database.ref('users').once('value', snapshot => {
-    if(!contactsListContainer) return;
-    contactsListContainer.innerHTML = '';
-    snapshot.forEach(childSnapshot => {
-      const user = childSnapshot.val();
-      if(user.uid !== currentUser.uid) {
-        const item = document.createElement('div');
-        item.className = 'chat-item';
-        item.innerHTML = `
-          <div class="avatar">${user.displayName ? user.displayName.charAt(0).toUpperCase() : '?'}</div>
-          <div class="chat-item-details"><p class="name">${user.displayName}</p><p class="preview">@${user.username}</p></div>
-        `;
-        item.onclick = () => startConversaCom(user.uid, user.displayName);
-        contactsListContainer.appendChild(item);
-      }
-    });
-  });
-}
-
-function startConversaCom(recipientId, recipientName) {
-  contactsModal.classList.add('hidden');
-  const chatId = currentUser.uid < recipientId ? `${currentUser.uid}_${recipientId}` : `${recipientId}_${currentUser.uid}`;
-  database.ref(`users/${currentUser.uid}/my_chats/${chatId}`).set({ recipientId: recipientId });
-  database.ref(`users/${recipientId}/my_chats/${chatId}`).set({ recipientId: currentUser.uid });
-  openChatRoom(chatId, recipientName, recipientId);
-}
-
+// Escuta de conversas existentes
 function listenToMyChats() {
-  database.ref(`users/${currentUser.uid}/my_chats`).on('value', snapshot => {
-    if(!chatsListContainer) return;
-    chatsListContainer.innerHTML = '';
-    snapshot.forEach(childSnapshot => {
-      const chatId = childSnapshot.key;
-      const chatData = childSnapshot.val();
-      database.ref(`users/${chatData.recipientId}`).once('value', userSnap => {
-        const user = userSnap.val();
-        if(user) {
-          const chatItem = document.createElement('div');
-          chatItem.className = `chat-item ${activeChatId === chatId ? 'active' : ''}`;
-          chatItem.innerHTML = `
-            <div class="avatar">${user.displayName ? user.displayName.charAt(0).toUpperCase() : '?'}</div>
-            <div class="chat-item-details"><p class="name">${user.displayName}</p><p class="preview">Canal pronto...</p></div>
-          `;
-          chatItem.onclick = () => openChatRoom(chatId, user.displayName, user.uid);
-          chatsListContainer.appendChild(chatItem);
-        }
-      });
+    database.ref(`users/${currentUser.uid}/my_chats`).on('value', snapshot => {
+        const container = document.getElementById('chats-list');
+        container.innerHTML = '';
+        snapshot.forEach(child => {
+            const chatId = child.key;
+            database.ref(`users/${child.val().recipientId}`).once('value', uSnap => {
+                const user = uSnap.val();
+                if(user) {
+                    const item = document.createElement('div');
+                    item.className = 'chat-item';
+                    item.innerHTML = `<div class="avatar">${user.displayName.charAt(0)}</div><div><h4>${user.displayName}</h4><small>@${user.username}</small></div>`;
+                    item.onclick = () => openChatRoom(chatId, user.displayName, user.uid);
+                    container.appendChild(item);
+                }
+            });
+        });
     });
-  });
 }
 
 function openChatRoom(chatId, recipientName, recipientId) {
-  activeChatId = chatId;
-  activeRecipientId = recipientId;
-  btnBlockUser.classList.remove('hidden');
-  if(activeChatNameHTML) activeChatNameHTML.innerText = recipientName;
-  
-  verificarStatusBloqueio(recipientId);
-
-  database.ref(`chats/${chatId}/messages`).off();
-  database.ref(`chats/${chatId}/messages`).on('value', snapshot => {
-    if(!messagesContainer) return;
-    messagesContainer.innerHTML = '';
-    snapshot.forEach(childSnapshot => {
-      const msg = childSnapshot.val();
-      const msgId = childSnapshot.key;
-      
-      // Lógica de Apagar para Mim local
-      if(msg.deletedFor && msg.deletedFor[currentUser.uid]) return;
-
-      const msgElement = document.createElement('div');
-      msgElement.className = `message ${msg.senderId === currentUser.uid ? 'sent' : 'received'}`;
-      
-      if(msg.isDeleted) {
-        msgElement.innerHTML = `<p class="deleted-text"><em>🗑️ Esta mensagem foi apagada</em></p>`;
-      } else {
-        let reactionContent = '';
-        if(msg.reactions) {
-            const emojis = Object.values(msg.reactions).join('');
-            if(emojis.length > 0) reactionContent = `<div class="reactions-badge">${emojis}</div>`;
-        }
-
-        msgElement.innerHTML = `
-          <p class="text-content">${msg.text}</p>
-          <span class="time-stamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-          ${reactionContent}
-        `;
-        
-        // EVENTO LONG PRESS (SEGURAR TOUCH / CLIQUES LONGO)
-        let pressTimer;
-        const startPress = (e) => {
-            pressTimer = setTimeout(() => openContextMenu(e, msgId, msg.senderId), 600);
-        };
-        const endPress = () => clearTimeout(pressTimer);
-
-        msgElement.addEventListener('mousedown', startPress);
-        msgElement.addEventListener('mouseup', endPress);
-        msgElement.addEventListener('touchstart', startPress, {passive: true});
-        msgElement.addEventListener('touchend', endPress);
-        // Suporte para clique direito convencional no PC
-        msgElement.addEventListener('contextmenu', (e) => { e.preventDefault(); openContextMenu(e, msgId, msg.senderId); });
-      }
-      messagesContainer.appendChild(msgElement);
-    });
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-  });
-}
-
-// Menu de Contexto Dinâmico (Estilo WhatsApp)
-function openContextMenu(e) {
-    // Interromper se o clique disparou via toque ou coordenadas de mouse
-    let posX = e.clientX || (e.touches && e.touches[0].clientX);
-    let posY = e.clientY || (e.touches && e.touches[0].clientY);
+    activeChatId = chatId; activeRecipientId = recipientId;
+    chatRoomScreen.classList.remove('hidden');
+    document.getElementById('active-chat-name').innerText = recipientName;
     
-    selectedMessageId = arguments[1];
-    const senderId = arguments[2];
+    database.ref(`chats/${chatId}/messages`).off();
+    database.ref(`chats/${chatId}/messages`).on('value', snapshot => {
+        messagesContainer.innerHTML = '';
+        snapshot.forEach(child => {
+            const msg = child.val();
+            const msgId = child.key;
+            if(msg.deletedFor && msg.deletedFor[currentUser.uid]) return;
 
-    messageContextMenu.style.top = `${posY}px`;
-    messageContextMenu.style.left = `${posX}px`;
-    messageContextMenu.classList.remove('hidden');
+            const div = document.createElement('div');
+            div.className = `message ${msg.senderId === currentUser.uid ? 'sent' : 'received'}`;
+            div.dataset.msgid = msgId;
+            div.dataset.sender = msg.senderId;
 
-    // Regra WhatsApp solicitada: se for minha, mostra apagar para todos
-    if(senderId === currentUser.uid) {
-        ctxDeleteForAll.classList.remove('hidden');
-        ctxEdit.classList.remove('hidden');
-    } else {
-        ctxDeleteForAll.classList.add('hidden');
-        ctxEdit.classList.add('hidden');
-    }
+            if(msg.isDeleted) {
+                div.innerHTML = `<small style="color:var(--text-muted)">🗑️ Mensagem apagada</small>`;
+            } else if (msg.type === 'file') {
+                div.innerHTML = `<a href="${msg.fileUrl}" target="_blank" class="file-attachment">📄 ${msg.fileName || 'Arquivo'}</a>`;
+            } else if (msg.type === 'img') {
+                div.innerHTML = `<img src="${msg.fileUrl}" class="media-preview">`;
+            } else {
+                div.innerHTML = `<p>${msg.text}</p>`;
+            }
+            
+            // Eventos de clique e clique longo para seleção e blur do iPhone
+            div.addEventListener('contextmenu', (e) => { e.preventDefault(); handleLongPress(div, msgId, msg.senderId); });
+            div.addEventListener('click', () => handleMessageClick(div, msgId));
+
+            messagesContainer.appendChild(div);
+        });
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    });
 }
 
-// Fechar menus ao clicar fora
-document.addEventListener('click', (e) => {
-    if(!messageContextMenu.contains(e.target)) messageContextMenu.classList.add('hidden');
+// Fechar Sala de Chat
+document.getElementById('btn-back-to-list').addEventListener('click', () => chatRoomScreen.classList.add('hidden'));
+
+// --- BLUR DO IPHONE E CONTEXT MENU ---
+function handleLongPress(element, msgId, senderId) {
+    if(isMultiSelectMode) return;
+    selectedMessageId = msgId;
+    selectedMessageElement = element;
+
+    focusedMsgContainer.innerHTML = element.innerHTML;
+    focusedMsgContainer.className = element.className;
+    
+    if(senderId === currentUser.uid) document.getElementById('ctx-delete-for-all').classList.remove('hidden');
+    else document.getElementById('ctx-delete-for-all').classList.add('hidden');
+
+    blurOverlay.classList.remove('hidden');
+}
+
+blurOverlay.addEventListener('click', (e) => {
+    if(e.target === blurOverlay) blurOverlay.classList.add('hidden');
 });
 
-// Ações do Menu de Contexto
-ctxDeleteForMe.addEventListener('click', () => {
-    if(!activeChatId || !selectedMessageId) return;
-    database.ref(`chats/${activeChatId}/messages/${selectedMessageId}/deletedFor/${currentUser.uid}`).set(true);
+// Ativar Seleção Múltipla via menu iPhone
+document.getElementById('ctx-select-multiple').addEventListener('click', () => {
+    blurOverlay.classList.add('hidden');
+    isMultiSelectMode = true;
+    multiSelectBar.classList.remove('hidden');
+    toggleSelectMessage(selectedMessageElement, selectedMessageId);
 });
 
-ctxDeleteForAll.addEventListener('click', () => {
-    if(!activeChatId || !selectedMessageId) return;
-    database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).update({ isDeleted: true });
+function handleMessageClick(element, msgId) {
+    if(!isMultiSelectMode) return;
+    toggleSelectMessage(element, msgId);
+}
+
+function toggleSelectMessage(element, msgId) {
+    if(selectedMessagesList.includes(msgId)) {
+        selectedMessagesList = selectedMessagesList.filter(id => id !== msgId);
+        element.classList.remove('selected');
+    } else {
+        selectedMessagesList.push(msgId);
+        element.classList.add('selected');
+    }
+    document.getElementById('select-count').innerText = `${selectedMessagesList.length} selecionada(s)`;
+}
+
+// Cancelar seleção
+document.getElementById('btn-cancel-select').addEventListener('click', () => {
+    isMultiSelectMode = false;
+    selectedMessagesList = [];
+    multiSelectBar.classList.add('hidden');
+    document.querySelectorAll('.message').forEach(m => m.classList.remove('selected'));
 });
 
-ctxEdit.addEventListener('click', () => {
-    const novoTexto = prompt("Edite sua mensagem:");
-    if(!novoTexto || !activeChatId || !selectedMessageId) return;
-    database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).update({ text: novoTexto + " (editada)" });
+// Ação de Apagar Múltiplos para Mim
+document.getElementById('btn-multi-delete-me').addEventListener('click', () => {
+    selectedMessagesList.forEach(id => {
+        database.ref(`chats/${activeChatId}/messages/${id}/deletedFor/${currentUser.uid}`).set(true);
+    });
+    document.getElementById('btn-cancel-select').click();
 });
 
-// Sistema de Reações do Menu
-document.querySelectorAll('.react-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-        const emoji = e.target.innerText;
-        if(!activeChatId || !selectedMessageId) return;
-        database.ref(`chats/${activeChatId}/messages/${selectedMessageId}/reactions/${currentUser.uid}`).set(emoji);
+// Envio de Mensagem de Texto Comum
+function emitirMensagem(conteudo, tipo = 'text', extras = {}) {
+    const ref = database.ref(`chats/${activeChatId}/messages`).push();
+    ref.set({
+        senderId: currentUser.uid,
+        timestamp: firebase.database.ServerValue.TIMESTAMP,
+        type: tipo,
+        isDeleted: false,
+        ...conteudo,
+        ...extras
+    });
+}
+
+document.getElementById('btn-send').addEventListener('click', () => {
+    const t = messageInput.value.trim();
+    if(!t) return;
+    emitirMensagem({ text: t });
+    messageInput.value = '';
+});
+
+// --- SISTEMA DE ARQUIVOS (MÍDIA ATÉ 500MB) ---
+document.getElementById('btn-attach').addEventListener('click', () => mediaFileInput.click());
+mediaFileInput.addEventListener('change', (e) => {
+    const arquivo = e.target.files[0];
+    if(!arquivo) return;
+    
+    const limiteMaximo = 500 * 1024 * 1024; // 500 MB em Bytes
+    if(arquivo.size > limiteMaximo) return alert('Arquivo muito pesado! Limite máximo permitido de 500MB.');
+
+    // Banco de dados simulado em formato de String base64 ou URL fictícia de Blob seguro local
+    const leitor = new FileReader();
+    leitor.onload = function(evt) {
+        const tipoMsg = arquivo.type.startsWith('image/') ? 'img' : 'file';
+        emitirMensagem({ fileUrl: evt.target.result, fileName: arquivo.name }, tipoMsg);
+    };
+    leitor.readAsDataURL(arquivo);
+});
+
+// Painel de Figurinhas
+document.getElementById('btn-sticker').addEventListener('click', () => stickerPanel.classList.remove('hidden'));
+document.getElementById('btn-close-stickers').addEventListener('click', () => stickerPanel.classList.add('hidden'));
+document.querySelectorAll('.sticker-item').forEach(stk => {
+    stk.addEventListener('click', (e) => {
+        emitirMensagem({ text: e.target.innerText }, 'sticker');
+        stickerPanel.classList.add('hidden');
     });
 });
 
-function sendMessage() {
-  if(!messageInput || !activeChatId) return;
+// Botão Novo Chat (+)
+document.getElementById('btn-new-chat').addEventListener('click', () => {
+    const modal = document.getElementById('contacts-modal');
+    modal.classList.remove('hidden');
+    const list = document.getElementById('contacts-list');
+    list.innerHTML = '';
+    database.ref('users').once('value', snap => {
+        snap.forEach(c => {
+            let u = c.val();
+            if(u.uid !== currentUser.uid) {
+                const item = document.createElement('div');
+                item.className = 'chat-item';
+                item.innerHTML = `<h4>${u.displayName}</h4>`;
+                item.onclick = () => {
+                    modal.classList.add('hidden');
+                    const cId = currentUser.uid < u.uid ? `${currentUser.uid}_${u.uid}` : `${u.uid}_${currentUser.uid}`;
+                    database.ref(`users/${currentUser.uid}/my_chats/${cId}`).set({ recipientId: u.uid });
+                    openChatRoom(cId, u.displayName, u.uid);
+                };
+                list.appendChild(item);
+            }
+        });
+    });
+});
+document.getElementById('btn-close-modal').addEventListener('click', () => document.getElementById('contacts-modal').classList.add('hidden'));
+
+// Registro inicial mock
+document.getElementById('btn-to-register').addEventListener('click', () => showPage(registerPage));
+document.getElementById('btn-to-login').addEventListener('click', () => showPage(loginPage));
+document.getElementById('btn-login').addEventListener('click', () => {
+    auth.signInWithEmailAndPassword(document.getElementById('email-login').value, document.getElementById('password-login').value)
+        .catch(e => alert(e.message));
+});
+document.getElementById('btn-register').addEventListener('click', () => {
+    auth.createUserWithEmailAndPassword(document.getElementById('email-reg').value, document.getElementById('password-reg').value)
+        .catch(e => alert(e.message));
+});
   
-  // Impede envio se estiver bloqueado
-  database.ref(`users/${currentUser.uid}/blocked/${activeRecipientId}`).once('value').then(snap => {
-      if(snap.exists()) return alert('Você bloqueou este contato. Desbloqueie para transmitir dados.');
-      
-      const text = messageInput.value.trim();
-      if(!text) return;
-      const msgRef = database.ref(`chats/${activeChatId}/messages`).push();
-      msgRef.set({
-        senderId: currentUser.uid,
-        text: text,
-        timestamp: firebase.database.ServerValue.TIMESTAMP,
-        isDeleted: false
-      });
-      messageInput.value = '';
-  });
-}
-
-if(btnSendMessage) btnSendMessage.addEventListener('click', sendMessage);
-if(messageInput) messageInput.addEventListener('keypress', (e) => { if(e.key === 'Enter') sendMessage(); });
-
-showPage(loginPage);
-                                              
