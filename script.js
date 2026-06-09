@@ -1,5 +1,7 @@
+// ATENÇÃO: Verifique se esses dados batem EXATAMENTE com o seu Firebase Console!
+// Corrigido com as letras maiúsculas exatas do seu Console (W e H)
 const firebaseConfig = {
-  apiKey: "AIzaSyDwW6loRrGTJqXdYkbhv-0srz7VKKfykh4",
+  apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfyH4",
   authDomain: "chatbuddy-96a61.firebaseapp.com",
   databaseURL: "https://chatbuddy-96a61-default-rtdb.firebaseio.com",
   projectId: "chatbuddy-96a61",
@@ -13,6 +15,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const database = firebase.database();
 
+// Mapeamento de Elementos
 const loginPage = document.getElementById('login-page');
 const registerPage = document.getElementById('register-page');
 const profilePage = document.getElementById('profile-page');
@@ -22,6 +25,8 @@ const btnToRegister = document.getElementById('btn-to-register');
 const btnToLogin = document.getElementById('btn-to-login');
 const btnLogin = document.getElementById('btn-login');
 const btnRegister = document.getElementById('btn-register');
+const btnGoogleLogin = document.getElementById('btn-google-login');
+const btnGoogleReg = document.getElementById('btn-google-reg');
 const btnSaveProfile = document.getElementById('btn-save-profile');
 const btnSendMessage = document.getElementById('btn-send');
 const btnLogout = document.getElementById('btn-logout');
@@ -50,17 +55,28 @@ let currentUser = null;
 let activeChatId = null;
 let activeRecipientId = null;
 
+// Função de troca de página com reset de animação CSS
 function showPage(page) {
-  if(loginPage) loginPage.classList.add('hidden');
-  if(registerPage) registerPage.classList.add('hidden');
-  if(profilePage) profilePage.classList.add('hidden');
-  if(chatPage) chatPage.classList.add('hidden');
-  if(page) page.classList.remove('hidden');
+  const pages = [loginPage, registerPage, profilePage, chatPage];
+  pages.forEach(p => {
+    if(p) p.classList.add('hidden');
+  });
+  if(page) {
+    page.classList.remove('hidden');
+    // Força a reinicialização da animação do box interno
+    const box = page.querySelector('.page-transition');
+    if(box) {
+        box.style.animation = 'none';
+        box.offsetHeight; // Truque do navegador para resetar reflow
+        box.style.animation = null;
+    }
+  }
 }
 
 if(btnToRegister) btnToRegister.addEventListener('click', () => showPage(registerPage));
 if(btnToLogin) btnToLogin.addEventListener('click', () => showPage(loginPage));
 
+// Monitor de Sessão
 auth.onAuthStateChanged(user => {
   if (user) {
     currentUser = user;
@@ -77,6 +93,7 @@ auth.onAuthStateChanged(user => {
   }
 });
 
+// Registro por Email
 if(btnRegister) {
   btnRegister.addEventListener('click', () => {
     const email = emailRegInput.value.trim();
@@ -87,6 +104,7 @@ if(btnRegister) {
   });
 }
 
+// Login por Email
 if(btnLogin) {
   btnLogin.addEventListener('click', () => {
     const email = emailLoginInput.value.trim();
@@ -97,6 +115,22 @@ if(btnLogin) {
   });
 }
 
+// FUNÇÃO ATUALIZADA: Login / Cadastro com Google
+function loginComGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+      .then((result) => {
+          // O fluxo do onAuthStateChanged cuidará de checar se o perfil existe
+      })
+      .catch((error) => {
+          alert('Erro na autenticação Google: ' + error.message);
+      });
+}
+
+if(btnGoogleLogin) btnGoogleLogin.addEventListener('click', loginComGoogle);
+if(btnGoogleReg) btnGoogleReg.addEventListener('click', loginComGoogle);
+
+// Salvar Perfil Inicial
 if(btnSaveProfile) {
   btnSaveProfile.addEventListener('click', () => {
     const displayName = displayNameInput.value.trim();
@@ -120,6 +154,7 @@ if(btnSaveProfile) {
   });
 }
 
+// Sair do Sistema
 if(btnLogout) {
   btnLogout.addEventListener('click', () => {
     if(currentUser) database.ref('users/' + currentUser.uid).update({ status: 'Offline' });
@@ -158,12 +193,12 @@ function loadContactsList() {
       const user = childSnapshot.val();
       if(user.uid !== currentUser.uid) {
         const item = document.createElement('div');
-        item.className = 'contact-item';
+        item.className = 'chat-item'; // Aproveita o estilo da lista
         item.innerHTML = `
-          <div class="avatar">${user.displayName.charAt(0).toUpperCase()}</div>
-          <div class="contact-info">
+          <div class="avatar">${user.displayName ? user.displayName.charAt(0).toUpperCase() : '?'}</div>
+          <div class="chat-item-details">
             <p class="name">${user.displayName}</p>
-            <p class="username">@${user.username}</p>
+            <p class="preview">@${user.username}</p>
           </div>
         `;
         item.onclick = () => startConversaCom(user.uid, user.displayName);
@@ -188,7 +223,7 @@ function listenToMyChats() {
     if(!chatsListContainer) return;
     chatsListContainer.innerHTML = '';
     if(!snapshot.exists()) {
-      chatsListContainer.innerHTML = '<p class="empty-state">Nenhum canal ativo.</p>';
+      chatsListContainer.innerHTML = '<p class="chat-placeholder">Nenhum canal ativo.</p>';
       return;
     }
     snapshot.forEach(childSnapshot => {
@@ -200,7 +235,7 @@ function listenToMyChats() {
           const chatItem = document.createElement('div');
           chatItem.className = `chat-item ${activeChatId === chatId ? 'active' : ''}`;
           chatItem.innerHTML = `
-            <div class="avatar">${user.displayName.charAt(0).toUpperCase()}</div>
+            <div class="avatar">${user.displayName ? user.displayName.charAt(0).toUpperCase() : '?'}</div>
             <div class="chat-item-details">
               <p class="name">${user.displayName}</p>
               <p class="preview">Conexão segura estabelecida...</p>
@@ -231,7 +266,7 @@ function openChatRoom(chatId, recipientName, recipientId) {
       const msgElement = document.createElement('div');
       msgElement.className = `message ${msg.senderId === currentUser.uid ? 'sent' : 'received'}`;
       if(msg.isDeleted) {
-        msgElement.innerHTML = `<p class="deleted-text"><em>[MENSAGEM APAGADA]</em></p>`;
+        msgElement.innerHTML = `<p class="deleted-text"><em>[MENSAGEM DELETADA]</em></p>`;
       } else {
         msgElement.innerHTML = `
           <p class="text-content">${msg.text}</p>
@@ -256,6 +291,22 @@ function sendMessage() {
   const text = messageInput.value.trim();
   if(!text || !activeChatId) return;
   const msgRef = database.ref(`chats/${activeChatId}/messages`).push();
+  msgRef.set({
+    senderId: currentUser.uid,
+    text: text,
+    timestamp: firebase.database.ServerValue.TIMESTAMP,
+    isDeleted: false
+  });
+  messageInput.value = '';
+}
+
+if(btnSendMessage) btnSendMessage.addEventListener('click', sendMessage);
+if(messageInput) {
+  messageInput.addEventListener('keypress', (e) => {
+    if(e.key === 'Enter') sendMessage();
+  });
+  }
+  ush();
   msgRef.set({
     senderId: currentUser.uid,
     text: text,
