@@ -1,243 +1,115 @@
-// CONFIGURAÇÃO DO BANCO DO FIREBASE CHATBUDDY
-const firebaseConfig = {
-  apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfykh4",
-  authDomain: "chatbuddy-96a61.firebaseapp.com",
-  databaseURL: "https://chatbuddy-96a61-default-rtdb.firebaseio.com",
-  projectId: "chatbuddy-96a61",
-  storageBucket: "chatbuddy-96a61.firebasestorage.app",
-};
-
-// Inicializa o Firebase apenas se não tiver sido carregado ainda
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
-const auth = firebase.auth();
-const database = firebase.database();
-
-let currentUser = null;
-let activeChatId = null;
-let activeRecipientId = null;
-let base64AvatarString = "";
-let base64OwnSettingsAvatar = "";
-let selectedMessageText = "";
-let selectedMessageId = "";
-
-const viewPages = {
-    login: document.getElementById('login-page'),
-    register: document.getElementById('register-page'),
-    profile: document.getElementById('profile-page'),
-    chat: document.getElementById('chat-page')
-};
-
-// Altera as telas removendo e inserindo a classe hidden com segurança
-function changeView(target) {
-    Object.keys(viewPages).forEach(k => {
-        if (viewPages[k]) viewPages[k].classList.add('hidden');
-    });
-    if (viewPages[target]) {
-        viewPages[target].classList.remove('hidden');
-    }
+:root {
+    --bg-dark: #000000;
+    --glass-bg: rgba(25, 25, 27, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --ios-blue: #0a84ff;
+    --ios-red: #ff3b30;
+    --text-main: #ffffff;
+    --text-muted: #8e8e93;
 }
 
-// Função utilitária obrigatória para blindar eventos de elementos ausentes no DOM
-function safeAddEvent(id, event, callback) {
-    const el = document.getElementById(id);
-    if (el) {
-        el.addEventListener(event, callback);
-    }
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+body { background: var(--bg-dark); color: var(--text-main); overflow: hidden; width: 100vw; height: 100vh; }
+
+/* O CORRETOR DE CLIQUE CRÍTICO: Isola o mouse de janelas invisíveis */
+.hidden { 
+    display: none !important; 
+    pointer-events: none !important; 
+    visibility: hidden !important; 
+    opacity: 0 !important;
 }
 
-// ESCUTA DE AUTENTICAÇÃO ATIVA (MANTER LOGADO)
-auth.onAuthStateChanged(user => {
-    if (user) {
-        currentUser = user;
-        database.ref('users/' + user.uid).once('value').then(snap => {
-            if (snap.exists() && snap.val().username) {
-                changeView('chat');
-                setupPresenceSystem(user.uid);
-                loadChatList();
-                loadOwnProfileSettingsData(snap.val());
-            } else {
-                changeView('profile');
-            }
-        }).catch(err => {
-            console.error("Erro no nó de usuário:", err);
-            changeView('profile');
-        });
-    } else {
-        changeView('login');
-    }
-});
-
-// SISTEMA DE PRESENÇA
-function setupPresenceSystem(userId) {
-    const userStatusRef = database.ref(`users/${userId}`);
-    database.ref(".info/connected").on("value", (snap) => {
-        if (snap.val() === false) return;
-        userStatusRef.onDisconnect().update({ status: "offline", lastSeen: firebase.database.ServerValue.TIMESTAMP })
-        .then(() => {
-            userStatusRef.update({ status: "online", lastSeen: firebase.database.ServerValue.TIMESTAMP });
-        });
-    });
+/* Containers das Páginas */
+.auth-container { 
+    width: 100vw; height: 100dvh; display: flex; justify-content: center; align-items: center; 
+    position: fixed; top: 0; left: 0; z-index: 10; background: #000; 
+}
+.app-container, .settings-screen { 
+    width: 100vw; height: 100dvh; position: fixed; top: 0; left: 0; z-index: 5; background: #000; display: flex; flex-direction: column; 
 }
 
-function loadOwnProfileSettingsData(data) {
-    const preview = document.getElementById('settings-avatar-preview');
-    const nick = document.getElementById('settings-nickname');
-    const userAt = document.getElementById('settings-username');
-    const bio = document.getElementById('settings-bio');
+/* Design Glassmorphism Premium */
+.glass-premium { background: var(--glass-bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); border: 1px solid var(--glass-border); }
+.auth-box { width: 90%; max-width: 360px; padding: 30px; border-radius: 20px; text-align: center; }
 
-    if (preview) preview.src = data.avatar || "https://via.placeholder.com/150";
-    if (nick) nick.value = data.nickname || "";
-    if (userAt) userAt.value = (data.username || "").replace('@','');
-    if (bio) bio.value = data.bio || "";
-    base64OwnSettingsAvatar = data.avatar || "";
+/* Logos e Tipografia */
+.ios-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 4px; }
+.ios-subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 30px; }
+.mono-icon-light { width: 24px; height: 24px; color: white; }
+
+/* Inputs Estilo iOS Flutuante */
+.input-group-premium { position: relative; margin-bottom: 16px; width: 100%; }
+.input-group-premium input { 
+    width: 100%; padding: 14px 12px 6px 12px; background: rgba(255,255,255,0.06); border: 1px solid transparent; 
+    border-radius: 10px; color: #fff; font-size: 15px; outline: none; transition: 0.2s; 
 }
-
-// MAPEAMENTO SEGURO DE EVENTOS DE BOTÕES DE CLIQUE
-safeAddEvent('btn-login', 'click', () => {
-    const email = document.getElementById('email-login').value.trim();
-    const pass = document.getElementById('password-login').value;
-    if(!email || !pass) return alert("Preencha todos os campos!");
-    auth.signInWithEmailAndPassword(email, pass).catch(err => alert("Erro: " + err.message));
-});
-
-safeAddEvent('btn-send-code', 'click', () => {
-    const email = document.getElementById('email-reg').value.trim();
-    const pass = document.getElementById('password-reg').value;
-    if(!email || !pass) return alert("Insira credenciais válidas.");
-    
-    document.getElementById('reg-step-1').classList.add('hidden');
-    document.getElementById('reg-step-2').classList.remove('hidden');
-});
-
-safeAddEvent('btn-verify-and-register', 'click', () => {
-    const code = document.getElementById('verification-code-input').value.trim();
-    if(code !== "123456") return alert("Código ChatBuddy inválido!");
-    const email = document.getElementById('email-reg').value.trim();
-    const pass = document.getElementById('password-reg').value;
-    auth.createUserWithEmailAndPassword(email, pass)
-        .then(() => changeView('profile'))
-        .catch(err => alert("Erro: " + err.message));
-});
-
-safeAddEvent('btn-google-login', 'click', () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithPopup(provider).then((result) => {
-        const user = result.user;
-        database.ref('users/' + user.uid).once('value').then(snap => {
-            if (!snap.exists()) {
-                database.ref('users/' + user.uid).set({
-                    uid: user.uid,
-                    nickname: user.displayName || "Usuário Google",
-                    username: '@' + (user.email.split('@')[0]),
-                    bio: "Disponível no ChatBuddy",
-                    avatar: user.photoURL || "https://via.placeholder.com/150",
-                    status: "online",
-                    lastSeen: firebase.database.ServerValue.TIMESTAMP
-                }).then(() => changeView('chat'));
-            } else {
-                changeView('chat');
-            }
-        });
-    }).catch(err => alert("Erro no Login Google: " + err.message));
-});
-
-safeAddEvent('btn-save-profile', 'click', () => {
-    const nick = document.getElementById('display-name').value.trim();
-    const userAt = document.getElementById('username').value.trim().replace('@','');
-    const bio = document.getElementById('user-bio').value.trim() || "Disponível no ChatBuddy";
-    if(!nick || !userAt) return alert("Campos obrigatórios vazios!");
-
-    database.ref('users/' + currentUser.uid).set({
-        uid: currentUser.uid,
-        nickname: nick,
-        username: '@' + userAt,
-        bio: bio,
-        avatar: base64AvatarString || "https://via.placeholder.com/150",
-        status: "online",
-        lastSeen: firebase.database.ServerValue.TIMESTAMP
-    }).then(() => changeView('chat'));
-});
-
-// ABERTURA DE SALA DE CHAT E MONITORAÇÃO REATIVA
-function openChatRoom(chatId, recipientData) {
-    activeChatId = chatId;
-    activeRecipientId = recipientData.uid;
-    
-    document.getElementById('active-chat-name').innerText = recipientData.nickname;
-    document.getElementById('active-chat-avatar').src = recipientData.avatar;
-    document.getElementById('chat-room-screen').classList.remove('hidden');
-
-    database.ref(`users/${recipientData.uid}`).on('value', rSnap => {
-        const rUser = rSnap.val();
-        if(!rUser) return;
-        document.getElementById('active-chat-status').innerText = rUser.status === 'online' ? "online" : "offline";
-    });
-    
-    database.ref(`chats/${chatId}/messages`).off();
-    database.ref(`chats/${chatId}/messages`).on('value', snap => {
-        const box = document.getElementById('messages-container');
-        if(!box) return;
-        box.innerHTML = '';
-        
-        snap.forEach(child => {
-            const data = child.val();
-            const card = document.createElement('div');
-            card.className = `message ${data.senderId === currentUser.uid ? 'sent' : 'received'}`;
-            card.innerHTML = data.image ? `<img src="${data.image}" style="max-width:100%; border-radius:10px;"><p>${data.text}</p>` : `<p>${data.text}</p>`;
-            box.appendChild(card);
-        });
-        box.scrollTop = box.scrollHeight;
-    });
+.input-group-premium input:focus { border-color: var(--ios-blue); background: rgba(255,255,255,0.09); }
+.input-group-premium label { 
+    position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); 
+    font-size: 15px; transition: 0.2s; pointer-events: none; 
 }
+.input-group-premium input:focus ~ label,
+.input-group-premium input:not(:placeholder-shown) ~ label { top: 12px; font-size: 11px; color: var(--ios-blue); }
 
-// RENDERIZADOR DA LISTA DE CONVERSAS PRINCIPAL
-function loadChatList() {
-    database.ref('users').on('value', snap => {
-        const parent = document.getElementById('chats-list');
-        if(!parent) return;
-        parent.innerHTML = '';
-        snap.forEach(child => {
-            const user = child.val();
-            if(user.uid === currentUser.uid) return;
-            const row = document.createElement('div');
-            row.className = "chat-item-row";
-            row.innerHTML = `<img src="${user.avatar || 'https://via.placeholder.com/150'}">
-                             <div class="chat-item-info">
-                                <h4>${user.nickname}</h4>
-                                <p>${user.username}</p>
-                             </div>`;
-            row.addEventListener('click', () => {
-                const combinedId = currentUser.uid < user.uid ? currentUser.uid + "_" + user.uid : user.uid + "_" + currentUser.uid;
-                openChatRoom(combinedId, user);
-            });
-            parent.appendChild(row);
-        });
-    });
+/* Botões */
+.ios-btn-primary { 
+    width: 100%; padding: 14px; background: var(--ios-blue); border: none; border-radius: 12px; 
+    color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; transition: 0.2s; 
 }
-
-// ENVIO DE MENSAGENS
-function pushMessage() {
-    const input = document.getElementById('message-input');
-    if(!input || !input.value.trim()) return;
-    
-    database.ref(`chats/${activeChatId}/messages`).push({
-        senderId: currentUser.uid,
-        text: input.value.trim(),
-        timestamp: firebase.database.ServerValue.TIMESTAMP
-    });
-    input.value = '';
+.ios-btn-primary:active { opacity: 0.8; }
+.ios-btn-google { 
+    width: 100%; padding: 12px; background: #fff; color: #000; border: none; border-radius: 12px; 
+    font-size: 14px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px; cursor: pointer; margin-top: 10px; 
 }
+.divider-text { margin: 15px 0; font-size: 12px; color: var(--text-muted); text-transform: uppercase; }
+.auth-switch { margin-top: 20px; font-size: 13px; color: var(--text-muted); }
+.auth-switch span { color: var(--ios-blue); cursor: pointer; font-weight: 500; }
 
-safeAddEvent('btn-send', 'click', pushMessage);
-safeAddEvent('message-input', 'keypress', (e) => { if(e.key === 'Enter') pushMessage(); });
+/* Cabeçalhos e Abas do App */
+.app-top-bar { padding: 16px; display: flex; justify-content: space-between; align-items: center; }
+.app-tabs { display: flex; border-bottom: 1px solid var(--glass-border); }
+.tab-item { flex: 1; padding: 12px; text-align: center; color: var(--text-muted); font-size: 14px; cursor: pointer; }
+.tab-item.active { color: var(--ios-blue); font-weight: 600; border-bottom: 2px solid var(--ios-blue); }
+.tab-content-container { flex: 1; overflow-y: auto; position: relative; }
 
-// COMPORTAMENTOS GERAIS DE BOTÕES E NAVEGAÇÃO
-safeAddEvent('btn-to-register', 'click', () => changeView('register'));
-safeAddEvent('btn-to-login', 'click', () => changeView('login'));
-safeAddEvent('btn-main-settings', 'click', () => document.getElementById('settings-screen').classList.remove('hidden'));
-safeAddEvent('btn-back-settings', 'click', () => document.getElementById('settings-screen').classList.add('hidden'));
-safeAddEvent('btn-back-to-list', 'click', () => document.getElementById('chat-room-screen').classList.add('hidden'));
-safeAddEvent('btn-logout', 'click', () => { auth.signOut().then(() => window.location.reload()); });
-                        
+/* Lista de Chats e Layout de Linhas */
+.chat-item-row { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; }
+.chat-item-row img { width: 48px; height: 48px; border-radius: 50%; margin-right: 12px; background: #222; }
+.chat-item-info h4 { font-size: 15px; font-weight: 600; }
+.chat-item-info p { font-size: 13px; color: var(--text-muted); }
+
+/* Sala de chat ativa e Balões */
+.chat-room-screen { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: #000; z-index: 20; display: flex; flex-direction: column; }
+.chat-header { padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+.back-btn, .icon-btn-dots { background: none; border: none; color: var(--ios-blue); cursor: pointer; }
+.active-user-info { flex: 1; display: flex; align-items: center; gap: 10px; cursor: pointer; }
+.header-avatar { width: 36px; height: 36px; border-radius: 50%; }
+.messages-container { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; background: #050505; }
+.message { max-width: 75%; padding: 10px 14px; border-radius: 16px; font-size: 15px; line-height: 1.4; word-wrap: break-word; }
+.message.sent { background: var(--ios-blue); color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+.message.received { background: #262629; color: white; align-self: flex-start; border-bottom-left-radius: 4px; }
+
+/* Rodapé do Chat */
+.chat-footer { padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+.footer-input-row { flex: 1; display: flex; align-items: center; background: rgba(255,255,255,0.08); padding: 8px 12px; border-radius: 20px; }
+.footer-input-row input { flex: 1; background: none; border: none; color: white; outline: none; margin-left: 8px; font-size: 15px; }
+.btn-send-round { width: 32px; height: 32px; border-radius: 50%; background: var(--ios-blue); border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+
+/* Grid da Galeria de Mídias Compartilhadas */
+.popup-media-grid { display: grid; grid-template-columns: repeat(3, 1fr); grid-gap: 6px; margin-top: 8px; }
+.popup-media-item { width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: #222; }
+
+/* Outros Menus e Overlays */
+.ios-dropdown-overlay, .blur-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.6); z-index: 100; display: flex; justify-content: center; align-items: center; }
+.contact-popup-card { width: 85%; max-width: 320px; padding: 20px; border-radius: 16px; text-align: center; }
+.avatar-popup-center { width: 70px; height: 70px; border-radius: 50%; margin-bottom: 10px; }
+.popup-internal-tabs { display: flex; margin: 15px 0; border-bottom: 1px solid var(--glass-border); }
+.inner-tab { flex: 1; padding: 8px; background: none; border: none; color: var(--text-muted); cursor: pointer; }
+.inner-tab.active { color: var(--ios-blue); border-bottom: 2px solid var(--ios-blue); }
+.popup-action-row-btn { width: 100%; padding: 12px; background: none; border: none; border-bottom: 1px solid var(--glass-border); text-align: left; color: #fff; font-size: 14px; cursor: pointer; }
+.danger-text { color: var(--ios-red) !important; }
+.btn-popup-close-primary { margin-top: 15px; width: 100%; padding: 10px; background: rgba(255,255,255,0.08); border: none; border-radius: 8px; color: white; cursor: pointer; }
+
+/* FAB Button */
+.btn-fab { position: absolute; bottom: 20px; right: 20px; width: 56px; height: 56px; border-radius: 50%; background: var(--ios-blue); border: none; color: white; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 12px rgba(10,132,255,0.3); }
+  
