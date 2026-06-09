@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ChatBuddy - Professional iOS Edition</title>
+    <title>ChatBuddy - Ultra Premium iOS</title>
     <meta name="google" content="notranslate">
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -12,99 +12,106 @@
 
     <!-- TELA DE LOGIN -->
     <div id="login-page" class="auth-container">
-        <div class="auth-box glass">
-            <h1 class="ios-title">ChatBuddy</h1>
-            <h2>Sign In</h2>
-            <div class="input-group">
-                <label>Email</label>
-                <input type="email" id="email-login" placeholder="seuemail@cyber.com">
+        <div class="auth-box glass-premium">
+            <div class="auth-logo">
+                <div class="logo-icon-wrapper">
+                    <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.99 4.26L2 22l5.92-1.21C9.13 21.42 10.51 21.8 12 21.8c5.52 0 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+                </div>
+                <h1 class="ios-title">ChatBuddy</h1>
+                <p class="ios-subtitle">Conectando você ao amanhã</p>
             </div>
-            <div class="input-group">
+            
+            <div class="input-group-premium">
+                <input type="email" id="email-login" required placeholder=" ">
+                <label>E-mail</label>
+            </div>
+            <div class="input-group-premium">
+                <input type="password" id="password-login" required placeholder=" ">
                 <label>Senha</label>
-                <input type="password" id="password-login" placeholder="••••••••">
             </div>
             <button id="btn-login" class="ios-btn-primary">Entrar</button>
-            <div class="divider"></div>
+            <div class="divider-text">ou</div>
             <button id="btn-google-login" class="ios-btn-google">
-                <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="Google">
+                <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="Google" width="18">
                 Entrar com o Google
             </button>
-            <p class="auth-switch">Não tem conta? <span id="btn-to-register">Criar uma</span></p>
+            <p class="auth-switch">Não tem uma conta? <span id="btn-to-register">Criar conta</span></p>
         </div>
     </div>
 
-    <!-- TELA DE REGISTRO COM VALIDAÇÃO DE 6 DÍGITOS -->
+    <!-- TELA DE REGISTRO -->
     <div id="register-page" class="auth-container hidden">
-        <div class="auth-box glass">
-            <h1 class="ios-title">ChatBuddy</h1>
-            <h2>Criar Conta</h2>
+        <div class="auth-box glass-premium">
+            <h1 class="ios-title">Criar Conta</h1>
+            <p class="ios-subtitle" style="margin-bottom: 25px;">Rápido, seguro e privado.</p>
             
             <div id="reg-step-1">
-                <div class="input-group">
-                    <label>Email</label>
-                    <input type="email" id="email-reg" placeholder="seu-email@cyber.com">
+                <div class="input-group-premium">
+                    <input type="email" id="email-reg" required placeholder=" ">
+                    <label>E-mail</label>
                 </div>
-                <div class="input-group">
+                <div class="input-group-premium">
+                    <input type="password" id="password-reg" required placeholder=" ">
                     <label>Senha</label>
-                    <input type="password" id="password-reg" placeholder="••••••••">
                 </div>
-                <button id="btn-send-code" class="ios-btn-primary">Enviar Código de Verificação</button>
+                <button id="btn-send-code" class="ios-btn-primary">Enviar Código</button>
             </div>
 
             <div id="reg-step-2" class="hidden">
-                <p class="info-text-verify">Enviamos um código de 6 dígitos para o seu e-mail.</p>
-                <div class="input-group">
-                    <label>Código de Verificação (6 dígitos)</label>
-                    <input type="text" id="verification-code-input" maxlength="6" placeholder="000000" style="text-align: center; font-size: 24px; letter-spacing: 8px;">
+                <p class="info-text-verify" style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Insira o código de 6 dígitos enviado ao seu e-mail (Simulado: 123456).</p>
+                <div class="input-group-premium">
+                    <input type="text" id="verification-code-input" maxlength="6" style="text-align: center; font-size: 22px; letter-spacing: 6px;" required placeholder=" ">
+                    <label>Código</label>
                 </div>
-                <button id="btn-verify-and-register" class="ios-btn-primary">Verificar e Criar Conta</button>
-                <button id="btn-back-to-step1" class="action-text-btn" style="margin-top: 12px; display: block; width: 100%;">Voltar</button>
+                <button id="btn-verify-and-register" class="ios-btn-primary">Verificar e Criar</button>
+                <button id="btn-back-to-step1" class="action-text-btn" style="background:none; border:none; color:var(--text-muted); margin-top:15px; cursor:pointer;">Voltar</button>
             </div>
 
-            <p class="auth-switch">Já tem conta? <span id="btn-to-login">Entrar</span></p>
+            <p class="auth-switch" style="margin-top:20px;">Já tem uma conta? <span id="btn-to-login">Fazer Login</span></p>
         </div>
     </div>
 
-    <!-- TELA DE CONFIGURAÇÃO DE PERFIL INICIAL -->
+    <!-- CONFIGURAÇÃO DE PERFIL INICIAL -->
     <div id="profile-page" class="auth-container hidden">
-        <div class="auth-box glass">
-            <h2>Configurar Perfil</h2>
-            <div class="avatar-upload-container">
-                <div class="avatar-preview" id="initial-avatar-preview">
-                    <svg class="mono-icon-lg" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v2h-16v-2c0-2.66 5.33-4 8-4z"/></svg>
+        <div class="auth-box glass-premium">
+            <h2 class="ios-title" style="font-size: 22px;">Configurar Perfil</h2>
+            <p class="ios-subtitle">Escolha sua identidade visual</p>
+            
+            <div class="avatar-upload-container-premium">
+                <div class="avatar-preview-wrapper">
+                    <img id="initial-avatar-preview" src="" class="hidden">
+                    <div id="initial-avatar-placeholder" class="avatar-placeholder-svg">
+                        <svg viewBox="0 0 24 24" class="mono-icon-gray"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    </div>
                 </div>
-                <label for="initial-avatar-file" class="avatar-file-label">Escolher Foto</label>
+                <label for="initial-avatar-file" class="avatar-file-label-premium">
+                    <svg viewBox="0 0 24 24" class="mono-icon-light" style="width:16px;height:16px;margin-right:6px;"><path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg> Alterar Foto
+                </label>
                 <input type="file" id="initial-avatar-file" accept="image/*" class="hidden">
             </div>
-            <div class="input-group">
-                <label>Nickname (Apelido)</label>
-                <input type="text" id="display-name" placeholder="Ex: Arthur">
+
+            <div class="input-group-premium">
+                <input type="text" id="display-name" required placeholder=" ">
+                <label>Apelido (Nickname)</label>
             </div>
-            <div class="input-group">
-                <label>Username (Único)</label>
-                <input type="text" id="username" placeholder="Ex: arthur123">
+            <div class="input-group-premium">
+                <input type="text" id="username" required placeholder=" ">
+                <label>Nome de usuário (@)</label>
             </div>
-            <div class="input-group">
-                <label>Biografia</label>
-                <input type="text" id="user-bio-initial" placeholder="Disponível">
-            </div>
-            <button id="btn-save-profile" class="ios-btn-primary">Salvar Perfil</button>
+            <button id="btn-save-profile" class="ios-btn-primary">Salvar e Entrar</button>
         </div>
     </div>
 
     <!-- TELA PRINCIPAL DO APP -->
     <div id="chat-page" class="app-container hidden">
-        <header class="app-top-bar glass">
-            <h2 class="app-title">ChatBuddy</h2>
-            <div class="top-bar-actions">
-                <button id="btn-main-settings" class="icon-btn">
-                    <!-- Ícone de Engrenagem SVG Monocromático -->
-                    <svg class="mono-icon" viewBox="0 0 24 24"><path fill="currentColor" d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5z"/></svg>
-                </button>
-            </div>
+        <header class="app-top-bar glass-premium">
+            <h2 class="app-title">Conversas</h2>
+            <button id="btn-main-settings" class="icon-btn">
+                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5z"/></svg>
+            </button>
         </header>
 
-        <nav class="app-tabs glass">
+        <nav class="app-tabs glass-premium">
             <div class="tab-item active" id="tab-chats">Conversas</div>
             <div class="tab-item" id="tab-status">Status</div>
             <div class="tab-item" id="tab-calls">Chamadas</div>
@@ -112,185 +119,112 @@
 
         <div class="tab-content-container">
             <div id="content-chats" class="tab-pane">
-                <div class="search-bar">
-                    <input type="text" id="search-contact" placeholder="Pesquisar...">
-                </div>
                 <div id="chats-list" class="chats-list"></div>
                 <button id="btn-new-chat" class="btn-fab">
-                    <svg class="mono-icon-white" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                 </button>
             </div>
-            <div id="content-status" class="tab-pane hidden"><div class="empty-state">Nenhum status.</div></div>
-            <div id="content-calls" class="tab-pane hidden"><div class="empty-state">Sem chamadas.</div></div>
+            <div id="content-status" class="tab-pane hidden"><div class="empty-state">Nenhum status disponível.</div></div>
+            <div id="content-calls" class="tab-pane hidden"><div class="empty-state">Sem chamadas recentes.</div></div>
         </div>
 
-        <!-- TELA INTEIRA DA SALA DE CONVERSA -->
+        <!-- TELA SALA DE CONVERSA -->
         <div id="chat-room-screen" class="chat-room-screen hidden">
-            <header class="chat-header glass">
+            <header class="chat-header glass-premium">
                 <button id="btn-back-to-list" class="back-btn">
-                    <svg class="mono-icon" viewBox="0 0 24 24" style="width:24px;height:24px;"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
                 </button>
                 <div class="active-user-info" id="btn-open-recipient-info">
-                    <div class="header-user-row">
-                        <img id="active-chat-avatar" class="header-avatar clickable-image-trigger" src="" alt="">
-                        <div>
-                            <h2 id="active-chat-name">Usuário</h2>
-                            <p id="active-chat-status">offline</p>
-                        </div>
+                    <img id="active-chat-avatar" class="header-avatar" src="https://via.placeholder.com/150" alt="">
+                    <div>
+                        <h2 id="active-chat-name">Usuário</h2>
+                        <p id="active-chat-status">online</p>
                     </div>
                 </div>
-                <button id="btn-contact-menu" class="icon-btn" style="font-weight:bold; letter-spacing: 2px;">•••</button>
-            </header>
-
-            <div id="multi-select-bar" class="multi-select-bar glass hidden">
-                <button id="btn-cancel-select" class="action-text-btn">Cancelar</button>
-                <span id="select-count">1 selecionada</span>
-                <button id="btn-multi-delete-trigger" class="icon-btn danger-color">
-                    <svg class="mono-icon-red" viewBox="0 0 24 24"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                <button id="btn-contact-menu" class="icon-btn-dots">
+                    <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
                 </button>
-            </div>
+            </header>
 
             <div id="messages-container" class="messages-container"></div>
 
-            <footer class="chat-footer glass">
+            <footer class="chat-footer glass-premium">
                 <div class="footer-input-row">
-                    <button id="btn-attach" class="attach-btn">
-                        <svg class="mono-icon-blue" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    <button id="btn-attach" class="attach-btn" style="background:none; border:none; cursor:pointer;">
+                        <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-2.76 2.24-5 5-5s5 2.24 5 5v12.5c0 3.31-2.69 6-6 6s-6-2.69-6-6V6h2v11.5c0 2.21 1.79 4 4 4s4-1.79 4-4V5c0-1.66-1.34-3-3-3s-3 1.34-3 3v12.5c0 1.1.9 2 2 2s2-.9 2-2V6h2z"/></svg>
                     </button>
                     <input type="file" id="media-file-input" class="hidden" accept="image/*">
                     <input type="text" id="message-input" placeholder="Mensagem">
-                    <button id="btn-sticker" class="sticker-btn">
-                        <!-- Ícone Monocromático de Sticker/Rosto -->
-                        <svg class="mono-icon-muted" viewBox="0 0 24 24"><path fill="currentColor" d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8s8 3.58 8 8s-3.58 8-8 8zm3.5-9c.83 0 1.5-.67 1.5-1.5S16.33 8 15.5 8S14 8.67 14 9.5s.67 1.5 1.5 1.5zm-7 0c.83 0 1.5-.67 1.5-1.5S9.33 8 8.5 8S7 8.67 7 9.5S7.67 11 8.5 11zm3.5 6.5c2.33 0 4.31-1.46 5.11-3.5H6.89c.8 2.04 2.78 3.5 5.11 3.5z"/></svg>
-                    </button>
                 </div>
                 <button id="btn-send" class="btn-send-round">
-                    <svg class="mono-icon-white" viewBox="0 0 24 24" style="width:18px;height:18px;transform: rotate(-45deg) translate(2px, -1px);"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+                    <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:16px;height:16px;transform: rotate(-45deg) translate(2px, -1px);"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                 </button>
             </footer>
         </div>
     </div>
 
-    <!-- FOLHA DE DETALHES DO CONTATO -->
-    <div id="contact-info-sheet" class="ios-sheet hidden">
-        <div class="ios-sheet-content glass">
-            <div class="ios-sheet-header">
-                <h3>Detalhes</h3>
-                <button id="btn-close-info-sheet" class="action-text-btn">Fechar</button>
-            </div>
-            <div class="ios-sheet-body">
-                <img id="sheet-contact-avatar" class="avatar-large clickable-image-trigger" src="" alt="">
-                
-                <h2 id="sheet-contact-nick">Nome</h2>
-                <p id="sheet-contact-custom-alias" class="alias-text-indicator"></p>
-                <p id="sheet-contact-user">@username</p>
-                <p id="sheet-contact-bio" class="bio-text">Biografia...</p>
-                
-                <div class="sheet-actions-list">
-                    <button id="btn-sheet-set-alias" class="sheet-action-btn">Definir Apelido</button>
-                    <button id="btn-sheet-block" class="sheet-action-btn danger">Bloquear Usuário</button>
-                    <button id="btn-sheet-report" class="sheet-action-btn danger">Denunciar Usuário</button>
+    <!-- RETÂNGULO FLUTUANTE DE 3 PONTINHOS -->
+    <div id="contact-info-sheet" class="ios-dropdown-overlay hidden">
+        <div class="ios-dropdown-box glass-premium">
+            <div class="dropdown-profile-summary">
+                <img id="sheet-contact-avatar" src="https://via.placeholder.com/150" alt="" class="avatar-dropdown">
+                <div>
+                    <h4 id="sheet-contact-nick">Nome</h4>
+                    <p id="sheet-contact-user">@username</p>
                 </div>
             </div>
+            <div class="dropdown-divider"></div>
+            <button id="btn-sheet-block" class="dropdown-item danger">Bloquear Usuário</button>
+            <div class="dropdown-divider"></div>
+            <button id="btn-close-info-sheet" class="dropdown-item cancel-item">Voltar</button>
         </div>
-    </div>
-
-    <!-- VISUALIZADOR DE IMAGEM FULLSCREEN -->
-    <div id="image-viewer-lightbox" class="lightbox-overlay hidden">
-        <button id="btn-close-lightbox" class="lightbox-close">✕</button>
-        <div class="lightbox-wrapper" id="lightbox-wrapper">
-            <img id="lightbox-target-img" src="" alt="">
-        </div>
-        <a id="btn-download-lightbox" class="ios-download-btn">
-            <svg class="mono-icon-white" viewBox="0 0 24 24" style="width:16px;height:16px;margin-right:8px;"><path fill="currentColor" d="M19.35 10.04C18.67 6.59 15.64 4 12 4 9.11 4 6.6 5.64 5.35 8.04 2.34 8.36 0 10.91 0 14c0 3.31 2.69 6 6 6h13c2.76 0 5-2.24 5-5 0-2.64-2.05-4.78-4.65-4.96zM17 13l-5 5-5-5h3V9h4v4h3z"/></svg>
-            Salvar na Galeria
-        </a>
     </div>
 
     <!-- TELA COMPLETA DE CONFIGURAÇÕES -->
     <div id="settings-screen" class="settings-screen hidden">
-        <header class="settings-screen-header glass">
+        <header class="settings-screen-header glass-premium">
             <button id="btn-back-settings" class="back-btn">
-                <svg class="mono-icon" viewBox="0 0 24 24" style="width:24px;height:24px;"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
             </button>
             <h2>Configurações</h2>
         </header>
-        <div class="settings-screen-body">
-            <div class="settings-profile-card glass">
-                <div class="avatar-upload-container">
-                    <img id="settings-avatar-img" class="avatar-preview" src="" alt="">
-                    <label for="settings-avatar-file" class="avatar-file-label">Mudar Foto</label>
-                    <input type="file" id="settings-avatar-file" accept="image/*" class="hidden">
-                </div>
-                <div class="profile-inputs">
-                    <div class="inline-input">
-                        <input type="text" id="set-nickname" placeholder="Nickname">
-                        <button id="btn-update-nickname" class="save-inline-btn">Salvar</button>
-                    </div>
-                    <div class="inline-input">
-                        <input type="text" id="set-username" placeholder="Username">
-                        <button id="btn-update-username" class="save-inline-btn">Salvar</button>
-                    </div>
-                    <div class="inline-input">
-                        <input type="text" id="set-bio" placeholder="Sua Biografia">
-                        <button id="btn-update-bio" class="save-inline-btn">Salvar</button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-menu-list glass">
-                <h3>Privacidade</h3>
-                <div class="menu-list-item">
-                    <div class="menu-text">
-                        <h4>Ocultar meu Username</h4>
-                        <p>Outras pessoas não verão seu @username</p>
-                    </div>
-                    <label class="switch">
-                        <input type="checkbox" id="toggle-hide-username">
-                        <span class="slider-round"></span>
-                    </label>
-                </div>
+        <div class="settings-screen-body" style="padding:20px;">
+            <div class="settings-profile-card glass-premium" style="padding:20px; border-radius:20px; text-align:center;">
+                <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red);">Desconectar Conta</button>
             </div>
         </div>
     </div>
 
-    <!-- BLUR OVERLAY DE SELEÇÃO DE MENSAGEM (IGUAL FOTO REFERÊNCIA) -->
+    <!-- MODAL DE SELEÇÃO DE MENSAGENS COM COPIAR -->
     <div id="blur-overlay" class="blur-overlay hidden">
         <div class="focused-container">
-            <div class="reactions-row-ios" id="ios-reactions">
-                <span class="react-btn">❤️</span><span class="react-btn">😂</span><span class="react-btn">😭</span>
-                <span class="react-btn">👍</span><span class="react-btn">😡</span><span class="react-btn">🤔</span>
-            </div>
             <div class="focused-message-container" id="focused-message-container"></div>
-            <div class="iphone-context-menu">
-                <div class="context-item" id="ctx-reply">Responder</div>
-                <div class="context-item" id="ctx-copy">Copiar</div>
-                <div class="context-item" id="ctx-select-multiple">Selecionar</div>
-                <div class="context-item danger" id="ctx-delete-single">Apagar</div>
+            <div class="iphone-context-menu glass-premium">
+                <div class="context-item" id="ctx-copy-direct">
+                    <svg viewBox="0 0 24 24" class="mono-icon-light" style="width:16px; margin-right:8px;"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> Copiar Texto
+                </div>
+                <div class="context-item danger" id="ctx-delete-single">Apagar para Mim</div>
+                <div class="context-item cancel" id="ctx-close-menu">Voltar</div>
             </div>
         </div>
     </div>
 
-    <!-- ACTION SHEET DE EXCLUSÃO COLETIVA -->
-    <div id="delete-actions-modal" class="ios-action-sheet-overlay hidden">
-        <div class="ios-action-sheet">
-            <button id="btn-delete-for-everyone" class="action-sheet-btn danger hidden">Apagar para Todos</button>
-            <button id="btn-delete-for-me" class="action-sheet-btn danger">Apagar para Mim</button>
-            <button id="btn-cancel-delete-modal" class="action-sheet-btn cancel">Cancelar</button>
-        </div>
-    </div>
-
+    <!-- MODAL DE NOVOS CONTATOS -->
     <div id="contacts-modal" class="modal hidden">
-        <div class="modal-content glass">
-            <div class="modal-header"><h3>Nova Conversa</h3><button id="btn-close-modal" class="action-text-btn">Voltar</button></div>
-            <div id="contacts-list" class="contacts-list"></div>
+        <div class="modal-content glass-premium">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
+                <h3>Iniciar Conversa</h3>
+                <button id="btn-close-modal" class="back-btn"><svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+            </div>
+            <div id="contacts-list-modal" class="chats-list"></div>
         </div>
     </div>
 
+    <!-- Scripts do Firebase v10 (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="script.js"></script>
 </body>
                 </html>
-                    
+        
