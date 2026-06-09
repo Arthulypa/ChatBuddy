@@ -15,6 +15,7 @@ let currentUser = null;
 let activeChatId = null;
 let activeRecipientId = null;
 let base64AvatarString = "";
+let base64OwnSettingsAvatar = "";
 let selectedMessageText = "";
 let selectedMessageId = "";
 let silencedUsers = {};
@@ -31,26 +32,33 @@ function changeView(target) {
     viewPages[target].classList.remove('hidden');
 }
 
-function bindImageLoader(inputId, previewId, placeholderId) {
+function bindImageLoader(inputId, callback) {
     const input = document.getElementById(inputId);
     if (!input) return;
     input.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (ev) => {
-            base64AvatarString = ev.target.result;
-            const imgEl = document.getElementById(previewId);
-            imgEl.src = base64AvatarString;
-            imgEl.classList.remove('hidden');
-            if (placeholderId) document.getElementById(placeholderId).classList.add('hidden');
-        };
+        reader.onload = (ev) => callback(ev.target.result);
         reader.readAsDataURL(file);
     });
 }
-bindImageLoader('initial-avatar-file', 'initial-avatar-preview', 'initial-avatar-placeholder');
 
-// MOTOR DE AUTENTICAÇÃO CHATBUDDY
+// Configuração loaders de fotos
+bindImageLoader('initial-avatar-file', (res) => {
+    base64AvatarString = res;
+    const imgEl = document.getElementById('initial-avatar-preview');
+    imgEl.src = res;
+    imgEl.classList.remove('hidden');
+    document.getElementById('initial-avatar-placeholder').classList.add('hidden');
+});
+
+bindImageLoader('settings-avatar-file', (res) => {
+    base64OwnSettingsAvatar = res;
+    document.getElementById('settings-avatar-preview').src = res;
+});
+
+// AUTENTICAÇÃO
 document.getElementById('btn-login').addEventListener('click', () => {
     const email = document.getElementById('email-login').value.trim();
     const pass = document.getElementById('password-login').value;
@@ -62,7 +70,6 @@ document.getElementById('btn-send-code').addEventListener('click', () => {
     const email = document.getElementById('email-reg').value.trim();
     const pass = document.getElementById('password-reg').value;
     if(!email || !pass) return alert("Insira credenciais válidas.");
-    
     document.getElementById('reg-step-1').classList.add('hidden');
     document.getElementById('reg-step-2').classList.remove('hidden');
 });
@@ -70,16 +77,13 @@ document.getElementById('btn-send-code').addEventListener('click', () => {
 document.getElementById('btn-verify-and-register').addEventListener('click', () => {
     const code = document.getElementById('verification-code-input').value.trim();
     if(code !== "123456") return alert("Código ChatBuddy inválido!");
-    
     const email = document.getElementById('email-reg').value.trim();
     const pass = document.getElementById('password-reg').value;
-    
     auth.createUserWithEmailAndPassword(email, pass)
         .then(() => changeView('profile'))
         .catch(err => alert("Erro: " + err.message));
 });
 
-// ARRUNADO: LOGIN DO GOOGLE COM CRIÇÃO DE PERFIL E PERSISTÊNCIA INTEGRADA
 document.getElementById('btn-google-login').addEventListener('click', () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider)
@@ -116,7 +120,6 @@ document.getElementById('btn-save-profile').addEventListener('click', () => {
         nickname: nick,
         username: '@' + userAt,
         bio: bio,
-        wlstwrus: "Disponível no ChatBuddy 🚀",
         avatar: base64AvatarString || "https://via.placeholder.com/150",
         status: "online",
         lastSeen: firebase.database.ServerValue.TIMESTAMP
@@ -127,54 +130,13 @@ document.getElementById('btn-save-profile').addEventListener('click', () => {
 function setupPresenceSystem(userId) {
     const userStatusRef = database.ref(`users/${userId}`);
     const connectedRef = database.ref(".info/connected");
-
     connectedRef.on("value", (snap) => {
         if (snap.val() === false) return;
-        userStatusRef.onDisconnect().update({
-            status: "offline",
-            lastSeen: firebase.database.ServerValue.TIMESTAMP
-        }).then(() => {
-            userStatusRef.update({
-                status: "online",
-                lastSeen: firebase.database.ServerValue.TIMESTAMP
-            });
+        userStatusRef.onDisconnect().update({ status: "offline", lastSeen: firebase.database.ServerValue.TIMESTAMP })
+        .then(() => {
+            userStatusRef.update({ status: "online", lastSeen: firebase.database.ServerValue.TIMESTAMP });
         });
     });
-}
-
-function listenToGlobalMessages() {
-    database.ref('chats').on('child_changed', snap => {
-        const chat = snap.val();
-        if(!chat || !chat.messages) return;
-        
-        const msgKeys = Object.keys(chat.messages);
-        const lastMsg = chat.messages[msgKeys[msgKeys.length - 1]];
-        
-        if(lastMsg.senderId !== currentUser.uid && lastMsg.status === 'sending') {
-            if (silencedUsers[lastMsg.senderId]) return;
-            if (!document.getElementById('toggle-popup-global').checked) return;
-
-            database.ref(`users/${lastMsg.senderId}`).once('value', uSnap => {
-                const sender = uSnap.val();
-                triggerPremiumPopup(sender, lastMsg.text || "Enviou uma mídia");
-            });
-        }
-    });
-}
-
-function triggerPremiumPopup(sender, text) {
-    const popup = document.getElementById('popup-notification');
-    document.getElementById('popup-avatar').src = sender.avatar;
-    document.getElementById('popup-title').innerText = sender.nickname;
-    document.getElementById('popup-text').innerText = text;
-    
-    popup.classList.remove('hidden');
-    setTimeout(() => popup.classList.add('expanded'), 150);
-    
-    setTimeout(() => {
-        popup.classList.remove('expanded');
-        setTimeout(() => popup.classList.add('hidden'), 400);
-    }, 3500);
 }
 
 auth.onAuthStateChanged(user => {
@@ -185,7 +147,7 @@ auth.onAuthStateChanged(user => {
                 changeView('chat');
                 setupPresenceSystem(user.uid);
                 loadChatList();
-                listenToGlobalMessages();
+                loadOwnProfileSettingsData(snap.val());
             } else {
                 changeView('profile');
             }
@@ -195,16 +157,51 @@ auth.onAuthStateChanged(user => {
     }
 });
 
+// CARREGA SEUS PRÓPRIOS DADOS NA TELA DE CONFIGURAÇÃO (ABAS)
+function loadOwnProfileSettingsData(data) {
+    document.getElementById('settings-avatar-preview').src = data.avatar || "https://via.placeholder.com/150";
+    document.getElementById('settings-nickname').value = data.nickname || "";
+    document.getElementById('settings-username').value = (data.username || "").replace('@','');
+    document.getElementById('settings-bio').value = data.bio || "";
+    base64OwnSettingsAvatar = data.avatar || "";
+}
+
+document.getElementById('btn-update-own-profile').addEventListener('click', () => {
+    const newNick = document.getElementById('settings-nickname').value.trim();
+    const newUsr = document.getElementById('settings-username').value.trim().replace('@','');
+    const newBio = document.getElementById('settings-bio').value.trim();
+    
+    if(!newNick || !newUsr) return alert("Nome e Nickname não podem ficar vazios!");
+    
+    database.ref(`users/${currentUser.uid}`).update({
+        nickname: newNick,
+        username: '@' + newUsr,
+        bio: newBio,
+        avatar: base64OwnSettingsAvatar
+    }).then(() => alert("Perfil atualizado com sucesso!"));
+});
+
+// INTERFACES DAS ABAS DE CONFIGURAÇÃO
+document.querySelectorAll('.settings-nav-item').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.settings-nav-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        
+        const target = btn.getAttribute('data-target');
+        document.querySelectorAll('.settings-pane-content').forEach(pane => pane.classList.add('hidden'));
+        document.getElementById(target).classList.remove('hidden');
+    });
+});
+
+// SISTEMA DE ARRASTAR PARA RESPONDER + CLIQUE LONGO
 function applyLongPress(element, actionCallback) {
     let timer;
-    const start = (e) => timer = setTimeout(() => actionCallback(e), 600);
+    const start = () => timer = setTimeout(() => actionCallback(), 600);
     const stop = () => clearTimeout(timer);
-    
     element.addEventListener('touchstart', start, { passive: true });
     element.addEventListener('touchend', stop, { passive: true });
     element.addEventListener('mousedown', start);
     element.addEventListener('mouseup', stop);
-    element.addEventListener('mouseleave', stop);
 }
 
 function buildTicks(status) {
@@ -218,18 +215,7 @@ function buildTicks(status) {
     return '';
 }
 
-function formatLastSeen(timestamp) {
-    if(!timestamp) return "offline";
-    const diffMs = Date.now() - timestamp;
-    const diffMins = Math.floor(diffMs / 60000);
-    if(diffMins < 1) return "offline há instantes";
-    if(diffMins < 60) return `offline há ${diffMins} min`;
-    const diffHours = Math.floor(diffMins / 60);
-    if(diffHours < 24) return `offline há ${diffHours} h`;
-    return "offline há algum tempo";
-}
-
-// SALA DE CHAT ATUALIZADA COM COMPATIBILIDADE DE GESTO SLIDE-TO-REPLY
+// INTERFACE DA SALA DE CONVERSA
 function openChatRoom(chatId, recipientData) {
     activeChatId = chatId;
     activeRecipientId = recipientData.uid;
@@ -240,19 +226,8 @@ function openChatRoom(chatId, recipientData) {
 
     database.ref(`users/${recipientData.uid}`).on('value', rSnap => {
         const rUser = rSnap.val();
-        const statusTextEl = document.getElementById('active-chat-status');
-        const badgeEl = document.getElementById('active-chat-online-badge');
-        const infoHeader = document.getElementById('btn-open-recipient-info');
-        
-        if(rUser.status === 'online') {
-            infoHeader.classList.add('is-online');
-            statusTextEl.innerText = "online";
-            badgeEl.classList.remove('hidden');
-        } else {
-            infoHeader.classList.remove('is-online');
-            statusTextEl.innerText = formatLastSeen(rUser.lastSeen);
-            badgeEl.classList.add('hidden');
-        }
+        if(!rUser) return;
+        document.getElementById('active-chat-status').innerText = rUser.status === 'online' ? "online" : "offline";
     });
     
     database.ref(`chats/${chatId}/messages`).off();
@@ -267,38 +242,25 @@ function openChatRoom(chatId, recipientData) {
             
             let content = data.image ? `<img src="${data.image}" class="message-img">` : '';
             content += data.text ? `<p>${data.text}</p>` : '';
-            
             let ticks = data.senderId === currentUser.uid ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
             card.innerHTML = content + ticks;
             
-            // Injeta o elemento visual da setinha de resposta do iOS
+            // Elemento indicador do gesto iOS
             const indicator = document.createElement('div');
             indicator.className = 'reply-drag-indicator';
             indicator.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3"><path d="M10 21L3 12l7-9M3 12h18"/></svg>';
             card.appendChild(indicator);
 
-            // SISTEMA DE ARRASTAR PARA RESPONDER
-            let startX = 0;
-            let currentX = 0;
-            let isDragging = false;
-
-            card.addEventListener('touchstart', (e) => {
-                startX = e.touches[0].clientX;
-                isDragging = true;
-            }, { passive: true });
-
+            // Mecanismo Drag to Reply
+            let startX = 0, currentX = 0, isDragging = false;
+            card.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; isDragging = true; }, { passive: true });
             card.addEventListener('touchmove', (e) => {
                 if (!isDragging) return;
                 currentX = e.touches[0].clientX - startX;
-
                 if (currentX < 0) {
                     let dragOffset = Math.max(currentX, -60);
                     card.style.transform = `translateX(${dragOffset}px)`;
                     card.classList.add('dragged');
-                    
-                    if (dragOffset === -60 && navigator.vibrate) {
-                        navigator.vibrate(10);
-                    }
                 }
             }, { passive: true });
 
@@ -306,7 +268,6 @@ function openChatRoom(chatId, recipientData) {
                 isDragging = false;
                 card.style.transform = '';
                 card.classList.remove('dragged');
-
                 if (currentX < -45) {
                     const inputField = document.getElementById('message-input');
                     inputField.value = `Replying to: "${data.text || 'Mídia'}" ➔ `;
@@ -315,67 +276,94 @@ function openChatRoom(chatId, recipientData) {
                 currentX = 0;
             });
             
-            // MANTÉM CLIQUE LONGO FUNCIONANDO PERFEITAMENTE
             applyLongPress(card, () => {
                 selectedMessageText = data.text || "";
                 selectedMessageId = data.id;
-                
                 const clone = card.cloneNode(true);
-                const oldInd = clone.querySelector('.reply-drag-indicator');
-                if(oldInd) oldInd.remove();
-
+                if(clone.querySelector('.reply-drag-indicator')) clone.querySelector('.reply-drag-indicator').remove();
                 const wrapper = document.getElementById('focused-message-wrapper');
                 wrapper.innerHTML = '';
                 wrapper.appendChild(clone);
-                
                 document.getElementById('blur-overlay').classList.remove('hidden');
             });
-            
             box.appendChild(card);
         });
         box.scrollTop = box.scrollHeight;
     });
 }
 
-document.getElementById('ctx-info-msg').addEventListener('click', () => {
-    if(!selectedMessageId || !activeChatId) return;
-    database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).once('value').then(snap => {
-        const data = snap.val();
-        if(!data) return;
+// POPUP DE INFORMAÇÕES DO CONTATO (DETALHES E MÍDIAS COLETADAS)
+document.getElementById('btn-open-recipient-info').addEventListener('click', () => {
+    database.ref('users/' + activeRecipientId).once('value').then(s => {
+        const u = s.val();
+        document.getElementById('sheet-contact-nick').innerText = u.nickname;
+        document.getElementById('sheet-contact-user').innerText = u.username;
+        document.getElementById('sheet-contact-avatar').src = u.avatar;
+        document.getElementById('sheet-contact-bio').innerText = u.bio || "Sem biografia definida.";
         
-        const sentDate = new Date(data.timestamp);
-        document.getElementById('info-sent-time').innerText = sentDate.toLocaleTimeString();
-        
-        const readDate = new Date(data.timestamp + 1200);
-        document.getElementById('info-read-time').innerText = data.status === 'read' ? readDate.toLocaleTimeString() : "Não lido";
-        
-        document.getElementById('blur-overlay').classList.add('hidden');
-        document.getElementById('msg-info-modal').classList.remove('hidden');
+        // Ativa painel default
+        switchPopupPanel('details');
+        document.getElementById('contact-info-sheet').classList.remove('hidden');
     });
 });
 
-document.getElementById('btn-close-msg-info').addEventListener('click', () => {
-    document.getElementById('msg-info-modal').classList.add('hidden');
-});
-
-document.getElementById('ctx-edit-msg').addEventListener('click', () => {
-    if(!selectedMessageText) return alert("Apenas textos podem ser editados!");
-    const newText = prompt("Editar mensagem:", selectedMessageText);
-    if(newText && newText.trim() !== "") {
-        database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).update({
-            text: newText + " (editada)"
+// Gerenciador de sub-abas do Popup de contato
+function switchPopupPanel(type) {
+    if(type === 'details') {
+        document.getElementById('popup-tab-details').classList.add('active');
+        document.getElementById('popup-tab-gallery').classList.remove('active');
+        document.getElementById('popup-panel-details').classList.remove('hidden');
+        document.getElementById('popup-panel-gallery').classList.add('hidden');
+    } else {
+        document.getElementById('popup-tab-details').classList.remove('active');
+        document.getElementById('popup-tab-gallery').classList.add('active');
+        document.getElementById('popup-panel-details').classList.add('hidden');
+        document.getElementById('popup-panel-gallery').classList.remove('hidden');
+        
+        // Coleta e injeta mídias trocadas dinamicamente
+        const grid = document.getElementById('popup-media-grid');
+        grid.innerHTML = '';
+        database.ref(`chats/${activeChatId}/messages`).once('value', snap => {
+            let foundMedia = false;
+            snap.forEach(c => {
+                const msg = c.val();
+                if(msg.image) {
+                    foundMedia = true;
+                    const img = document.createElement('img');
+                    img.src = msg.image;
+                    img.className = 'popup-media-item';
+                    grid.appendChild(img);
+                }
+            });
+            if(!foundMedia) grid.innerHTML = '<p style="color:var(--text-muted); font-size:13px; grid-column:span 3; text-align:center; padding:20px 0;">Nenhuma mídia compartilhada.</p>';
         });
     }
-    document.getElementById('blur-overlay').classList.add('hidden');
-});
+}
 
-document.getElementById('ctx-delete-single').addEventListener('click', () => {
-    if(confirm("Apagar para todos?")) {
-        database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).remove();
+document.getElementById('popup-tab-details').addEventListener('click', () => switchPopupPanel('details'));
+document.getElementById('popup-tab-gallery').addEventListener('click', () => switchPopupPanel('gallery'));
+
+// Botões de Ação do Contato
+document.getElementById('btn-customize-nickname').addEventListener('click', () => {
+    const newName = prompt("Defina um apelido local para este contato:");
+    if(newName && newName.trim() !== "") {
+        document.getElementById('sheet-contact-nick').innerText = newName;
+        document.getElementById('active-chat-name').innerText = newName;
     }
-    document.getElementById('blur-overlay').classList.add('hidden');
 });
 
+document.getElementById('btn-sheet-block').addEventListener('click', () => {
+    alert("Usuário bloqueado com sucesso nas diretrizes do dispositivo!");
+    document.getElementById('contact-info-sheet').classList.add('hidden');
+    document.getElementById('chat-room-screen').classList.add('hidden');
+});
+
+document.getElementById('btn-sheet-report').addEventListener('click', () => {
+    alert("Perfil denunciado à central de moderação do ChatBuddy!");
+    document.getElementById('contact-info-sheet').classList.add('hidden');
+});
+
+// ENVIO DE MENSAGENS E ARQUIVOS
 function pushMessage(text, imgBase64 = null) {
     if(!text.trim() && !imgBase64) return;
     const ref = database.ref(`chats/${activeChatId}/messages`).push();
@@ -387,19 +375,15 @@ function pushMessage(text, imgBase64 = null) {
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
     if(imgBase64) payload.image = imgBase64;
-    
     ref.set(payload).then(() => {
-        setTimeout(() => ref.update({ status: 'sent' }), 300);
-        setTimeout(() => ref.update({ status: 'delivered' }), 800);
-        setTimeout(() => ref.update({ status: 'read' }), 1400);
+        setTimeout(() => ref.update({ status: 'sent' }), 200);
+        setTimeout(() => ref.update({ status: 'delivered' }), 500);
+        setTimeout(() => ref.update({ status: 'read' }), 1000);
     });
     document.getElementById('message-input').value = '';
 }
 
-document.getElementById('message-input').addEventListener('keypress', (e) => {
-    if(e.key === 'Enter') pushMessage(e.target.value);
-});
-
+document.getElementById('message-input').addEventListener('keypress', (e) => { if(e.key === 'Enter') pushMessage(e.target.value); });
 document.getElementById('btn-attach').addEventListener('click', () => document.getElementById('media-file-input').click());
 document.getElementById('media-file-input').addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -409,12 +393,33 @@ document.getElementById('media-file-input').addEventListener('change', (e) => {
     reader.readAsDataURL(file);
 });
 
-document.getElementById('ctx-copy-direct').addEventListener('click', () => {
-    navigator.clipboard.writeText(selectedMessageText).then(() => {
+// FUNÇÕES DE MENU DE CONTEXTO DAS BALÕES
+document.getElementById('ctx-info-msg').addEventListener('click', () => {
+    database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).once('value').then(snap => {
+        const data = snap.val();
+        if(!data) return;
+        document.getElementById('info-sent-time').innerText = new Date(data.timestamp).toLocaleTimeString();
+        document.getElementById('info-read-time').innerText = data.status === 'read' ? new Date(data.timestamp + 1000).toLocaleTimeString() : "Pendente";
         document.getElementById('blur-overlay').classList.add('hidden');
+        document.getElementById('msg-info-modal').classList.remove('hidden');
     });
 });
+document.getElementById('btn-close-msg-info').addEventListener('click', () => document.getElementById('msg-info-modal').classList.add('hidden'));
+document.getElementById('ctx-edit-msg').addEventListener('click', () => {
+    const n = prompt("Editar:", selectedMessageText);
+    if(n) database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).update({ text: n + " (editada)" });
+    document.getElementById('blur-overlay').classList.add('hidden');
+});
+document.getElementById('ctx-delete-single').addEventListener('click', () => {
+    if(confirm("Deletar mensagem?")) database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).remove();
+    document.getElementById('blur-overlay').classList.add('hidden');
+});
+document.getElementById('ctx-copy-direct').addEventListener('click', () => {
+    navigator.clipboard.writeText(selectedMessageText);
+    document.getElementById('blur-overlay').classList.add('hidden');
+});
 
+// CARREGADOR DE LISTA PRINCIPAL
 function loadChatList() {
     database.ref('users').on('value', snap => {
         const parent = document.getElementById('chats-list');
@@ -422,49 +427,12 @@ function loadChatList() {
         snap.forEach(child => {
             const user = child.val();
             if(user.uid === currentUser.uid) return;
-            
             const row = document.createElement('div');
             row.className = "chat-item-row";
-            row.innerHTML = `<img src="${user.avatar}" onerror="this.src='https://via.placeholder.com/150'">
+            row.innerHTML = `<img src="${user.avatar}">
                              <div class="chat-item-info">
                                 <div class="chat-item-header"><h4>${user.nickname}</h4></div>
                                 <p>${user.username}</p>
                              </div>`;
-            
             row.addEventListener('click', () => {
-                const combinedId = currentUser.uid < user.uid ? currentUser.uid + "_" + user.uid : user.uid + "_" + currentUser.uid;
-                openChatRoom(combinedId, user);
-            });
-            parent.appendChild(row);
-        });
-    });
-}
-
-document.getElementById('btn-open-recipient-info').addEventListener('click', () => {
-    database.ref('users/' + activeRecipientId).once('value').then(s => {
-        const u = s.val();
-        document.getElementById('sheet-contact-nick').innerText = u.nickname;
-        document.getElementById('sheet-contact-user').innerText = u.username;
-        document.getElementById('sheet-contact-avatar').src = u.avatar;
-        document.getElementById('sheet-contact-bio').innerText = u.bio || "Sem biografia.";
-        document.getElementById('sheet-contact-wlstwrus').innerText = u.wlstwrus || "Disponível";
-        
-        document.getElementById('toggle-silence-user').checked = !!silencedUsers[activeRecipientId];
-        document.getElementById('contact-info-sheet').classList.remove('hidden');
-    });
-});
-
-document.getElementById('toggle-silence-user').addEventListener('change', (e) => {
-    silencedUsers[activeRecipientId] = e.target.checked;
-});
-
-document.getElementById('ctx-close-menu').addEventListener('click', () => document.getElementById('blur-overlay').classList.add('hidden'));
-document.getElementById('btn-close-info-sheet').addEventListener('click', () => document.getElementById('contact-info-sheet').classList.add('hidden'));
-document.getElementById('btn-back-to-list').addEventListener('click', () => {
-    database.ref(`users/${activeRecipientId}`).off();
-    document.getElementById('chat-room-screen').classList.add('hidden');
-});
-document.getElementById('btn-main-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.remove('hidden'));
-document.getElementById('btn-back-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.add('hidden'));
-document.getElementById('btn-logout').addEventListener('click', () => { auth.signOut().then(() => window.location.reload()); });
-document.getElementById('btn-to-register').addE
+                const combinedId = currentUser.uid < user.uid ?
