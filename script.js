@@ -1,4 +1,4 @@
-// CONFIGURAÇÃO DO FIREBASE CORRIGIDA (Letras maiúsculas W e H ajustadas!)
+// CONFIGURAÇÃO DO FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfyH4", 
   authDomain: "chatbuddy-96a61.firebaseapp.com",
@@ -56,22 +56,22 @@ let activeRecipientId = null;
 
 // Função de troca de página com reset de animação CSS
 function showPage(page) {
-  const pages = [loginPage, registerPage, profilePage, chatPage];
-  pages.forEach(p => {
-    if(p) p.classList.add('hidden');
-  });
-  if(page) {
-    page.classList.remove('hidden');
-    const box = page.querySelector('.page-transition');
-    if(box) {
-        box.style.animation = 'none';
-        box.offsetHeight; // Força reflow do CSS
-        box.style.animation = null;
+    const pages = [loginPage, registerPage, profilePage, chatPage];
+    pages.forEach(p => {
+      if(p) p.classList.add('hidden');
+    });
+    if(page) {
+      page.classList.remove('hidden');
+      const box = page.querySelector('.page-transition');
+      if(box) {
+          box.style.animation = 'none';
+          box.offsetHeight; // Força reflow do CSS
+          box.style.animation = null;
+      }
     }
-  }
 }
 
-// Vinculação de eventos para navegação entre telas de login/cadastro
+// Vinculação de eventos para navegação entre telas
 if(btnToRegister) btnToRegister.addEventListener('click', () => showPage(registerPage));
 if(btnToLogin) btnToLogin.addEventListener('click', () => showPage(loginPage));
 
@@ -303,70 +303,5 @@ if(messageInput) {
   });
 }
 
-// ASSEGURA QUE A TELA DE LOGIN APARECERÁ NO INÍCIO CASO O MONITOR DO FIREBASE DEMORE
+// ASSEGURA QUE A TELA DE LOGIN APARECERÁ NO INÍCIO
 showPage(loginPage);
-  if(!messagesContainer) return;
-    messagesContainer.innerHTML = '';
-    snapshot.forEach(childSnapshot => {
-      const msg = childSnapshot.val();
-      const msgId = childSnapshot.key;
-      const msgElement = document.createElement('div');
-      msgElement.className = `message ${msg.senderId === currentUser.uid ? 'sent' : 'received'}`;
-      if(msg.isDeleted) {
-        msgElement.innerHTML = `<p class="deleted-text"><em>[MENSAGEM DELETADA]</em></p>`;
-      } else {
-        msgElement.innerHTML = `
-          <p class="text-content">${msg.text}</p>
-          <span class="time-stamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-        `;
-        if(msg.senderId === currentUser.uid) {
-          msgElement.onclick = () => {
-            if(confirm('Apagar registro da mensagem?')) {
-              database.ref(`chats/${chatId}/messages/${msgId}`).update({ isDeleted: true });
-            }
-          };
-        }
-      }
-      messagesContainer.appendChild(msgElement);
-    });
-    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-  });
-}
-
-function sendMessage() {
-  if(!messageInput) return;
-  const text = messageInput.value.trim();
-  if(!text || !activeChatId) return;
-  const msgRef = database.ref(`chats/${activeChatId}/messages`).push();
-  msgRef.set({
-    senderId: currentUser.uid,
-    text: text,
-    timestamp: firebase.database.ServerValue.TIMESTAMP,
-    isDeleted: false
-  });
-  messageInput.value = '';
-}
-
-if(btnSendMessage) btnSendMessage.addEventListener('click', sendMessage);
-if(messageInput) {
-  messageInput.addEventListener('keypress', (e) => {
-    if(e.key === 'Enter') sendMessage();
-  });
-  }
-  ush();
-  msgRef.set({
-    senderId: currentUser.uid,
-    text: text,
-    timestamp: firebase.database.ServerValue.TIMESTAMP,
-    isDeleted: false
-  });
-  messageInput.value = '';
-}
-
-if(btnSendMessage) btnSendMessage.addEventListener('click', sendMessage);
-if(messageInput) {
-  messageInput.addEventListener('keypress', (e) => {
-    if(e.key === 'Enter') sendMessage();
-  });
-    }
-      
