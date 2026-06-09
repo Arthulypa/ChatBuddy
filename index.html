@@ -10,7 +10,16 @@
 </head>
 <body>
 
-    <!-- TELA DE LOGIN -->
+    <div id="popup-notification" class="popup-notification hidden animate-pop">
+        <div class="popup-avatar-wrapper">
+            <img id="popup-avatar" src="" alt="">
+        </div>
+        <div class="popup-content">
+            <h5 id="popup-title">Nome</h5>
+            <p id="popup-text">Mensagem...</p>
+        </div>
+    </div>
+
     <div id="login-page" class="auth-container">
         <div class="auth-box glass-premium">
             <div class="auth-logo">
@@ -39,11 +48,10 @@
         </div>
     </div>
 
-    <!-- TELA DE REGISTRO -->
     <div id="register-page" class="auth-container hidden">
         <div class="auth-box glass-premium">
             <h1 class="ios-title">Criar Conta</h1>
-            <p class="ios-subtitle" style="margin-bottom: 25px;">Rápido, seguro e privado.</p>
+            <p class="ios-subtitle" style="margin-bottom: 25px;">Rápido, seguro e privado na ChatBuddy.</p>
             
             <div id="reg-step-1">
                 <div class="input-group-premium">
@@ -64,18 +72,15 @@
                     <label>Código</label>
                 </div>
                 <button id="btn-verify-and-register" class="ios-btn-primary">Verificar e Criar</button>
-                <button id="btn-back-to-step1" class="action-text-btn" style="background:none; border:none; color:var(--text-muted); margin-top:15px; cursor:pointer;">Voltar</button>
             </div>
-
             <p class="auth-switch" style="margin-top:20px;">Já tem uma conta? <span id="btn-to-login">Fazer Login</span></p>
         </div>
     </div>
 
-    <!-- CONFIGURAÇÃO DE PERFIL INICIAL -->
     <div id="profile-page" class="auth-container hidden">
         <div class="auth-box glass-premium">
             <h2 class="ios-title" style="font-size: 22px;">Configurar Perfil</h2>
-            <p class="ios-subtitle">Escolha sua identidade visual</p>
+            <p class="ios-subtitle">Defina sua identidade no ChatBuddy</p>
             
             <div class="avatar-upload-container-premium">
                 <div class="avatar-preview-wrapper">
@@ -84,9 +89,7 @@
                         <svg viewBox="0 0 24 24" class="mono-icon-gray"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                     </div>
                 </div>
-                <label for="initial-avatar-file" class="avatar-file-label-premium">
-                    <svg viewBox="0 0 24 24" class="mono-icon-light" style="width:16px;height:16px;margin-right:6px;"><path fill="currentColor" d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg> Alterar Foto
-                </label>
+                <label for="initial-avatar-file" class="avatar-file-label-premium">Escolher Foto</label>
                 <input type="file" id="initial-avatar-file" accept="image/*" class="hidden">
             </div>
 
@@ -98,15 +101,18 @@
                 <input type="text" id="username" required placeholder=" ">
                 <label>Nome de usuário (@)</label>
             </div>
+            <div class="input-group-premium">
+                <input type="text" id="user-bio" placeholder=" " value="Disponível no ChatBuddy">
+                <label>Biografia (Bio)</label>
+            </div>
             <button id="btn-save-profile" class="ios-btn-primary">Salvar e Entrar</button>
         </div>
     </div>
 
-    <!-- TELA PRINCIPAL DO APP -->
     <div id="chat-page" class="app-container hidden">
         <header class="app-top-bar glass-premium">
-            <h2 class="app-title">Conversas</h2>
-            <button id="btn-main-settings" class="icon-btn">
+            <h2 class="app-title">ChatBuddy</h2>
+            <button id="btn-main-settings" class="config-icon-btn">
                 <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5z"/></svg>
             </button>
         </header>
@@ -124,21 +130,23 @@
                     <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                 </button>
             </div>
-            <div id="content-status" class="tab-pane hidden"><div class="empty-state">Nenhum status disponível.</div></div>
-            <div id="content-calls" class="tab-pane hidden"><div class="empty-state">Sem chamadas recentes.</div></div>
+            <div id="content-status" class="tab-pane hidden"><div class="empty-state">Nenhum status postado.</div></div>
+            <div id="content-calls" class="tab-pane hidden"><div class="empty-state">Nenhuma chamada efetuada.</div></div>
         </div>
 
-        <!-- TELA SALA DE CONVERSA -->
         <div id="chat-room-screen" class="chat-room-screen hidden">
             <header class="chat-header glass-premium">
                 <button id="btn-back-to-list" class="back-btn">
                     <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
                 </button>
                 <div class="active-user-info" id="btn-open-recipient-info">
-                    <img id="active-chat-avatar" class="header-avatar" src="https://via.placeholder.com/150" alt="">
+                    <div class="header-avatar-container">
+                        <img id="active-chat-avatar" class="header-avatar" src="" alt="">
+                        <span id="active-chat-online-badge" class="online-indicator-dot hidden"></span>
+                    </div>
                     <div>
                         <h2 id="active-chat-name">Usuário</h2>
-                        <p id="active-chat-status">online</p>
+                        <p id="active-chat-status">offline</p>
                     </div>
                 </div>
                 <button id="btn-contact-menu" class="icon-btn-dots">
@@ -163,24 +171,65 @@
         </div>
     </div>
 
-    <!-- RETÂNGULO FLUTUANTE DE 3 PONTINHOS -->
     <div id="contact-info-sheet" class="ios-dropdown-overlay hidden">
-        <div class="ios-dropdown-box glass-premium">
-            <div class="dropdown-profile-summary">
-                <img id="sheet-contact-avatar" src="https://via.placeholder.com/150" alt="" class="avatar-dropdown">
-                <div>
-                    <h4 id="sheet-contact-nick">Nome</h4>
-                    <p id="sheet-contact-user">@username</p>
+        <div class="profile-detail-card glass-premium">
+            <div class="profile-detail-header">
+                <img id="sheet-contact-avatar" src="" alt="" class="avatar-detail-large">
+                <h3 id="sheet-contact-nick">Nome</h3>
+                <p id="sheet-contact-user">@username</p>
+            </div>
+            
+            <div class="profile-info-sections">
+                <div class="info-block">
+                    <span class="block-label">Biografia</span>
+                    <p id="sheet-contact-bio" class="block-content">Carregando...</p>
+                </div>
+                <div class="info-block">
+                    <span class="block-label">Status do Recado</span>
+                    <p id="sheet-contact-wlstwrus" class="block-content">Disponível</p>
                 </div>
             </div>
-            <div class="dropdown-divider"></div>
-            <button id="btn-sheet-block" class="dropdown-item danger">Bloquear Usuário</button>
-            <div class="dropdown-divider"></div>
-            <button id="btn-close-info-sheet" class="dropdown-item cancel-item">Voltar</button>
+
+            <div class="profile-actions-list">
+                <div class="action-row-toggle">
+                    <span>Silenciar Notificações</span>
+                    <label class="ios-switch-wrapper">
+                        <input type="checkbox" id="toggle-silence-user">
+                        <span class="ios-switch-slider"></span>
+                    </label>
+                </div>
+                <button id="btn-sheet-block" class="action-danger-btn">Bloquear Usuário</button>
+            </div>
+
+            <button id="btn-close-info-sheet" class="btn-profile-close">Voltar ao Chat</button>
         </div>
     </div>
 
-    <!-- TELA COMPLETA DE CONFIGURAÇÕES -->
+    <div id="blur-overlay" class="blur-overlay hidden">
+        <div class="focused-container">
+            <div id="focused-message-wrapper" class="focused-message-wrapper">
+                </div>
+            <div class="iphone-context-menu glass-premium">
+                <div class="context-item" id="ctx-info-msg">
+                    <svg viewBox="0 0 24 24" class="mono-icon-light" style="width:16px; margin-right:8px;"><path fill="currentColor" d="M11 9h2V7h-2v2zm1 11c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm0-18C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm-1 13h2v-4h-2v4z"/></svg> Dados da Mensagem (Info)
+                </div>
+                <div class="context-item" id="ctx-edit-msg">Editar Mensagem</div>
+                <div class="context-item" id="ctx-copy-direct">Copiar Texto</div>
+                <div class="context-item danger" id="ctx-delete-single">Apagar Mensagem</div>
+                <div class="context-item cancel" id="ctx-close-menu">Voltar</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="msg-info-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width: 280px; text-align: center;">
+            <h3 style="margin-bottom:15px;">Detalhes do Envio</h3>
+            <p style="font-size:14px; margin-bottom:8px; color:var(--text-muted);">Enviado às: <span id="info-sent-time" style="color:#fff; font-weight:600;">--:--</span></p>
+            <p style="font-size:14px; margin-bottom:20px; color:var(--text-muted);">Visto/Lido às: <span id="info-read-time" style="color:#30d158; font-weight:600;">--:--</span></p>
+            <button id="btn-close-msg-info" class="ios-btn-primary" style="padding:10px;">Fechar</button>
+        </div>
+    </div>
+
     <div id="settings-screen" class="settings-screen hidden">
         <header class="settings-screen-header glass-premium">
             <button id="btn-back-settings" class="back-btn">
@@ -188,43 +237,39 @@
             </button>
             <h2>Configurações</h2>
         </header>
-        <div class="settings-screen-body" style="padding:20px;">
-            <div class="settings-profile-card glass-premium" style="padding:20px; border-radius:20px; text-align:center;">
+        <div class="settings-screen-body">
+            <div class="settings-section-group glass-premium">
+                <div class="settings-row-toggle">
+                    <div>
+                        <p class="row-main-title">Notificações Flutuantes</p>
+                        <p class="row-sub-title">Mostrar bolinha expansível ao receber mensagens</p>
+                    </div>
+                    <label class="ios-switch-wrapper">
+                        <input type="checkbox" id="toggle-popup-global" checked>
+                        <span class="ios-switch-slider"></span>
+                    </label>
+                </div>
+            </div>
+            <div style="padding: 20px;">
                 <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red);">Desconectar Conta</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL DE SELEÇÃO DE MENSAGENS COM COPIAR -->
-    <div id="blur-overlay" class="blur-overlay hidden">
-        <div class="focused-container">
-            <div class="focused-message-container" id="focused-message-container"></div>
-            <div class="iphone-context-menu glass-premium">
-                <div class="context-item" id="ctx-copy-direct">
-                    <svg viewBox="0 0 24 24" class="mono-icon-light" style="width:16px; margin-right:8px;"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg> Copiar Texto
-                </div>
-                <div class="context-item danger" id="ctx-delete-single">Apagar para Mim</div>
-                <div class="context-item cancel" id="ctx-close-menu">Voltar</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL DE NOVOS CONTATOS -->
     <div id="contacts-modal" class="modal hidden">
         <div class="modal-content glass-premium">
             <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
-                <h3>Iniciar Conversa</h3>
+                <h3>Nova Conversa</h3>
                 <button id="btn-close-modal" class="back-btn"><svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
             </div>
             <div id="contacts-list-modal" class="chats-list"></div>
         </div>
     </div>
 
-    <!-- Scripts do Firebase v10 (Compat) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="script.js"></script>
 </body>
-                </html>
+        </html>
     
