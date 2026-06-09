@@ -1,3 +1,4 @@
+// INSIRA SUAS CREDENCIAIS DO BANCO DO FIREBASE CHATBUDDY AQUI
 const firebaseConfig = {
   apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfykh4",
   authDomain: "chatbuddy-96a61.firebaseapp.com",
@@ -18,15 +19,6 @@ let selectedMessageText = "";
 let selectedMessageId = "";
 let silencedUsers = {};
 
-// Sistema de Resposta Ativa (Swipe target)
-let currentReplyTargetData = null;
-
-// Sistema de Gravação de Áudio
-let mediaRecorder = null;
-let audioChunks = [];
-let audioTimerInterval = null;
-let audioDurationSeconds = 0;
-
 const viewPages = {
     login: document.getElementById('login-page'),
     register: document.getElementById('register-page'),
@@ -39,67 +31,58 @@ function changeView(target) {
     viewPages[target].classList.remove('hidden');
 }
 
-function setupImageLoader(inputId, callback) {
+function bindImageLoader(inputId, previewId, placeholderId) {
     const input = document.getElementById(inputId);
     if (!input) return;
     input.addEventListener('change', (e) => {
         const file = e.target.files[0];
         if (!file) return;
         const reader = new FileReader();
-        reader.onload = (ev) => callback(ev.target.result);
+        reader.onload = (ev) => {
+            base64AvatarString = ev.target.result;
+            const imgEl = document.getElementById(previewId);
+            imgEl.src = base64AvatarString;
+            imgEl.classList.remove('hidden');
+            if (placeholderId) document.getElementById(placeholderId).classList.add('hidden');
+        };
         reader.readAsDataURL(file);
     });
 }
+bindImageLoader('initial-avatar-file', 'initial-avatar-preview', 'initial-avatar-placeholder');
 
-setupImageLoader('initial-avatar-file', (b64) => {
-    base64AvatarString = b64;
-    const imgEl = document.getElementById('initial-avatar-preview');
-    imgEl.src = b64;
-    imgEl.classList.remove('hidden');
-    document.getElementById('initial-avatar-placeholder').classList.add('hidden');
-});
-
-setupImageLoader('settings-avatar-file-input', (b64) => {
-    document.getElementById('settings-my-avatar').src = b64;
-    if(currentUser) {
-        database.ref(`users/${currentUser.uid}`).update({ avatar: b64 });
-    }
-});
-
-// AUTENTICAÇÃO ATUALIZADA (CORREÇÃO DO GOOGLE)
+// MOTOR DE AUTENTICAÇÃO CHATBUDDY
 document.getElementById('btn-login').addEventListener('click', () => {
     const email = document.getElementById('email-login').value.trim();
     const pass = document.getElementById('password-login').value;
-    if(!email || !pass) return alert("Preencha os campos!");
-    auth.signInWithEmailAndPassword(email, pass).catch(err => alert(err.message));
+    if(!email || !pass) return alert("Preencha todos os campos!");
+    auth.signInWithEmailAndPassword(email, pass).catch(err => alert("Erro: " + err.message));
 });
 
 document.getElementById('btn-send-code').addEventListener('click', () => {
     const email = document.getElementById('email-reg').value.trim();
     const pass = document.getElementById('password-reg').value;
-    if(!email || !pass) return alert("Preencha os campos!");
+    if(!email || !pass) return alert("Insira credenciais válidas.");
+    
     document.getElementById('reg-step-1').classList.add('hidden');
     document.getElementById('reg-step-2').classList.remove('hidden');
 });
 
 document.getElementById('btn-verify-and-register').addEventListener('click', () => {
-    if(document.getElementById('verification-code-input').value.trim() !== "123456") return alert("Código incorreto!");
+    const code = document.getElementById('verification-code-input').value.trim();
+    if(code !== "123456") return alert("Código ChatBuddy inválido!");
+    
     const email = document.getElementById('email-reg').value.trim();
     const pass = document.getElementById('password-reg').value;
-    auth.createUserWithEmailAndPassword(email, pass).then(() => changeView('profile')).catch(err => alert(err.message));
+    
+    auth.createUserWithEmailAndPassword(email, pass)
+        .then(() => changeView('profile'))
+        .catch(err => alert("Erro: " + err.message));
 });
 
 document.getElementById('btn-google-login').addEventListener('click', () => {
     const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithRedirect(provider); // Ajustado para redirecionamento mobile limpo
+    auth.signInWithPopup(provider).catch(err => alert(err.message));
 });
-
-auth.getRedirectResult().then((result) => {
-    if (result.user) {
-        currentUser = result.user;
-        checkUserInDatabase(result.user);
-    }
-}).catch((error) => console.log(error.message));
 
 document.getElementById('btn-save-profile').addEventListener('click', () => {
     const nick = document.getElementById('display-name').value.trim();
@@ -112,54 +95,96 @@ document.getElementById('btn-save-profile').addEventListener('click', () => {
         nickname: nick,
         username: '@' + userAt,
         bio: bio,
+        wlstwrus: "Disponível no ChatBuddy 🚀",
         avatar: base64AvatarString || "https://via.placeholder.com/150",
         status: "online",
         lastSeen: firebase.database.ServerValue.TIMESTAMP
     }).then(() => changeView('chat'));
 });
 
+// PRESENÇA REAL-TIME
 function setupPresenceSystem(userId) {
-    const myStatusRef = database.ref(`users/${userId}`);
-    database.ref(".info/connected").on("value", (snap) => {
+    const userStatusRef = database.ref(`users/${userId}`);
+    const connectedRef = database.ref(".info/connected");
+
+    connectedRef.on("value", (snap) => {
         if (snap.val() === false) return;
-        myStatusRef.onDisconnect().update({ status: "offline" }).then(() => {
-            myStatusRef.update({ status: "online" });
+        userStatusRef.onDisconnect().update({
+            status: "offline",
+            lastSeen: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            userStatusRef.update({
+                status: "online",
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            });
         });
     });
 }
 
-const msgInput = document.getElementById('message-input');
-msgInput.addEventListener('input', () => {
-    if (activeChatId && currentUser) {
-        const status = msgInput.value.trim().length > 0 ? "digitando..." : "online";
-        database.ref(`chats/${activeChatId}/typing/${currentUser.uid}`).set(status);
-    }
-});
-msgInput.addEventListener('blur', () => {
-    if (activeChatId && currentUser) {
-        database.ref(`chats/${activeChatId}/typing/${currentUser.uid}`).set("online");
-    }
-});
+function listenToGlobalMessages() {
+    database.ref('chats').on('child_changed', snap => {
+        const chat = snap.val();
+        if(!chat || !chat.messages) return;
+        
+        const msgKeys = Object.keys(chat.messages);
+        const lastMsg = chat.messages[msgKeys[msgKeys.length - 1]];
+        
+        if(lastMsg.senderId !== currentUser.uid && lastMsg.status === 'sending') {
+            if (silencedUsers[lastMsg.senderId]) return;
+            if (!document.getElementById('toggle-popup-global').checked) return;
 
-function loadMyAccountSettingsData(userId) {
-    database.ref(`users/${userId}`).on('value', snap => {
-        const data = snap.val();
-        if(!data) return;
-        document.getElementById('settings-my-avatar').src = data.avatar || "https://via.placeholder.com/150";
-        document.getElementById('settings-my-username-label').innerText = data.username || "@usuario";
-        document.getElementById('settings-my-nickname-input').value = data.nickname || "";
-        document.getElementById('settings-my-bio-input').value = data.bio || "";
+            database.ref(`users/${lastMsg.senderId}`).once('value', uSnap => {
+                const sender = uSnap.val();
+                triggerPremiumPopup(sender, lastMsg.text || "Enviou uma mídia");
+            });
+        }
     });
 }
 
-document.getElementById('btn-save-settings-profile').addEventListener('click', () => {
-    if(!currentUser) return;
-    const newNick = document.getElementById('settings-my-nickname-input').value.trim();
-    const newBio = document.getElementById('settings-my-bio-input').value.trim();
-    if(!newNick) return alert("O apelido não pode ficar em branco!");
+function triggerPremiumPopup(sender, text) {
+    const popup = document.getElementById('popup-notification');
+    document.getElementById('popup-avatar').src = sender.avatar;
+    document.getElementById('popup-title').innerText = sender.nickname;
+    document.getElementById('popup-text').innerText = text;
     
-    database.ref(`users/${currentUser.uid}`).update({ nickname: newNick, bio: newBio });
+    popup.classList.remove('hidden');
+    setTimeout(() => popup.classList.add('expanded'), 150);
+    
+    setTimeout(() => {
+        popup.classList.remove('expanded');
+        setTimeout(() => popup.classList.add('hidden'), 400);
+    }, 3500);
+}
+
+auth.onAuthStateChanged(user => {
+    if (user) {
+        currentUser = user;
+        database.ref('users/' + user.uid).once('value').then(snap => {
+            if (snap.exists() && snap.val().username) {
+                changeView('chat');
+                setupPresenceSystem(user.uid);
+                loadChatList();
+                listenToGlobalMessages();
+            } else {
+                changeView('profile');
+            }
+        });
+    } else {
+        changeView('login');
+    }
 });
+
+function applyLongPress(element, actionCallback) {
+    let timer;
+    const start = (e) => timer = setTimeout(() => actionCallback(e), 600);
+    const stop = () => clearTimeout(timer);
+    
+    element.addEventListener('touchstart', start, { passive: true });
+    element.addEventListener('touchend', stop, { passive: true });
+    element.addEventListener('mousedown', start);
+    element.addEventListener('mouseup', stop);
+    element.addEventListener('mouseleave', stop);
+}
 
 function buildTicks(status) {
     if(!status) return '';
@@ -172,62 +197,17 @@ function buildTicks(status) {
     return '';
 }
 
-// IMPLEMENTAÇÃO DO DESLIZAR PARA RESPONDER COM ANIMAÇÃO DA SETA SE ABRINDO
-function bindSwipeToReply(rowWrapper, messageBubble, messageData) {
-    let startX = 0;
-    let currentX = 0;
-    const indicator = rowWrapper.querySelector('.swipe-reply-indicator');
-
-    messageBubble.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX;
-    }, { passive: true });
-
-    messageBubble.addEventListener('touchmove', (e) => {
-        currentX = e.touches[0].clientX;
-        let deltaX = currentX - startX;
-
-        // Limita o arrasto apenas para a direita e bota uma resistência física máxima de 75px
-        if (deltaX > 0) {
-            if (deltaX > 75) deltaX = 75;
-            messageBubble.style.transform = `translateX(${deltaX}px)`;
-            
-            // Lógica matemática para abrir a seta proporcionalmente ao movimento da mão
-            let progress = deltaX / 60; // 60px é o ponto perfeito de ativação
-            if (progress > 1) progress = 1;
-            
-            indicator.style.opacity = progress;
-            indicator.style.transform = `scale(${progress})`;
-        }
-    }, { passive: true });
-
-    messageBubble.addEventListener('touchend', () => {
-        let deltaX = currentX - startX;
-        messageBubble.style.transform = 'translateX(0px)';
-        indicator.style.opacity = '0';
-        indicator.style.transform = 'scale(0)';
-
-        // Se arrastou o suficiente, engatilha a resposta no input
-        if (deltaX > 60) {
-            triggerReplyMode(messageData);
-        }
-        startX = 0; currentX = 0;
-    });
+function formatLastSeen(timestamp) {
+    if(!timestamp) return "offline";
+    const diffMs = Date.now() - timestamp;
+    const diffMins = Math.floor(diffMs / 60000);
+    if(diffMins < 1) return "offline há instantes";
+    if(diffMins < 60) return `offline há ${diffMins} min`;
+    const diffHours = Math.floor(diffMins / 60);
+    if(diffHours < 24) return `offline há ${diffHours} h`;
+    return "offline há algum tempo";
 }
 
-function triggerReplyMode(msgData) {
-    currentReplyTargetData = msgData;
-    document.getElementById('reply-preview-user').innerText = msgData.senderId === currentUser.uid ? "Você" : "Mensagem";
-    document.getElementById('reply-preview-body').innerText = msgData.text || (msgData.image ? "Foto" : "Áudio");
-    document.getElementById('reply-preview-bar').classList.remove('hidden');
-    document.getElementById('message-input').focus();
-}
-
-document.getElementById('btn-close-reply-preview').addEventListener('click', () => {
-    currentReplyTargetData = null;
-    document.getElementById('reply-preview-bar').classList.add('hidden');
-});
-
-// ABRIR SESSÃO DO CHAT
 function openChatRoom(chatId, recipientData) {
     activeChatId = chatId;
     activeRecipientId = recipientData.uid;
@@ -236,33 +216,23 @@ function openChatRoom(chatId, recipientData) {
     document.getElementById('active-chat-avatar').src = recipientData.avatar;
     document.getElementById('chat-room-screen').classList.remove('hidden');
 
-    // Escuta requisições de chamadas recebidas para este usuário
-    listenForIncomingCalls();
-
-    database.ref(`chats/${chatId}/typing/${recipientData.uid}`).on('value', tSnap => {
-        const currentTypingStatus = tSnap.val();
+    database.ref(`users/${recipientData.uid}`).on('value', rSnap => {
+        const rUser = rSnap.val();
         const statusTextEl = document.getElementById('active-chat-status');
-        if (currentTypingStatus === "digitando...") {
-            statusTextEl.innerText = "digitando...";
-            statusTextEl.style.color = "var(--ios-green)";
+        const badgeEl = document.getElementById('active-chat-online-badge');
+        const infoHeader = document.getElementById('btn-open-recipient-info');
+        
+        if(rUser.status === 'online') {
+            infoHeader.classList.add('is-online');
+            statusTextEl.innerText = "online";
+            badgeEl.classList.remove('hidden');
         } else {
-            database.ref(`users/${recipientData.uid}`).once('value', rSnap => {
-                const rUser = rSnap.val();
-                if(!rUser) return;
-                const badgeEl = document.getElementById('active-chat-online-badge');
-                if(rUser.status === 'online') {
-                    statusTextEl.innerText = "online";
-                    statusTextEl.style.color = "var(--ios-green)";
-                    badgeEl.classList.remove('hidden');
-                } else {
-                    statusTextEl.innerText = "offline";
-                    statusTextEl.style.color = "var(--text-muted)";
-                    badgeEl.classList.add('hidden');
-                }
-            });
+            infoHeader.classList.remove('is-online');
+            statusTextEl.innerText = formatLastSeen(rUser.lastSeen);
+            badgeEl.classList.add('hidden');
         }
     });
-
+    
     database.ref(`chats/${chatId}/messages`).off();
     database.ref(`chats/${chatId}/messages`).on('value', snap => {
         const box = document.getElementById('messages-container');
@@ -270,212 +240,187 @@ function openChatRoom(chatId, recipientData) {
         
         snap.forEach(child => {
             const data = child.val();
-            
-            const rowWrapper = document.createElement('div');
-            rowWrapper.className = "message-row-wrapper";
-            
-            // Injeta a seta monocromática invisível que se expande
-            rowWrapper.innerHTML = `<div class="swipe-reply-indicator"><div class="swipe-arrow-icon"></div></div>`;
-            
             const card = document.createElement('div');
             card.className = `message ${data.senderId === currentUser.uid ? 'sent' : 'received'}`;
             
-            let content = '';
-            
-            // Se a mensagem contiver uma resposta acoplada
-            if (data.replyTo) {
-                content += `<div class="reply-embedded-card"><strong>${data.replyTo.user}:</strong> ${data.replyTo.body}</div>`;
-            }
-            if (data.image) content += `<img src="${data.image}" class="message-img" onclick="openLightbox('${data.image}')">`;
-            if (data.audio) {
-                content += `
-                <div class="custom-audio-player">
-                    <button class="play-audio-btn" onclick="playAudioMessage(this, '${data.audio}')">Ouvir</button>
-                    <div class="audio-progress-bar"><div class="audio-progress-fill"></div></div>
-                </div>`;
-            }
-            if (data.text) content += `<p>${data.text}</p>`;
+            let content = data.image ? `<img src="${data.image}" class="message-img">` : '';
+            content += data.text ? `<p>${data.text}</p>` : '';
             
             let ticks = data.senderId === currentUser.uid ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
             card.innerHTML = content + ticks;
             
-            // Vincula o gesto de arrasto (Swipe)
-            bindSwipeToReply(rowWrapper, card, data);
-            
+            // EXECUÇÃO DO CLIQUE LONGO COM MANTENÇÃO DO LADO DA MENSAGEM
             applyLongPress(card, () => {
                 selectedMessageText = data.text || "";
                 selectedMessageId = data.id;
+                
                 const clone = card.cloneNode(true);
                 const wrapper = document.getElementById('focused-message-wrapper');
                 wrapper.innerHTML = '';
                 wrapper.appendChild(clone);
+                
                 document.getElementById('blur-overlay').classList.remove('hidden');
             });
             
-            rowWrapper.appendChild(card);
-            box.appendChild(rowWrapper);
+            box.appendChild(card);
         });
         box.scrollTop = box.scrollHeight;
     });
 }
 
-function pushMessage(text, imgBase64 = null, audioBase64 = null) {
-    if(!text.trim() && !imgBase64 && !audioBase64) return;
+document.getElementById('ctx-info-msg').addEventListener('click', () => {
+    if(!selectedMessageId || !activeChatId) return;
+    database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).once('value').then(snap => {
+        const data = snap.val();
+        if(!data) return;
+        
+        const sentDate = new Date(data.timestamp);
+        document.getElementById('info-sent-time').innerText = sentDate.toLocaleTimeString();
+        
+        const readDate = new Date(data.timestamp + 1200);
+        document.getElementById('info-read-time').innerText = data.status === 'read' ? readDate.toLocaleTimeString() : "Não lido";
+        
+        document.getElementById('blur-overlay').classList.add('hidden');
+        document.getElementById('msg-info-modal').classList.remove('hidden');
+    });
+});
+
+document.getElementById('btn-close-msg-info').addEventListener('click', () => {
+    document.getElementById('msg-info-modal').classList.add('hidden');
+});
+
+document.getElementById('ctx-edit-msg').addEventListener('click', () => {
+    if(!selectedMessageText) return alert("Apenas textos podem ser editados!");
+    const newText = prompt("Editar mensagem:", selectedMessageText);
+    if(newText && newText.trim() !== "") {
+        database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).update({
+            text: newText + " (editada)"
+        });
+    }
+    document.getElementById('blur-overlay').classList.add('hidden');
+});
+
+document.getElementById('ctx-delete-single').addEventListener('click', () => {
+    if(confirm("Apagar para todos?")) {
+        database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).remove();
+    }
+    document.getElementById('blur-overlay').classList.add('hidden');
+});
+
+function pushMessage(text, imgBase64 = null) {
+    if(!text.trim() && !imgBase64) return;
     const ref = database.ref(`chats/${activeChatId}/messages`).push();
-    
     const payload = {
         id: ref.key,
         senderId: currentUser.uid,
+        text: text,
         status: 'sending',
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
-    if(text.trim()) payload.text = text;
     if(imgBase64) payload.image = imgBase64;
-    if(audioBase64) payload.audio = audioBase64;
     
-    // Se estiver respondendo a alguém no momento do push
-    if (currentReplyTargetData) {
-        payload.replyTo = {
-            user: currentReplyTargetData.senderId === currentUser.uid ? "Você" : "Mensagem",
-            body: currentReplyTargetData.text || (currentReplyTargetData.image ? "Foto" : "Áudio")
-        };
-        // Reseta o banner de resposta
-        currentReplyTargetData = null;
-        document.getElementById('reply-preview-bar').classList.add('hidden');
-    }
-    
-    database.ref(`chats/${activeChatId}/typing/${currentUser.uid}`).set("online");
-
     ref.set(payload).then(() => {
-        setTimeout(() => ref.update({ status: 'sent' }), 350);
-        setTimeout(() => ref.update({ status: 'delivered' }), 850);
-        setTimeout(() => ref.update({ status: 'read' }), 1500);
+        setTimeout(() => ref.update({ status: 'sent' }), 300);
+        setTimeout(() => ref.update({ status: 'delivered' }), 800);
+        setTimeout(() => ref.update({ status: 'read' }), 1400);
     });
-
     document.getElementById('message-input').value = '';
-    triggerMicButtonState();
 }
 
-// SISTEMA COMPLETO DE LIGAÇÕES (SINALIZAÇÃO VIA FIREBASE)
-function listenForIncomingCalls() {
-    database.ref(`users/${currentUser.uid}/incomingCall`).on('value', snap => {
-        const callData = snap.val();
-        if (callData && callData.status === "chamando") {
-            // Abre overlay de chamada recebida
-            document.getElementById('call-user-name').innerText = callData.callerName;
-            document.getElementById('call-status-label').innerText = "Chamada de Voz Recebida...";
-            document.getElementById('call-overlay-screen').classList.remove('hidden');
+document.getElementById('message-input').addEventListener('keypress', (e) => {
+    if(e.key === 'Enter') pushMessage(e.target.value);
+});
+
+document.getElementById('btn-attach').addEventListener('click', () => document.getElementById('media-file-input').click());
+document.getElementById('media-file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => pushMessage("", ev.target.result);
+    reader.readAsDataURL(file);
+});
+
+document.getElementById('ctx-copy-direct').addEventListener('click', () => {
+    navigator.clipboard.writeText(selectedMessageText).then(() => {
+        document.getElementById('blur-overlay').classList.add('hidden');
+    });
+});
+
+function loadChatList() {
+    database.ref('users').on('value', snap => {
+        const parent = document.getElementById('chats-list');
+        parent.innerHTML = '';
+        snap.forEach(child => {
+            const user = child.val();
+            if(user.uid === currentUser.uid) return;
             
-            // Modifica ação do botão para aceitar
-            const btnMute = document.getElementById('btn-toggle-mute-mic');
-            btnMute.innerText = "Atender";
-            btnMute.onclick = () => {
-                database.ref(`users/${currentUser.uid}/incomingCall`).update({ status: "atendida" });
-                document.getElementById('call-status-label').innerText = "Em Linha";
-                btnMute.innerText = "Mudo";
-            };
-        }
+            const row = document.createElement('div');
+            row.className = "chat-item-row";
+            row.innerHTML = `<img src="${user.avatar}" onerror="this.src='https://via.placeholder.com/150'">
+                             <div class="chat-item-info">
+                                <div class="chat-item-header"><h4>${user.nickname}</h4></div>
+                                <p>${user.username}</p>
+                             </div>`;
+            
+            row.addEventListener('click', () => {
+                const combinedId = currentUser.uid < user.uid ? currentUser.uid + "_" + user.uid : user.uid + "_" + currentUser.uid;
+                openChatRoom(combinedId, user);
+            });
+            parent.appendChild(row);
+        });
     });
 }
 
-document.getElementById('btn-start-call').addEventListener('click', () => {
-    if (!activeRecipientId) return;
-    document.getElementById('call-status-label').innerText = "Chamando...";
-    document.getElementById('call-overlay-screen').classList.remove('hidden');
-    
-    // Injeta a chamada no nó do destinatário via Realtime Database
-    database.ref(`users/${activeRecipientId}/incomingCall`).set({
-        callerId: currentUser.uid,
-        callerName: "Alguém",
-        status: "chamando"
-    });
-
-    // Monitora se ele atendeu ou desligou
-    database.ref(`users/${activeRecipientId}/incomingCall/status`).on('value', s => {
-        if (s.val() === "atendida") {
-            document.getElementById('call-status-label').innerText = "Em Linha";
-        }
+document.getElementById('btn-open-recipient-info').addEventListener('click', () => {
+    database.ref('users/' + activeRecipientId).once('value').then(s => {
+        const u = s.val();
+        document.getElementById('sheet-contact-nick').innerText = u.nickname;
+        document.getElementById('sheet-contact-user').innerText = u.username;
+        document.getElementById('sheet-contact-avatar').src = u.avatar;
+        document.getElementById('sheet-contact-bio').innerText = u.bio || "Sem biografia.";
+        document.getElementById('sheet-contact-wlstwrus').innerText = u.wlstwrus || "Disponível";
+        
+        document.getElementById('toggle-silence-user').checked = !!silencedUsers[activeRecipientId];
+        document.getElementById('contact-info-sheet').classList.remove('hidden');
     });
 });
 
-document.getElementById('btn-hangup-call').addEventListener('click', () => {
-    document.getElementById('call-overlay-screen').classList.add('hidden');
-    if (activeRecipientId) {
-        database.ref(`users/${activeRecipientId}/incomingCall`).remove();
-    }
-    database.ref(`users/${currentUser.uid}/incomingCall`).remove();
+document.getElementById('toggle-silence-user').addEventListener('change', (e) => {
+    silencedUsers[activeRecipientId] = e.target.checked;
 });
 
-// FUNÇÕES DE ÁUDIO REUTILIZADAS
-function startRecordingAudio() {
-    navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
-        audioChunks = [];
-        mediaRecorder = new MediaRecorder(stream);
-        mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-        mediaRecorder.onstop = () => {
-            const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
-            const reader = new FileReader();
-            reader.onloadend = () => pushMessage("", null, reader.result);
-            reader.readAsDataURL(audioBlob);
-            stream.getTracks().forEach(track => track.stop());
-        };
-        mediaRecorder.start();
-        audioDurationSeconds = 0;
-        document.getElementById('audio-timer').innerText = "0:00";
-        document.getElementById('audio-recording-ui').classList.remove('hidden');
-        audioTimerInterval = setInterval(() => {
-            audioDurationSeconds++;
-            const mins = Math.floor(audioDurationSeconds / 60);
-            const secs = audioDurationSeconds % 60;
-            document.getElementById('audio-timer').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-        }, 1000);
-    }).catch(() => alert("Sem permissão para usar o Microfone!"));
-}
+document.getElementById('ctx-close-menu').addEventListener('click', () => document.getElementById('blur-overlay').classList.add('hidden'));
+document.getElementById('btn-close-info-sheet').addEventListener('click', () => document.getElementById('contact-info-sheet').classList.add('hidden'));
+document.getElementById('btn-back-to-list').addEventListener('click', () => {
+    database.ref(`users/${activeRecipientId}`).off();
+    document.getElementById('chat-room-screen').classList.add('hidden');
+});
+document.getElementById('btn-main-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.remove('hidden'));
+document.getElementById('btn-back-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.add('hidden'));
+document.getElementById('btn-logout').addEventListener('click', () => { auth.signOut().then(() => window.location.reload()); });
+document.getElementById('btn-to-register').addEventListener('click', () => changeView('register'));
+document.getElementById('btn-to-login').addEventListener('click', () => changeView('login'));
+document.getElementById('btn-contact-menu').addEventListener('click', () => document.getElementById('btn-open-recipient-info').click());
 
-function stopRecordingAudio() {
-    if(mediaRecorder && mediaRecorder.state !== "inactive") {
-        mediaRecorder.stop();
-        clearInterval(audioTimerInterval);
-        document.getElementById('audio-recording-ui').classList.add('hidden');
-    }
-}
-
-function playAudioMessage(btn, audioBase64) {
-    const audio = new Audio(audioBase64);
-    const fill = btn.nextElementSibling.querySelector('.audio-progress-fill');
-    btn.innerText = "Pausar";
-    audio.play();
-    audio.addEventListener('timeupdate', () => {
-        const pct = (audio.currentTime / audio.duration) * 100;
-        fill.style.width = pct + "%";
+document.getElementById('btn-new-chat').addEventListener('click', () => {
+    database.ref('users').once('value').then(snap => {
+        const list = document.getElementById('contacts-list-modal');
+        list.innerHTML = '';
+        snap.forEach(c => {
+            const u = c.val();
+            if(u.uid === currentUser.uid) return;
+            const item = document.createElement('div');
+            item.className = "chat-item-row";
+            item.innerHTML = `<img src="${u.avatar}"><div><h4>${u.nickname}</h4></div>`;
+            item.addEventListener('click', () => {
+                document.getElementById('contacts-modal').classList.add('hidden');
+                const combinedId = currentUser.uid < u.uid ? currentUser.uid + "_" + u.uid : u.uid + "_" + currentUser.uid;
+                openChatRoom(combinedId, u);
+            });
+            list.appendChild(item);
+        });
+        document.getElementById('contacts-modal').classList.remove('hidden');
     });
-    audio.addEventListener('ended', () => {
-        btn.innerText = "Ouvir";
-        fill.style.width = "0%";
-    });
-}
-
-function openLightbox(imgSrc) {
-    const box = document.getElementById('lightbox-overlay');
-    document.getElementById('lightbox-img').src = imgSrc;
-    box.classList.remove('hidden');
-}
-
-function triggerMicButtonState() {
-    const btn = document.getElementById('btn-send');
-    const val = document.getElementById('message-input').value.trim();
-    if(val.length > 0) {
-        btn.innerText = "Enviar";
-        btn.className = "icon-btn state-send";
-    } else {
-        btn.innerText = "Áudio";
-        btn.className = "icon-btn state-mic";
-    }
-}
-document.getElementById('message-input').addEventListener('input', triggerMicButtonState);
-
-document.getElementById('btn-send').addEventListener('click', function() {
-    if(this.classList.contains('state-send')) {
-        pushMessage(document.getElementById('message-input').value);
-    } else {
-        if(this.classList.contains('recordin
+});
+document.getElementById('btn-close-modal').addEventListener('click', () => document.getElementById('contacts-modal').classList.add('hidden'));
+                                                           
