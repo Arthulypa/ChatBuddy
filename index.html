@@ -3,42 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatBuddy</title>
-    <link rel="stylesheet" href="estilo.css">
+    <title>ChatBuddy - Neon Edition</title>
+    <link rel="stylesheet" href="style.css">
+    <!-- Google Fonts para dar um visual moderno -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
     <!-- 1. TELA DE LOGIN -->
     <div id="login-page" class="auth-container">
         <div class="auth-box">
+            <div class="logo-container">
+                <h1 class="neon-text">CHAT<span>BUDDY</span></h1>
+            </div>
             <h2>Sign In</h2>
             <div class="input-group">
                 <label>Email</label>
-                <input type="email" id="email-login" placeholder="Ex: arthur@email.com">
+                <input type="email" id="email-login" placeholder="arthur@cyber.com">
             </div>
             <div class="input-group">
                 <label>Password</label>
                 <input type="password" id="password-login" placeholder="••••••••">
             </div>
-            <button id="btn-login" class="btn-primary">Sign In</button>
-            <p class="auth-switch">New here? <span id="btn-to-register">Create account</span></p>
+            <button id="btn-login" class="btn-primary">ENTRAR</button>
+            <p class="auth-switch">New to the grid? <span id="btn-to-register">Create account</span></p>
         </div>
     </div>
 
     <!-- 2. TELA DE REGISTRO (CRIAR CONTA) -->
     <div id="register-page" class="auth-container hidden">
         <div class="auth-box">
+            <div class="logo-container">
+                <h1 class="neon-text">CHAT<span>BUDDY</span></h1>
+            </div>
             <h2>Create Account</h2>
             <div class="input-group">
                 <label>Email Address</label>
-                <input type="email" id="email-reg" placeholder="Ex: arthur@email.com">
+                <input type="email" id="email-reg" placeholder="seu-email@cyber.com">
             </div>
             <div class="input-group">
                 <label>Choose Password</label>
                 <input type="password" id="password-reg" placeholder="••••••••">
             </div>
-            <button id="btn-register" class="btn-primary">Continue</button>
-            <p class="auth-switch">Already have an account? <span id="btn-to-login">Sign In</span></p>
+            <button id="btn-register" class="btn-primary">CONTINUAR</button>
+            <p class="auth-switch">Already initialized? <span id="btn-to-login">Sign In</span></p>
         </div>
     </div>
 
@@ -54,29 +62,27 @@
                 <label>Username</label>
                 <input type="text" id="username" placeholder="Ex: arthur123">
             </div>
-            <button id="btn-save-profile" class="btn-primary">Save and Finish</button>
+            <button id="btn-save-profile" class="btn-primary">SALVAR PERFIL</button>
         </div>
     </div>
 
     <!-- 4. TELA PRINCIPAL DO CHAT -->
     <div id="chat-page" class="chat-container hidden">
-        <!-- BARRA LATERAL (CONVERSAS) -->
+        <!-- BARRA LATERAL -->
         <aside class="sidebar">
             <header class="sidebar-header">
                 <div class="user-profile-summary">
                     <h3 id="current-user-name">Carregando...</h3>
                     <p id="current-user-tag">@username</p>
                 </div>
-                <button id="btn-logout" class="btn-icon-logout">Sair</button>
+                <button id="btn-logout" class="btn-logout">Sair</button>
             </header>
             
             <div class="search-bar">
-                <input type="text" id="search-contact" placeholder="Buscar conversa...">
+                <input type="text" id="search-contact" placeholder="Buscar transmissão...">
             </div>
 
-            <div id="chats-list" class="chats-list">
-                <!-- Injetado via JavaScript -->
-            </div>
+            <div id="chats-list" class="chats-list"></div>
 
             <button id="btn-new-chat" class="btn-fab">+</button>
         </aside>
@@ -85,42 +91,40 @@
         <main class="chat-area">
             <header class="chat-header">
                 <div class="active-user-info">
-                    <h2 id="active-chat-name">Selecione uma conversa</h2>
+                    <h2 id="active-chat-name">Selecione um canal</h2>
                     <p id="active-chat-status"></p>
                 </div>
             </header>
 
             <div id="messages-container" class="messages-container">
-                <p class="chat-placeholder">Inicie um chat clicando no botão "+" abaixo.</p>
+                <p class="chat-placeholder">Abra o terminal clicando no botão "+" para buscar usuários.</p>
             </div>
 
             <footer class="chat-footer">
-                <input type="text" id="message-input" placeholder="Digite uma mensagem...">
-                <button id="btn-send" class="btn-send">Enviar</button>
+                <input type="text" id="message-input" placeholder="Digite sua mensagem criptografada...">
+                <button id="btn-send" class="btn-send">ENVIAR</button>
             </footer>
         </main>
     </div>
 
-    <!-- MODAL DE CONTATOS (CHAMADO PELO BOTÃO FAB +) -->
+    <!-- MODAL DE CONTATOS -->
     <div id="contacts-modal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Iniciar nova conversa</h3>
+                <h3>Conectar a um usuário</h3>
                 <button id="btn-close-modal" class="btn-close">&times;</button>
             </div>
-            <div id="contacts-list" class="contacts-list">
-                <!-- Injetado via JavaScript -->
-            </div>
+            <div id="contacts-list" class="contacts-list"></div>
         </div>
     </div>
 
-    <!-- SCRIPTS DO FIREBASE (FORMATO COMPAT) -->
+    <!-- SCRIPTS DO FIREBASE -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
-    <!-- MEU SCRIPT PRINCIPAL -->
+    <!-- CODE SCRIPT -->
     <script src="script.js"></script>
 </body>
-  </html>
-  
+    </html>
+                                                        
