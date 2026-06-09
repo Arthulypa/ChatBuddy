@@ -1,6 +1,6 @@
 // CONFIGURAÇÃO DO FIREBASE
 const firebaseConfig = {
-  apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfyH4", 
+  apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfykh4", 
   authDomain: "chatbuddy-96a61.firebaseapp.com",
   databaseURL: "https://chatbuddy-96a61-default-rtdb.firebaseio.com",
   projectId: "chatbuddy-96a61",
