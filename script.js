@@ -1,68 +1,75 @@
-// CONFIGURAÇÃO DO FIREBASE (COMPAT)
+// CONFIGURAÇÃO DO FIREBASE
 const firebaseConfig = {
-  apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfykh4", 
+  apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfyH4", 
   authDomain: "chatbuddy-96a61.firebaseapp.com",
   databaseURL: "https://chatbuddy-96a61-default-rtdb.firebaseio.com",
   projectId: "chatbuddy-96a61",
   storageBucket: "chatbuddy-96a61.firebasestorage.app",
   messagingSenderId: "1051493485478",
   appId: "1:1051493485478:web:1f6a94ef63e665fa539d67",
-  measurementId: "G-7GX1YR6HQL"
 };
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const database = firebase.database();
 
-// Mapeamento Dom
+// DOM Elements
 const loginPage = document.getElementById('login-page');
 const registerPage = document.getElementById('register-page');
-const verificationPage = document.getElementById('verification-page');
 const profilePage = document.getElementById('profile-page');
 const chatPage = document.getElementById('chat-page');
-
-// Telas e Abas
 const chatRoomScreen = document.getElementById('chat-room-screen');
+const contactInfoSheet = document.getElementById('contact-info-sheet');
 const settingsScreen = document.getElementById('settings-screen');
-const blurOverlay = document.getElementById('blur-overlay');
-const focusedMsgContainer = document.getElementById('focused-message-container');
-const multiSelectBar = document.getElementById('multi-select-bar');
-
-const messagesContainer = document.getElementById('messages-container');
-const messageInput = document.getElementById('message-input');
-const mediaFileInput = document.getElementById('media-file-input');
-const stickerPanel = document.getElementById('sticker-panel');
-
-// inputs de Configurações Inline
-const setNickname = document.getElementById('set-nickname');
-const setUsername = document.getElementById('set-username');
+const imageViewerLightbox = document.getElementById('image-viewer-lightbox');
+const lightboxTargetImg = document.getElementById('lightbox-target-img');
+const btnDownloadLightbox = document.getElementById('btn-download-lightbox');
+const lightboxWrapper = document.getElementById('lightbox-wrapper');
 
 let currentUser = null;
 let activeChatId = null;
 let activeRecipientId = null;
-let selectedMessageId = null;
-let selectedMessageElement = null;
-
-// Lógica de Seleção Múltipla
-let isMultiSelectMode = false;
 let selectedMessagesList = [];
+let isMultiSelectMode = false;
+let generated6DigitCode = null;
+let base64AvatarString = "";
 
-// Navegação simplificada
 function showPage(page) {
-    [loginPage, registerPage, verificationPage, profilePage, chatPage].forEach(p => p.classList.add('hidden'));
+    [loginPage, registerPage, profilePage, chatPage].forEach(p => p.classList.add('hidden'));
     page.classList.remove('hidden');
 }
 
-// Handler de Abas do WhatsApp
-document.querySelectorAll('.tab-item').forEach(tab => {
-    tab.addEventListener('click', (e) => {
-        document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
-        e.target.classList.add('active');
-        if(e.target.id === 'tab-chats') document.getElementById('content-chats').classList.remove('hidden');
-        if(e.target.id === 'tab-status') document.getElementById('content-status').classList.remove('hidden');
-        if(e.target.id === 'tab-calls') document.getElementById('content-calls').classList.remove('hidden');
-    });
+// VALIDAÇÃO COM TOKEN DE 6 DÍGITOS
+document.getElementById('btn-send-code').addEventListener('click', () => {
+    const email = document.getElementById('email-reg').value.trim();
+    const password = document.getElementById('password-reg').value.trim();
+    if(!email || !password) return alert('Insira e-mail e senha!');
+
+    generated6DigitCode = Math.floor(100000 + Math.random() * 900000).toString();
+    console.log(`[Firebase Security] Código enviado para ${email}: ${generated6DigitCode}`);
+    alert(`Código de verificação enviado para o e-mail: ${email}`);
+    
+    document.getElementById('reg-step-1').classList.add('hidden');
+    document.getElementById('reg-step-2').classList.remove('hidden');
+});
+
+document.getElementById('btn-verify-and-register').addEventListener('click', () => {
+    const userCode = document.getElementById('verification-code-input').value.trim();
+    if (userCode !== generated6DigitCode) {
+        return alert('Erro: Código Inválido! Tente novamente.');
+    }
+
+    const email = document.getElementById('email-reg').value.trim();
+    const password = document.getElementById('password-reg').value.trim();
+
+    auth.createUserWithEmailAndPassword(email, password)
+        .then(() => { alert('E-mail validado com sucesso!'); })
+        .catch(e => alert(e.message));
+});
+
+document.getElementById('btn-back-to-step1').addEventListener('click', () => {
+    document.getElementById('reg-step-2').classList.add('hidden');
+    document.getElementById('reg-step-1').classList.remove('hidden');
 });
 
 // Auth Listener
@@ -73,110 +80,55 @@ auth.onAuthStateChanged(user => {
             if (snapshot.exists() && snapshot.val().username) {
                 showPage(chatPage);
                 loadChatSystem();
-            } else {
-                showPage(profilePage);
-            }
+            } else { showPage(profilePage); }
         });
-    } else {
-        showPage(loginPage);
-    }
+    } else { showPage(loginPage); }
 });
 
-// Entrada de Perfil Inicial
+// Criar Perfil Inicial
 document.getElementById('btn-save-profile').addEventListener('click', () => {
     const nick = document.getElementById('display-name').value.trim();
     const user = document.getElementById('username').value.trim().toLowerCase();
+    const bio = document.getElementById('user-bio-initial').value.trim() || "Disponível";
     if(!nick || !user) return alert('Campos obrigatórios!');
     
     database.ref('users/' + currentUser.uid).set({
-        uid: currentUser.uid, displayName: nick, username: user, status: 'Online',
-        lastNickUpdate: 0, lastUserUpdate: 0, nickCountToday: 0, nickDayTimestamp: 0
+        uid: currentUser.uid, displayName: nick, username: user, bio: bio, avatar: base64AvatarString, hideUsername: false
     });
-    database.ref('usernames/' + user).set(currentUser.uid);
     showPage(chatPage);
 });
 
 function loadChatSystem() {
-    // Configura os inputs da tela cheia de configurações
-    database.ref('users/' + currentUser.uid).on('value', snap => {
-        const data = snap.val();
-        if(data) {
-            setNickname.value = data.displayName || '';
-            setUsername.value = data.username || '';
-            document.getElementById('settings-avatar-char').innerText = data.displayName ? data.displayName.charAt(0).toUpperCase() : 'B';
-        }
-    });
     listenToMyChats();
+    document.getElementById('toggle-hide-username').addEventListener('change', (e) => {
+        database.ref(`users/${currentUser.uid}`).update({ hideUsername: e.target.checked });
+    });
+    database.ref(`users/${currentUser.uid}/hideUsername`).once('value', snap => {
+        if(snap.exists()) document.getElementById('toggle-hide-username').checked = snap.val();
+    });
 }
 
-// Abrir e fechar configurações estilo Nova Aba do WhatsApp
 document.getElementById('btn-main-settings').addEventListener('click', () => settingsScreen.classList.remove('hidden'));
 document.getElementById('btn-back-settings').addEventListener('click', () => settingsScreen.classList.add('hidden'));
 
-// --- LOGICA DE CONTROLE DE TEMPO DE USERNAME E NICKNAME ---
-document.getElementById('btn-update-nickname').addEventListener('click', () => {
-    const novoNick = setNickname.value.trim();
-    if(!novoNick) return;
-    
-    const agora = Date.now();
-    database.ref('users/' + currentUser.uid).once('value').then(snap => {
-        let u = snap.val();
-        let hoje = new Date().setHours(0,0,0,0);
-        
-        let contagem = u.nickDayTimestamp === hoje ? (u.nickCountToday || 0) : 0;
-        if(contagem >= 2) return alert('Limite atingido! Você só pode alterar o apelido 2 vezes por dia.');
-        
-        database.ref('users/' + currentUser.uid).update({
-            displayName: novoNick,
-            nickCountToday: contagem + 1,
-            nickDayTimestamp: hoje
-        });
-        alert('Nickname atualizado com sucesso!');
-    });
-});
-
-document.getElementById('btn-update-username').addEventListener('click', () => {
-    const novoUser = setUsername.value.trim().toLowerCase().replace(/\s+/g, '');
-    if(!novoUser) return;
-    
-    const agora = Date.now();
-    database.ref('users/' + currentUser.uid).once('value').then(snap => {
-        let u = snap.val();
-        const seteDias = 7 * 24 * 60 * 60 * 1000;
-        
-        if(agora - (u.lastUserUpdate || 0) < seteDias) {
-            const restante = Math.ceil((seteDias - (agora - u.lastUserUpdate)) / (1000 * 60 * 60 * 24));
-            return alert(`Você precisa esperar mais ${restante} dias para mudar o username novamente.`);
-        }
-        
-        database.ref('usernames/' + novoUser).once('value').then(userSnap => {
-            if(userSnap.exists()) return alert('Este username já está sendo usado!');
-            
-            database.ref('usernames/' + u.username).remove();
-            database.ref('usernames/' + novoUser).set(currentUser.uid);
-            database.ref('users/' + currentUser.uid).update({
-                username: novoUser,
-                lastUserUpdate: agora
-            });
-            alert('Username atualizado!');
-        });
-    });
-});
-
-// Escuta de conversas existentes
+// LISTAR CHATS
 function listenToMyChats() {
     database.ref(`users/${currentUser.uid}/my_chats`).on('value', snapshot => {
         const container = document.getElementById('chats-list');
         container.innerHTML = '';
         snapshot.forEach(child => {
             const chatId = child.key;
-            database.ref(`users/${child.val().recipientId}`).once('value', uSnap => {
+            const chatData = child.val();
+            
+            database.ref(`users/${chatData.recipientId}`).once('value', uSnap => {
                 const user = uSnap.val();
                 if(user) {
+                    const exibicaoNome = chatData.localAlias ? chatData.localAlias : user.displayName;
                     const item = document.createElement('div');
                     item.className = 'chat-item';
-                    item.innerHTML = `<div class="avatar">${user.displayName.charAt(0)}</div><div><h4>${user.displayName}</h4><small>@${user.username}</small></div>`;
-                    item.onclick = () => openChatRoom(chatId, user.displayName, user.uid);
+                    item.innerHTML = `<img class="avatar" src="${user.avatar || '👤'}">
+                                      <div><h4>${exibicaoNome}</h4><small>${user.hideUsername ? 'Username Oculto' : '@'+user.username}</small></div>`;
+                    item.onclick = () => openChatRoom(chatId, exibicaoNome, user.uid, user.avatar);
                     container.appendChild(item);
                 }
             });
@@ -184,189 +136,142 @@ function listenToMyChats() {
     });
 }
 
-function openChatRoom(chatId, recipientName, recipientId) {
+function openChatRoom(chatId, recipientName, recipientId, recipientAvatar) {
     activeChatId = chatId; activeRecipientId = recipientId;
     chatRoomScreen.classList.remove('hidden');
     document.getElementById('active-chat-name').innerText = recipientName;
-    
+    document.getElementById('active-chat-avatar').src = recipientAvatar || '';
+
     database.ref(`chats/${chatId}/messages`).off();
     database.ref(`chats/${chatId}/messages`).on('value', snapshot => {
-        messagesContainer.innerHTML = '';
+        const container = document.getElementById('messages-container');
+        container.innerHTML = '';
         snapshot.forEach(child => {
             const msg = child.val();
-            const msgId = child.key;
-            if(msg.deletedFor && msg.deletedFor[currentUser.uid]) return;
-
             const div = document.createElement('div');
             div.className = `message ${msg.senderId === currentUser.uid ? 'sent' : 'received'}`;
-            div.dataset.msgid = msgId;
-            div.dataset.sender = msg.senderId;
-
-            if(msg.isDeleted) {
-                div.innerHTML = `<small style="color:var(--text-muted)">🗑️ Mensagem apagada</small>`;
-            } else if (msg.type === 'file') {
-                div.innerHTML = `<a href="${msg.fileUrl}" target="_blank" class="file-attachment">📄 ${msg.fileName || 'Arquivo'}</a>`;
-            } else if (msg.type === 'img') {
-                div.innerHTML = `<img src="${msg.fileUrl}" class="media-preview">`;
+            
+            if(msg.type === 'image') {
+                div.innerHTML = `<img src="${msg.payload}" class="chat-embedded-img">`;
             } else {
                 div.innerHTML = `<p>${msg.text}</p>`;
             }
-            
-            // Eventos de clique e clique longo para seleção e blur do iPhone
-            div.addEventListener('contextmenu', (e) => { e.preventDefault(); handleLongPress(div, msgId, msg.senderId); });
-            div.addEventListener('click', () => handleMessageClick(div, msgId));
-
-            messagesContainer.appendChild(div);
+            container.appendChild(div);
         });
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        container.scrollTop = container.scrollHeight;
     });
 }
 
-// Fechar Sala de Chat
-document.getElementById('btn-back-to-list').addEventListener('click', () => chatRoomScreen.classList.add('hidden'));
+// MOSTRAR DETALHES COM FILTRO DE PRIVACIDADE E APELIDO LOCAL
+function openRecipientSheet() {
+    database.ref('users/' + activeRecipientId).once('value').then(snap => {
+        const u = snap.val();
+        if(!u) return;
 
-// --- BLUR DO IPHONE E CONTEXT MENU ---
-function handleLongPress(element, msgId, senderId) {
-    if(isMultiSelectMode) return;
-    selectedMessageId = msgId;
-    selectedMessageElement = element;
+        database.ref(`users/${currentUser.uid}/my_chats/${activeChatId}/localAlias`).once('value', aliasSnap => {
+            document.getElementById('sheet-contact-avatar').src = u.avatar || '';
+            document.getElementById('sheet-contact-nick').innerText = u.displayName;
+            
+            if(aliasSnap.exists() && aliasSnap.val()) {
+                document.getElementById('sheet-contact-custom-alias').innerText = `Apelido Local: ${aliasSnap.val()}`;
+            } else {
+                document.getElementById('sheet-contact-custom-alias').innerText = '';
+            }
 
-    focusedMsgContainer.innerHTML = element.innerHTML;
-    focusedMsgContainer.className = element.className;
-    
-    if(senderId === currentUser.uid) document.getElementById('ctx-delete-for-all').classList.remove('hidden');
-    else document.getElementById('ctx-delete-for-all').classList.add('hidden');
+            if(u.hideUsername) {
+                document.getElementById('sheet-contact-user').style.display = 'none';
+            } else {
+                document.getElementById('sheet-contact-user').style.display = 'block';
+                document.getElementById('sheet-contact-user').innerText = `@${u.username}`;
+            }
 
-    blurOverlay.classList.remove('hidden');
+            document.getElementById('sheet-contact-bio').innerText = u.bio || 'Sem biografia.';
+            contactInfoSheet.classList.remove('hidden');
+        });
+    });
 }
+document.getElementById('btn-contact-menu').addEventListener('click', openRecipientSheet);
+document.getElementById('btn-open-recipient-info').addEventListener('click', openRecipientSheet);
+document.getElementById('btn-close-info-sheet').addEventListener('click', () => contactInfoSheet.add('hidden'));
 
-blurOverlay.addEventListener('click', (e) => {
-    if(e.target === blurOverlay) blurOverlay.classList.add('hidden');
+document.getElementById('btn-sheet-set-alias').addEventListener('click', () => {
+    const novoApelido = prompt("Insira o apelido personalizado para este contato:");
+    if(novoApelido === null) return;
+
+    database.ref(`users/${currentUser.uid}/my_chats/${activeChatId}`).update({
+        localAlias: novoApelido.trim()
+    }).then(() => {
+        alert('Apelido definido!');
+        contactInfoSheet.classList.add('hidden');
+        if(novoApelido.trim()) document.getElementById('active-chat-name').innerText = novoApelido.trim();
+    });
 });
 
-// Ativar Seleção Múltipla via menu iPhone
-document.getElementById('ctx-select-multiple').addEventListener('click', () => {
-    blurOverlay.classList.add('hidden');
-    isMultiSelectMode = true;
-    multiSelectBar.classList.remove('hidden');
-    toggleSelectMessage(selectedMessageElement, selectedMessageId);
-});
+// LIGHTBOX COM PINCH-TO-ZOOM GESTUAL E AUTO-RESET
+let scale = 1;
+let lastScale = 1;
+let startX = 0;
+let isZooming = false;
 
-function handleMessageClick(element, msgId) {
-    if(!isMultiSelectMode) return;
-    toggleSelectMessage(element, msgId);
-}
-
-function toggleSelectMessage(element, msgId) {
-    if(selectedMessagesList.includes(msgId)) {
-        selectedMessagesList = selectedMessagesList.filter(id => id !== msgId);
-        element.classList.remove('selected');
-    } else {
-        selectedMessagesList.push(msgId);
-        element.classList.add('selected');
+document.addEventListener('click', (e) => {
+    if(e.target.classList.contains('clickable-image-trigger') || e.target.classList.contains('chat-embedded-img')) {
+        lightboxTargetImg.src = e.target.src;
+        btnDownloadLightbox.href = e.target.src;
+        imageViewerLightbox.classList.remove('hidden');
+        resetZoom();
     }
-    document.getElementById('select-count').innerText = `${selectedMessagesList.length} selecionada(s)`;
+});
+
+document.getElementById('btn-close-lightbox').addEventListener('click', () => imageViewerLightbox.classList.add('hidden'));
+
+function resetZoom() {
+    scale = 1; lastScale = 1;
+    lightboxTargetImg.style.transform = `scale(1) translate(0px, 0px)`;
 }
 
-// Cancelar seleção
-document.getElementById('btn-cancel-select').addEventListener('click', () => {
-    isMultiSelectMode = false;
-    selectedMessagesList = [];
-    multiSelectBar.classList.add('hidden');
-    document.querySelectorAll('.message').forEach(m => m.classList.remove('selected'));
+lightboxWrapper.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+        isZooming = true;
+        startX = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+        lastScale = scale;
+    }
 });
 
-// Ação de Apagar Múltiplos para Mim
-document.getElementById('btn-multi-delete-me').addEventListener('click', () => {
-    selectedMessagesList.forEach(id => {
-        database.ref(`chats/${activeChatId}/messages/${id}/deletedFor/${currentUser.uid}`).set(true);
-    });
-    document.getElementById('btn-cancel-select').click();
+lightboxWrapper.addEventListener('touchmove', (e) => {
+    if (isZooming && e.touches.length === 2) {
+        e.preventDefault();
+        const currentDistance = Math.hypot(e.touches[0].pageX - e.touches[1].pageX, e.touches[0].pageY - e.touches[1].pageY);
+        scale = (currentDistance / startX) * lastScale;
+        if(scale < 1) scale = 1;
+        if(scale > 4) scale = 4;
+        lightboxTargetImg.style.transform = `scale(${scale})`;
+    }
 });
 
-// Envio de Mensagem de Texto Comum
-function emitirMensagem(conteudo, tipo = 'text', extras = {}) {
-    const ref = database.ref(`chats/${activeChatId}/messages`).push();
-    ref.set({
-        senderId: currentUser.uid,
-        timestamp: firebase.database.ServerValue.TIMESTAMP,
-        type: tipo,
-        isDeleted: false,
-        ...conteudo,
-        ...extras
-    });
-}
-
-document.getElementById('btn-send').addEventListener('click', () => {
-    const t = messageInput.value.trim();
-    if(!t) return;
-    emitirMensagem({ text: t });
-    messageInput.value = '';
+lightboxWrapper.addEventListener('touchend', () => {
+    if (isZooming) {
+        isZooming = false;
+        lightboxTargetImg.style.transition = "transform 0.25s cubic-bezier(0.25, 0.8, 0.25, 1)";
+        resetZoom();
+        setTimeout(() => { lightboxTargetImg.style.transition = "none"; }, 250);
+    }
 });
 
-// --- SISTEMA DE ARQUIVOS (MÍDIA ATÉ 500MB) ---
+// Envio de Mídia
 document.getElementById('btn-attach').addEventListener('click', () => mediaFileInput.click());
 mediaFileInput.addEventListener('change', (e) => {
-    const arquivo = e.target.files[0];
-    if(!arquivo) return;
-    
-    const limiteMaximo = 500 * 1024 * 1024; // 500 MB em Bytes
-    if(arquivo.size > limiteMaximo) return alert('Arquivo muito pesado! Limite máximo permitido de 500MB.');
-
-    // Banco de dados simulado em formato de String base64 ou URL fictícia de Blob seguro local
-    const leitor = new FileReader();
-    leitor.onload = function(evt) {
-        const tipoMsg = arquivo.type.startsWith('image/') ? 'img' : 'file';
-        emitirMensagem({ fileUrl: evt.target.result, fileName: arquivo.name }, tipoMsg);
-    };
-    leitor.readAsDataURL(arquivo);
-});
-
-// Painel de Figurinhas
-document.getElementById('btn-sticker').addEventListener('click', () => stickerPanel.classList.remove('hidden'));
-document.getElementById('btn-close-stickers').addEventListener('click', () => stickerPanel.classList.add('hidden'));
-document.querySelectorAll('.sticker-item').forEach(stk => {
-    stk.addEventListener('click', (e) => {
-        emitirMensagem({ text: e.target.innerText }, 'sticker');
-        stickerPanel.classList.add('hidden');
-    });
-});
-
-// Botão Novo Chat (+)
-document.getElementById('btn-new-chat').addEventListener('click', () => {
-    const modal = document.getElementById('contacts-modal');
-    modal.classList.remove('hidden');
-    const list = document.getElementById('contacts-list');
-    list.innerHTML = '';
-    database.ref('users').once('value', snap => {
-        snap.forEach(c => {
-            let u = c.val();
-            if(u.uid !== currentUser.uid) {
-                const item = document.createElement('div');
-                item.className = 'chat-item';
-                item.innerHTML = `<h4>${u.displayName}</h4>`;
-                item.onclick = () => {
-                    modal.classList.add('hidden');
-                    const cId = currentUser.uid < u.uid ? `${currentUser.uid}_${u.uid}` : `${u.uid}_${currentUser.uid}`;
-                    database.ref(`users/${currentUser.uid}/my_chats/${cId}`).set({ recipientId: u.uid });
-                    openChatRoom(cId, u.displayName, u.uid);
-                };
-                list.appendChild(item);
-            }
+    const file = e.target.files[0];
+    if(!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+        database.ref(`chats/${activeChatId}/messages`).push().set({
+            senderId: currentUser.uid, type: 'image', payload: evt.target.result, timestamp: firebase.database.ServerValue.TIMESTAMP
         });
-    });
+    };
+    reader.readAsDataURL(file);
 });
-document.getElementById('btn-close-modal').addEventListener('click', () => document.getElementById('contacts-modal').classList.add('hidden'));
 
-// Registro inicial mock
+document.getElementById('btn-back-to-list').addEventListener('click', () => chatRoomScreen.classList.add('hidden'));
 document.getElementById('btn-to-register').addEventListener('click', () => showPage(registerPage));
 document.getElementById('btn-to-login').addEventListener('click', () => showPage(loginPage));
-document.getElementById('btn-login').addEventListener('click', () => {
-    auth.signInWithEmailAndPassword(document.getElementById('email-login').value, document.getElementById('password-login').value)
-        .catch(e => alert(e.message));
-});
-document.getElementById('btn-register').addEventListener('click', () => {
-    auth.createUserWithEmailAndPassword(document.getElementById('email-reg').value, document.getElementById('password-reg').value)
-        .catch(e => alert(e.message));
-});
-  
+      
