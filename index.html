@@ -34,15 +34,15 @@
             
             <div class="input-group-premium">
                 <input type="email" id="email-login" required placeholder=" ">
-                <label>E-mail</label>
+                <label for="email-login">E-mail</label>
             </div>
             <div class="input-group-premium">
                 <input type="password" id="password-login" required placeholder=" ">
-                <label>Senha</label>
+                <label for="password-login">Senha</label>
             </div>
-            <button id="btn-login" class="ios-btn-primary">Entrar</button>
+            <button id="btn-login" type="button" class="ios-btn-primary">Entrar</button>
             <div class="divider-text">ou</div>
-            <button id="btn-google-login" class="ios-btn-google">
+            <button id="btn-google-login" type="button" class="ios-btn-google">
                 <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="Google" width="18">
                 Entrar com o Google
             </button>
@@ -59,22 +59,22 @@
             <div id="reg-step-1">
                 <div class="input-group-premium">
                     <input type="email" id="email-reg" required placeholder=" ">
-                    <label>E-mail</label>
+                    <label for="email-reg">E-mail</label>
                 </div>
                 <div class="input-group-premium">
                     <input type="password" id="password-reg" required placeholder=" ">
-                    <label>Senha</label>
+                    <label for="password-reg">Senha</label>
                 </div>
-                <button id="btn-send-code" class="ios-btn-primary">Enviar Código</button>
+                <button id="btn-send-code" type="button" class="ios-btn-primary">Enviar Código</button>
             </div>
 
             <div id="reg-step-2" class="hidden">
                 <p class="info-text-verify" style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Insira o código de 6 dígitos enviado ao seu e-mail (Simulado: 123456).</p>
                 <div class="input-group-premium">
                     <input type="text" id="verification-code-input" maxlength="6" style="text-align: center; font-size: 22px; letter-spacing: 6px;" required placeholder=" ">
-                    <label>Código</label>
+                    <label for="verification-code-input">Código</label>
                 </div>
-                <button id="btn-verify-and-register" class="ios-btn-primary">Verificar e Criar</button>
+                <button id="btn-verify-and-register" type="button" class="ios-btn-primary">Verificar e Criar</button>
             </div>
             <p class="auth-switch" style="margin-top:20px;">Já tem uma conta? <span id="btn-to-login">Fazer Login</span></p>
         </div>
@@ -88,7 +88,7 @@
             
             <div class="avatar-upload-container-premium">
                 <div class="avatar-preview-wrapper">
-                    <img id="initial-avatar-preview" src="" class="hidden">
+                    <img id="initial-avatar-preview" src="" class="hidden" alt="Preview">
                     <div id="initial-avatar-placeholder" class="avatar-placeholder-svg">
                         <svg viewBox="0 0 24 24" class="mono-icon-gray"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
                     </div>
@@ -99,17 +99,17 @@
 
             <div class="input-group-premium">
                 <input type="text" id="display-name" required placeholder=" ">
-                <label>Apelido (Nickname)</label>
+                <label for="display-name">Apelido (Nickname)</label>
             </div>
             <div class="input-group-premium">
                 <input type="text" id="username" required placeholder=" ">
-                <label>Nome de usuário (@)</label>
+                <label for="username">Nome de usuário (@)</label>
             </div>
             <div class="input-group-premium">
                 <input type="text" id="user-bio" placeholder=" " value="Disponível no ChatBuddy">
-                <label>Biografia (Bio)</label>
+                <label for="user-bio">Biografia (Bio)</label>
             </div>
-            <button id="btn-save-profile" class="ios-btn-primary">Salvar e Entrar</button>
+            <button id="btn-save-profile" type="button" class="ios-btn-primary">Salvar e Entrar</button>
         </div>
     </div>
 
@@ -177,7 +177,7 @@
         </div>
     </div>
 
-    <!-- NOVO POPUP ESTILOSO DE INFORMAÇÕES DO CONTATO -->
+    <!-- POPUP DE INFORMAÇÕES DO CONTATO -->
     <div id="contact-info-sheet" class="ios-dropdown-overlay hidden">
         <div class="contact-popup-card glass-premium animate-pop">
             <div class="popup-avatar-header-wrapper">
@@ -189,42 +189,37 @@
                 <p id="sheet-contact-user">@username</p>
             </div>
 
-            <!-- Abas internas: Info vs Mídias -->
             <div class="popup-internal-tabs">
                 <button id="popup-tab-details" class="inner-tab active">Detalhes</button>
                 <button id="popup-tab-gallery" class="inner-tab">Mídias</button>
             </div>
 
-            <!-- Conteúdo: Detalhes -->
             <div id="popup-panel-details" class="popup-panel">
                 <div class="info-block-premium">
                     <span class="block-label">Biografia</span>
                     <p id="sheet-contact-bio" class="block-content">Carregando...</p>
                 </div>
                 <div class="popup-actions-vertical">
-                    <button id="btn-customize-nickname" class="popup-action-row-btn">
+                    <button id="btn-customize-nickname" type="button" class="popup-action-row-btn">
                         <span>Personalizar Apelido</span>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
                     </button>
-                    <button id="btn-sheet-block" class="popup-action-row-btn danger-text">
+                    <button id="btn-sheet-block" type="button" class="popup-action-row-btn danger-text">
                         <span>Bloquear Usuário</span>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>
                     </button>
-                    <button id="btn-sheet-report" class="popup-action-row-btn danger-text">
+                    <button id="btn-sheet-report" type="button" class="popup-action-row-btn danger-text">
                         <span>Denunciar Perfil</span>
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
                     </button>
                 </div>
             </div>
 
-            <!-- Conteúdo: Aba de Mídias (Fotos/Vídeos) -->
             <div id="popup-panel-gallery" class="popup-panel hidden">
-                <div id="popup-media-grid" class="popup-media-grid">
-                    <!-- Injetado dinamicamente via JS -->
-                </div>
+                <div id="popup-media-grid" class="popup-media-grid"></div>
             </div>
 
-            <button id="btn-close-info-sheet" class="btn-popup-close-primary">Fechar</button>
+            <button id="btn-close-info-sheet" type="button" class="btn-popup-close-primary">Fechar</button>
         </div>
     </div>
 
@@ -248,11 +243,11 @@
             <h3 style="margin-bottom:15px;">Detalhes</h3>
             <p style="font-size:14px; margin-bottom:8px; color:var(--text-muted);">Enviado: <span id="info-sent-time" style="color:#fff;">--:--</span></p>
             <p style="font-size:14px; margin-bottom:20px; color:var(--text-muted);">Lido: <span id="info-read-time" style="color:#30d158;">--:--</span></p>
-            <button id="btn-close-msg-info" class="ios-btn-primary" style="padding:10px;">Fechar</button>
+            <button id="btn-close-msg-info" type="button" class="ios-btn-primary" style="padding:10px;">Fechar</button>
         </div>
     </div>
 
-    <!-- TELA DE CONFIGURAÇÕES AVANÇADA COM ABAS ORGANIZADAS (CONTA, PRIVACIDADE...) -->
+    <!-- TELA DE CONFIGURAÇÕES AVANÇADA -->
     <div id="settings-screen" class="settings-screen hidden">
         <header class="settings-screen-header glass-premium">
             <button id="btn-back-settings" class="back-btn">
@@ -262,7 +257,6 @@
         </header>
         
         <div class="settings-layout-container">
-            <!-- Navegação Lateral das Configurações -->
             <div class="settings-sidebar-tabs">
                 <button class="settings-nav-item active" data-target="set-tab-account">Conta</button>
                 <button class="settings-nav-item" data-target="set-tab-privacy">Privacidade</button>
@@ -270,35 +264,31 @@
                 <button class="settings-nav-item" data-target="set-tab-notify">Notificações</button>
             </div>
 
-            <!-- Painéis de Conteúdo -->
             <div class="settings-main-panels">
-                
-                <!-- ABA CONTA (CUSTOMIZAR SEU PROPRIO PERSONAGEM) -->
                 <div id="set-tab-account" class="settings-pane-content">
                     <h3 class="panel-section-title">Personalizar Avatar e Dados</h3>
                     <div class="avatar-upload-container-premium">
                         <div class="avatar-preview-wrapper">
-                            <img id="settings-avatar-preview" src="https://via.placeholder.com/150">
+                            <img id="settings-avatar-preview" src="https://via.placeholder.com/150" alt="Avatar">
                         </div>
                         <label for="settings-avatar-file" class="avatar-file-label-premium">Alterar Avatar</label>
                         <input type="file" id="settings-avatar-file" accept="image/*" class="hidden">
                     </div>
                     <div class="input-group-premium">
                         <input type="text" id="settings-nickname" required placeholder=" ">
-                        <label>Nickname</label>
+                        <label for="settings-nickname">Nickname</label>
                     </div>
                     <div class="input-group-premium">
                         <input type="text" id="settings-username" required placeholder=" ">
-                        <label>Username (@)</label>
+                        <label for="settings-username">Username (@)</label>
                     </div>
                     <div class="input-group-premium">
                         <input type="text" id="settings-bio" required placeholder=" ">
-                        <label>Biografia</label>
+                        <label for="settings-bio">Biografia</label>
                     </div>
-                    <button id="btn-update-own-profile" class="ios-btn-primary" style="margin-top: 10px;">Salvar Alterações</button>
+                    <button id="btn-update-own-profile" type="button" class="ios-btn-primary" style="margin-top: 10px;">Salvar Alterações</button>
                 </div>
 
-                <!-- ABA PRIVACIDADE -->
                 <div id="set-tab-privacy" class="settings-pane-content hidden">
                     <h3 class="panel-section-title">Privacidade</h3>
                     <div class="settings-row-toggle-card">
@@ -311,17 +301,15 @@
                     </div>
                 </div>
 
-                <!-- ABA SEGURANÇA -->
                 <div id="set-tab-security" class="settings-pane-content hidden">
                     <h3 class="panel-section-title">Segurança</h3>
-                    <p style="color: var(--text-muted); font-size:13px; margin-bottom:15px;">A sua conta está protegida com criptografia ponta a ponta nativa do banco ChatBuddy.</p>
+                    <p style="color: var(--text-muted); font-size:13px; margin-bottom:15px;">A sua conta está protegida com criptografia ponta a ponta.</p>
                     <div class="settings-row-toggle-card">
                         <span>Bloqueio por Biometria / ID</span>
                         <label class="ios-switch-wrapper"><input type="checkbox"><span class="ios-switch-slider"></span></label>
                     </div>
                 </div>
 
-                <!-- ABA NOTIFICAÇÕES -->
                 <div id="set-tab-notify" class="settings-pane-content hidden">
                     <h3 class="panel-section-title">Notificações</h3>
                     <div class="settings-row-toggle-card">
@@ -332,16 +320,17 @@
                         </label>
                     </div>
                 </div>
-
             </div>
         </div>
 
         <div style="padding: 16px; border-top: 1px solid var(--glass-border);">
-            <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red); padding: 12px;">Desconectar Conta</button>
+            <button id="btn-logout" type="button" class="ios-btn-primary" style="background:var(--ios-red); padding: 12px;">Desconectar Conta</button>
         </div>
     </div>
 
-    <!-- Novo Modal de Contatos -->
+    <!-- Modal de Contatos -->
     <div id="contacts-modal" class="modal hidden">
         <div class="modal-content glass-premium">
-          
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
+                <h3>Nova Conversa</h3>
+                <button id="btn-close-modal" clas
