@@ -10,7 +10,7 @@ const firebaseConfig = {
   measurementId: "G-7GX1YR6HQL"
 };
 
-// Inicializa o Firebase (Formato clássico/compat)
+// Inicializa o Firebase
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const database = firebase.database();
@@ -30,7 +30,6 @@ const btnSendMessage = document.getElementById('btn-send');
 const btnLogout = document.getElementById('btn-logout');
 const btnOpenNewChat = document.getElementById('btn-new-chat');
 const btnCloseModal = document.getElementById('btn-close-modal');
-const btnStartChat = document.getElementById('btn-start-chat');
 
 const emailLoginInput = document.getElementById('email-login');
 const passwordLoginInput = document.getElementById('password-login');
@@ -39,7 +38,6 @@ const passwordRegInput = document.getElementById('password-reg');
 const displayNameInput = document.getElementById('display-name');
 const usernameInput = document.getElementById('username');
 const messageInput = document.getElementById('message-input');
-const searchContactInput = document.getElementById('search-contact');
 
 const currentUserNameHTML = document.getElementById('current-user-name');
 const currentUserTagHTML = document.getElementById('current-user-tag');
@@ -159,6 +157,7 @@ function loadChatSystem() {
     }
   });
 
+  database.ref('users/' + currentUser.uid).update({ status: 'Online' });
   listenToMyChats();
 }
 
@@ -274,6 +273,47 @@ function openChatRoom(chatId, recipientName, recipientId) {
       } else {
         msgElement.innerHTML = `
           <p class="text-content">${msg.text}</p>
+          <span class="time-stamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+        `;
+        
+        if(msg.senderId === currentUser.uid) {
+          msgElement.onclick = () => {
+            if(confirm('Deseja apagar esta mensagem?')) {
+              database.ref(`chats/${chatId}/messages/${msgId}`).update({ isDeleted: true });
+            }
+          };
+        }
+      }
+      messagesContainer.appendChild(msgElement);
+    });
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  });
+}
+
+// ENVIAR MENSAGEM
+function sendMessage() {
+  if(!messageInput) return;
+  const text = messageInput.value.trim();
+  if(!text || !activeChatId) return;
+
+  const msgRef = database.ref(`chats/${activeChatId}/messages`).push();
+  msgRef.set({
+    senderId: currentUser.uid,
+    text: text,
+    timestamp: firebase.database.ServerValue.TIMESTAMP,
+    isDeleted: false
+  });
+
+  messageInput.value = '';
+}
+
+if(btnSendMessage) btnSendMessage.addEventListener('click', sendMessage);
+if(messageInput) {
+  messageInput.addEventListener('keypress', (e) => {
+    if(e.key === 'Enter') sendMessage();
+  });
+}
+xt-content">${msg.text}</p>
           <span class="time-stamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
         `;
         
