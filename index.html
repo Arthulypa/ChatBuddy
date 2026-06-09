@@ -26,18 +26,16 @@
                 <input type="password" id="password-login" placeholder="••••••••">
             </div>
             <button id="btn-login" class="btn-primary">ENTRAR</button>
-            
             <div class="divider"><span>OU</span></div>
             <button id="btn-google-login" class="btn-google">
                 <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="Google">
                 Entrar com o Google
             </button>
-
             <p class="auth-switch">New to the grid? <span id="btn-to-register">Create account</span></p>
         </div>
     </div>
 
-    <!-- 2. TELA DE REGISTRO (CRIAR CONTA) -->
+    <!-- 2. TELA DE REGISTRO -->
     <div id="register-page" class="auth-container hidden">
         <div class="auth-box page-transition">
             <div class="logo-container">
@@ -53,14 +51,29 @@
                 <input type="password" id="password-reg" placeholder="••••••••">
             </div>
             <button id="btn-register" class="btn-primary">CONTINUAR</button>
-
             <div class="divider"><span>OU</span></div>
             <button id="btn-google-reg" class="btn-google">
                 <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="Google">
                 Cadastrar com o Google
             </button>
-
             <p class="auth-switch">Already initialized? <span id="btn-to-login">Sign In</span></p>
+        </div>
+    </div>
+
+    <!-- TELA DE VALIDAÇÃO DE EMAIL / PIN -->
+    <div id="verification-page" class="auth-container hidden">
+        <div class="auth-box page-transition">
+            <h2>Verificação de Segurança</h2>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;" id="verification-desc">Insira as credenciais para continuar.</p>
+            <div class="input-group" id="email-verify-group">
+                <label>Código enviado por e-mail</label>
+                <input type="text" id="email-code-input" placeholder="Digite o código">
+            </div>
+            <div class="input-group hidden" id="pin2-verify-group">
+                <label>Código PIN de 2 etapas</label>
+                <input type="password" id="pin2-input" placeholder="••••••" maxlength="6">
+            </div>
+            <button id="btn-verify-submit" class="btn-primary">VERIFICAR</button>
         </div>
     </div>
 
@@ -88,7 +101,10 @@
                     <h3 id="current-user-name">Carregando...</h3>
                     <p id="current-user-tag">@username</p>
                 </div>
-                <button id="btn-logout" class="btn-logout">Sair</button>
+                <div style="display: flex; gap: 8px;">
+                    <button id="btn-open-settings" class="btn-settings-icon">⚙️</button>
+                    <button id="btn-logout" class="btn-logout">Sair</button>
+                </div>
             </header>
             <div class="search-bar">
                 <input type="text" id="search-contact" placeholder="Buscar transmissão...">
@@ -100,9 +116,13 @@
         <main class="chat-area page-transition">
             <header class="chat-header">
                 <div class="active-user-info">
-                    <h2 id="active-chat-name">Selecione um canal</h2>
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <h2 id="active-chat-name">Selecione um canal</h2>
+                        <span id="blocked-badge" class="badge-blocked hidden">BLOQUEADO</span>
+                    </div>
                     <p id="active-chat-status"></p>
                 </div>
+                <button id="btn-block-user" class="btn-block hidden">Bloquear Usuário</button>
             </header>
             <div id="messages-container" class="messages-container">
                 <p class="chat-placeholder">Abra o terminal clicando no botão "+" para buscar usuários.</p>
@@ -125,11 +145,58 @@
         </div>
     </div>
 
+    <!-- MODAL DE CONFIGURAÇÕES ESTILO WHATSAPP -->
+    <div id="settings-modal" class="modal hidden">
+        <div class="modal-content page-transition">
+            <div class="modal-header">
+                <h3>Configurações</h3>
+                <button id="btn-close-settings" class="btn-close">&times;</button>
+            </div>
+            <div class="settings-options">
+                <div class="settings-item">
+                    <h4>🔒 Privacidade</h4>
+                    <p>Gerencie quem vê seus dados de rede.</p>
+                </div>
+                <div class="settings-item">
+                    <h4>👤 Conta</h4>
+                    <p>Altere os metadados do seu terminal numérico.</p>
+                </div>
+                <div class="settings-item">
+                    <h4>🔑 Verificação em duas etapas</h4>
+                    <p>Adicione segurança extra exigindo um PIN de 6 dígitos.</p>
+                    <label class="switch">
+                        <input type="checkbox" id="toggle-2fa">
+                        <span class="slider-round"></span>
+                    </label>
+                    <div id="pin-setup-group" class="hidden" style="margin-top: 10px;">
+                        <input type="password" id="new-pin2" placeholder="Definir PIN de 6 dígitos" maxlength="6" style="padding: 8px; border-radius: 4px; background: var(--bg-input); border: 1px solid #224; color: #fff; width: 100%;">
+                        <button id="btn-save-pin" class="btn-primary" style="padding: 6px; font-size: 11px; margin-top: 5px;">Salvar PIN</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MENU DE CONTEXTO FLUTUANTE (MENSAGEM) -->
+    <div id="message-context-menu" class="context-menu hidden">
+        <div class="reactions-row">
+            <span class="react-btn">👍</span>
+            <span class="react-btn">❤️</span>
+            <span class="react-btn">😂</span>
+            <span class="react-btn">😮</span>
+            <span class="react-btn">😢</span>
+            <span class="react-btn">🙏</span>
+        </div>
+        <div class="context-item" id="ctx-edit">✏️ Editar Mensagem</div>
+        <div class="context-item" id="ctx-delete-for-me">🗑️ Apagar para mim</div>
+        <div class="context-item danger hidden" id="ctx-delete-for-all">💥 Apagar para todos</div>
+    </div>
+
     <!-- Scripts do Firebase v10 Compat -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
     <script src="script.js"></script>
 </body>
-                    </html>
-        
+                </html>
+                
