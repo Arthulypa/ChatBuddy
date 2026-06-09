@@ -1,4 +1,4 @@
-// CONFIGURAÇÃO DO SEU FIREBASE CONECTADO
+// INSIRA SUAS CREDENCIAIS DO BANCO DO FIREBASE CHATBUDDY AQUI
 const firebaseConfig = {
   apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfykh4",
   authDomain: "chatbuddy-96a61.firebaseapp.com",
@@ -17,8 +17,8 @@ let activeRecipientId = null;
 let base64AvatarString = "";
 let selectedMessageText = "";
 let selectedMessageId = "";
+let silencedUsers = {};
 
-// NAVEGADOR DE PÁGINAS ESTÁVEL
 const viewPages = {
     login: document.getElementById('login-page'),
     register: document.getElementById('register-page'),
@@ -31,7 +31,6 @@ function changeView(target) {
     viewPages[target].classList.remove('hidden');
 }
 
-// CONVERSOR DE ARQUIVOS EM BASE64 (AVATAR E PROTOCOLO DE IMAGENS)
 function bindImageLoader(inputId, previewId, placeholderId) {
     const input = document.getElementById(inputId);
     if (!input) return;
@@ -51,66 +50,121 @@ function bindImageLoader(inputId, previewId, placeholderId) {
 }
 bindImageLoader('initial-avatar-file', 'initial-avatar-preview', 'initial-avatar-placeholder');
 
-// CONTROLE DE AUTENTICAÇÃO REAL (FIREBASE AUTH)
+// MOTOR DE AUTENTICAÇÃO CHATBUDDY
 document.getElementById('btn-login').addEventListener('click', () => {
     const email = document.getElementById('email-login').value.trim();
     const pass = document.getElementById('password-login').value;
-    if(!email || !pass) return alert("Preencha os dados!");
-    
+    if(!email || !pass) return alert("Preencha todos os campos!");
     auth.signInWithEmailAndPassword(email, pass).catch(err => alert("Erro: " + err.message));
 });
 
-// REGISTRO DE CONTA COM SISTEMA DE CÓDIGO INTERNO DE 6 DÍGITOS
 document.getElementById('btn-send-code').addEventListener('click', () => {
     const email = document.getElementById('email-reg').value.trim();
     const pass = document.getElementById('password-reg').value;
-    if(!email || !pass) return alert("Insira e-mail e senha válidos.");
+    if(!email || !pass) return alert("Insira credenciais válidas.");
     
-    // Transiciona para verificação de segurança requisitada
     document.getElementById('reg-step-1').classList.add('hidden');
     document.getElementById('reg-step-2').classList.remove('hidden');
 });
 
 document.getElementById('btn-verify-and-register').addEventListener('click', () => {
     const code = document.getElementById('verification-code-input').value.trim();
-    if(code !== "123456") return alert("Código de ativação inválido!");
+    if(code !== "123456") return alert("Código ChatBuddy inválido!");
     
     const email = document.getElementById('email-reg').value.trim();
     const pass = document.getElementById('password-reg').value;
     
     auth.createUserWithEmailAndPassword(email, pass)
         .then(() => changeView('profile'))
-        .catch(err => alert("Erro ao registrar: " + err.message));
+        .catch(err => alert("Erro: " + err.message));
 });
 
-// CAPTURA DO GOOGLE AUTH
 document.getElementById('btn-google-login').addEventListener('click', () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch(err => alert(err.message));
 });
 
-// SALVAMENTO DE CADASTRO DO PERFIL DO USUÁRIO
 document.getElementById('btn-save-profile').addEventListener('click', () => {
     const nick = document.getElementById('display-name').value.trim();
     const userAt = document.getElementById('username').value.trim().replace('@','');
-    if(!nick || !userAt) return alert("Campos obrigatórios!");
+    const bio = document.getElementById('user-bio').value.trim() || "Disponível no ChatBuddy";
+    if(!nick || !userAt) return alert("Campos obrigatórios vazios!");
 
     database.ref('users/' + currentUser.uid).set({
         uid: currentUser.uid,
         nickname: nick,
         username: '@' + userAt,
-        avatar: base64AvatarString || "https://via.placeholder.com/150"
+        bio: bio,
+        wlstwrus: "Disponível no ChatBuddy 🚀",
+        avatar: base64AvatarString || "https://via.placeholder.com/150",
+        status: "online",
+        lastSeen: firebase.database.ServerValue.TIMESTAMP
     }).then(() => changeView('chat'));
 });
 
-// ESCUTADOR CENTRAL DO USUÁRIO LOGADO
+// PRESENÇA REAL-TIME
+function setupPresenceSystem(userId) {
+    const userStatusRef = database.ref(`users/${userId}`);
+    const connectedRef = database.ref(".info/connected");
+
+    connectedRef.on("value", (snap) => {
+        if (snap.val() === false) return;
+        userStatusRef.onDisconnect().update({
+            status: "offline",
+            lastSeen: firebase.database.ServerValue.TIMESTAMP
+        }).then(() => {
+            userStatusRef.update({
+                status: "online",
+                lastSeen: firebase.database.ServerValue.TIMESTAMP
+            });
+        });
+    });
+}
+
+function listenToGlobalMessages() {
+    database.ref('chats').on('child_changed', snap => {
+        const chat = snap.val();
+        if(!chat || !chat.messages) return;
+        
+        const msgKeys = Object.keys(chat.messages);
+        const lastMsg = chat.messages[msgKeys[msgKeys.length - 1]];
+        
+        if(lastMsg.senderId !== currentUser.uid && lastMsg.status === 'sending') {
+            if (silencedUsers[lastMsg.senderId]) return;
+            if (!document.getElementById('toggle-popup-global').checked) return;
+
+            database.ref(`users/${lastMsg.senderId}`).once('value', uSnap => {
+                const sender = uSnap.val();
+                triggerPremiumPopup(sender, lastMsg.text || "Enviou uma mídia");
+            });
+        }
+    });
+}
+
+function triggerPremiumPopup(sender, text) {
+    const popup = document.getElementById('popup-notification');
+    document.getElementById('popup-avatar').src = sender.avatar;
+    document.getElementById('popup-title').innerText = sender.nickname;
+    document.getElementById('popup-text').innerText = text;
+    
+    popup.classList.remove('hidden');
+    setTimeout(() => popup.classList.add('expanded'), 150);
+    
+    setTimeout(() => {
+        popup.classList.remove('expanded');
+        setTimeout(() => popup.classList.add('hidden'), 400);
+    }, 3500);
+}
+
 auth.onAuthStateChanged(user => {
     if (user) {
         currentUser = user;
         database.ref('users/' + user.uid).once('value').then(snap => {
             if (snap.exists() && snap.val().username) {
                 changeView('chat');
+                setupPresenceSystem(user.uid);
                 loadChatList();
+                listenToGlobalMessages();
             } else {
                 changeView('profile');
             }
@@ -120,23 +174,18 @@ auth.onAuthStateChanged(user => {
     }
 });
 
-// SISTEMA REAL DE SELEÇÃO DE MENSAGEM (CLIQUE LONGO CORRIGIDO)
 function applyLongPress(element, actionCallback) {
     let timer;
-    const start = (e) => {
-        timer = setTimeout(() => actionCallback(e), 550);
-    };
+    const start = (e) => timer = setTimeout(() => actionCallback(e), 600);
     const stop = () => clearTimeout(timer);
     
     element.addEventListener('touchstart', start, { passive: true });
     element.addEventListener('touchend', stop, { passive: true });
-    element.addEventListener('touchmove', stop, { passive: true });
     element.addEventListener('mousedown', start);
     element.addEventListener('mouseup', stop);
     element.addEventListener('mouseleave', stop);
 }
 
-// DISPARADOR DOS PONTINHOS DE STATUS PREMIUM
 function buildTicks(status) {
     if(!status) return '';
     switch(status) {
@@ -148,7 +197,17 @@ function buildTicks(status) {
     return '';
 }
 
-// CARREGAR E RENDERIZAR MENSAGENS EM TEMPO REAL
+function formatLastSeen(timestamp) {
+    if(!timestamp) return "offline";
+    const diffMs = Date.now() - timestamp;
+    const diffMins = Math.floor(diffMs / 60000);
+    if(diffMins < 1) return "offline há instantes";
+    if(diffMins < 60) return `offline há ${diffMins} min`;
+    const diffHours = Math.floor(diffMins / 60);
+    if(diffHours < 24) return `offline há ${diffHours} h`;
+    return "offline há algum tempo";
+}
+
 function openChatRoom(chatId, recipientData) {
     activeChatId = chatId;
     activeRecipientId = recipientData.uid;
@@ -156,6 +215,23 @@ function openChatRoom(chatId, recipientData) {
     document.getElementById('active-chat-name').innerText = recipientData.nickname;
     document.getElementById('active-chat-avatar').src = recipientData.avatar;
     document.getElementById('chat-room-screen').classList.remove('hidden');
+
+    database.ref(`users/${recipientData.uid}`).on('value', rSnap => {
+        const rUser = rSnap.val();
+        const statusTextEl = document.getElementById('active-chat-status');
+        const badgeEl = document.getElementById('active-chat-online-badge');
+        const infoHeader = document.getElementById('btn-open-recipient-info');
+        
+        if(rUser.status === 'online') {
+            infoHeader.classList.add('is-online');
+            statusTextEl.innerText = "online";
+            badgeEl.classList.remove('hidden');
+        } else {
+            infoHeader.classList.remove('is-online');
+            statusTextEl.innerText = formatLastSeen(rUser.lastSeen);
+            badgeEl.classList.add('hidden');
+        }
+    });
     
     database.ref(`chats/${chatId}/messages`).off();
     database.ref(`chats/${chatId}/messages`).on('value', snap => {
@@ -173,13 +249,17 @@ function openChatRoom(chatId, recipientData) {
             let ticks = data.senderId === currentUser.uid ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
             card.innerHTML = content + ticks;
             
-            applyLongPress(card, (e) => {
-                if(data.text) {
-                    selectedMessageText = data.text;
-                    selectedMessageId = data.id;
-                    document.getElementById('focused-message-container').innerHTML = card.innerHTML;
-                    document.getElementById('blur-overlay').classList.remove('hidden');
-                }
+            // EXECUÇÃO DO CLIQUE LONGO COM MANTENÇÃO DO LADO DA MENSAGEM
+            applyLongPress(card, () => {
+                selectedMessageText = data.text || "";
+                selectedMessageId = data.id;
+                
+                const clone = card.cloneNode(true);
+                const wrapper = document.getElementById('focused-message-wrapper');
+                wrapper.innerHTML = '';
+                wrapper.appendChild(clone);
+                
+                document.getElementById('blur-overlay').classList.remove('hidden');
             });
             
             box.appendChild(card);
@@ -188,7 +268,45 @@ function openChatRoom(chatId, recipientData) {
     });
 }
 
-// ENVIO DE MENSAGEM DINÂMICA
+document.getElementById('ctx-info-msg').addEventListener('click', () => {
+    if(!selectedMessageId || !activeChatId) return;
+    database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).once('value').then(snap => {
+        const data = snap.val();
+        if(!data) return;
+        
+        const sentDate = new Date(data.timestamp);
+        document.getElementById('info-sent-time').innerText = sentDate.toLocaleTimeString();
+        
+        const readDate = new Date(data.timestamp + 1200);
+        document.getElementById('info-read-time').innerText = data.status === 'read' ? readDate.toLocaleTimeString() : "Não lido";
+        
+        document.getElementById('blur-overlay').classList.add('hidden');
+        document.getElementById('msg-info-modal').classList.remove('hidden');
+    });
+});
+
+document.getElementById('btn-close-msg-info').addEventListener('click', () => {
+    document.getElementById('msg-info-modal').classList.add('hidden');
+});
+
+document.getElementById('ctx-edit-msg').addEventListener('click', () => {
+    if(!selectedMessageText) return alert("Apenas textos podem ser editados!");
+    const newText = prompt("Editar mensagem:", selectedMessageText);
+    if(newText && newText.trim() !== "") {
+        database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).update({
+            text: newText + " (editada)"
+        });
+    }
+    document.getElementById('blur-overlay').classList.add('hidden');
+});
+
+document.getElementById('ctx-delete-single').addEventListener('click', () => {
+    if(confirm("Apagar para todos?")) {
+        database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).remove();
+    }
+    document.getElementById('blur-overlay').classList.add('hidden');
+});
+
 function pushMessage(text, imgBase64 = null) {
     if(!text.trim() && !imgBase64) return;
     const ref = database.ref(`chats/${activeChatId}/messages`).push();
@@ -202,9 +320,9 @@ function pushMessage(text, imgBase64 = null) {
     if(imgBase64) payload.image = imgBase64;
     
     ref.set(payload).then(() => {
-        setTimeout(() => ref.update({ status: 'sent' }), 500);
-        setTimeout(() => ref.update({ status: 'delivered' }), 1200);
-        setTimeout(() => ref.update({ status: 'read' }), 2000);
+        setTimeout(() => ref.update({ status: 'sent' }), 300);
+        setTimeout(() => ref.update({ status: 'delivered' }), 800);
+        setTimeout(() => ref.update({ status: 'read' }), 1400);
     });
     document.getElementById('message-input').value = '';
 }
@@ -213,7 +331,6 @@ document.getElementById('message-input').addEventListener('keypress', (e) => {
     if(e.key === 'Enter') pushMessage(e.target.value);
 });
 
-// DISPARO DE MÍDIA INTEGRADO NO CLIPE DE PAPEL
 document.getElementById('btn-attach').addEventListener('click', () => document.getElementById('media-file-input').click());
 document.getElementById('media-file-input').addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -223,15 +340,12 @@ document.getElementById('media-file-input').addEventListener('change', (e) => {
     reader.readAsDataURL(file);
 });
 
-// COPIAR TEXTO VIA BOTÃO SEM RECURSOS INTERNOS BUGADOS
 document.getElementById('ctx-copy-direct').addEventListener('click', () => {
     navigator.clipboard.writeText(selectedMessageText).then(() => {
-        alert("Copiado com sucesso!");
         document.getElementById('blur-overlay').classList.add('hidden');
     });
 });
 
-// ABASTECIMENTO DAS LISTAS DE CONVERSAS E CRIAÇÃO DE NOVOS CHATS
 function loadChatList() {
     database.ref('users').on('value', snap => {
         const parent = document.getElementById('chats-list');
@@ -242,7 +356,7 @@ function loadChatList() {
             
             const row = document.createElement('div');
             row.className = "chat-item-row";
-            row.innerHTML = `<img src="${user.avatar}">
+            row.innerHTML = `<img src="${user.avatar}" onerror="this.src='https://via.placeholder.com/150'">
                              <div class="chat-item-info">
                                 <div class="chat-item-header"><h4>${user.nickname}</h4></div>
                                 <p>${user.username}</p>
@@ -257,19 +371,37 @@ function loadChatList() {
     });
 }
 
-// INTERRUPÇÕES DE COMPONENTE E BOTÕES DE FECHAMENTO (VOLTAR)
-document.getElementById('ctx-close-menu').addEventListener('click', () => document.getElementById('blur-overlay').classList.add('hidden'));
-document.getElementById('btn-back-to-list').addEventListener('click', () => document.getElementById('chat-room-screen').classList.add('hidden'));
-document.getElementById('btn-contact-menu').addEventListener('click', () => {
+document.getElementById('btn-open-recipient-info').addEventListener('click', () => {
     database.ref('users/' + activeRecipientId).once('value').then(s => {
         const u = s.val();
         document.getElementById('sheet-contact-nick').innerText = u.nickname;
         document.getElementById('sheet-contact-user').innerText = u.username;
         document.getElementById('sheet-contact-avatar').src = u.avatar;
+        document.getElementById('sheet-contact-bio').innerText = u.bio || "Sem biografia.";
+        document.getElementById('sheet-contact-wlstwrus').innerText = u.wlstwrus || "Disponível";
+        
+        document.getElementById('toggle-silence-user').checked = !!silencedUsers[activeRecipientId];
         document.getElementById('contact-info-sheet').classList.remove('hidden');
     });
 });
+
+document.getElementById('toggle-silence-user').addEventListener('change', (e) => {
+    silencedUsers[activeRecipientId] = e.target.checked;
+});
+
+document.getElementById('ctx-close-menu').addEventListener('click', () => document.getElementById('blur-overlay').classList.add('hidden'));
 document.getElementById('btn-close-info-sheet').addEventListener('click', () => document.getElementById('contact-info-sheet').classList.add('hidden'));
+document.getElementById('btn-back-to-list').addEventListener('click', () => {
+    database.ref(`users/${activeRecipientId}`).off();
+    document.getElementById('chat-room-screen').classList.add('hidden');
+});
+document.getElementById('btn-main-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.remove('hidden'));
+document.getElementById('btn-back-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.add('hidden'));
+document.getElementById('btn-logout').addEventListener('click', () => { auth.signOut().then(() => window.location.reload()); });
+document.getElementById('btn-to-register').addEventListener('click', () => changeView('register'));
+document.getElementById('btn-to-login').addEventListener('click', () => changeView('login'));
+document.getElementById('btn-contact-menu').addEventListener('click', () => document.getElementById('btn-open-recipient-info').click());
+
 document.getElementById('btn-new-chat').addEventListener('click', () => {
     database.ref('users').once('value').then(snap => {
         const list = document.getElementById('contacts-list-modal');
@@ -291,9 +423,4 @@ document.getElementById('btn-new-chat').addEventListener('click', () => {
     });
 });
 document.getElementById('btn-close-modal').addEventListener('click', () => document.getElementById('contacts-modal').classList.add('hidden'));
-document.getElementById('btn-main-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.remove('hidden'));
-document.getElementById('btn-back-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.add('hidden'));
-document.getElementById('btn-logout').addEventListener('click', () => { auth.signOut().then(() => window.location.reload()); });
-document.getElementById('btn-to-register').addEventListener('click', () => changeView('register'));
-document.getElementById('btn-to-login').addEventListener('click', () => changeView('login'));
-      
+                                                           
