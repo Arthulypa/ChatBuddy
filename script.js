@@ -1,3 +1,4 @@
+// CONFIGURAÇÕES DO SEU FIREBASE
 const firebaseConfig = {
   apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfykh4",
   authDomain: "chatbuddy-96a61.firebaseapp.com",
@@ -18,10 +19,7 @@ let selectedMessageText = "";
 let selectedMessageId = "";
 let silencedUsers = {};
 
-// Sistema de Resposta Ativa (Swipe target)
-let currentReplyTargetData = null;
-
-// Sistema de Gravação de Áudio
+// Variáveis para Gravação de Áudio
 let mediaRecorder = null;
 let audioChunks = [];
 let audioTimerInterval = null;
@@ -39,6 +37,7 @@ function changeView(target) {
     viewPages[target].classList.remove('hidden');
 }
 
+// Conversor de Imagem para Base64
 function setupImageLoader(inputId, callback) {
     const input = document.getElementById(inputId);
     if (!input) return;
@@ -66,7 +65,7 @@ setupImageLoader('settings-avatar-file-input', (b64) => {
     }
 });
 
-// AUTENTICAÇÃO ATUALIZADA (CORREÇÃO DO GOOGLE)
+// AUTENTICAÇÃO
 document.getElementById('btn-login').addEventListener('click', () => {
     const email = document.getElementById('email-login').value.trim();
     const pass = document.getElementById('password-login').value;
@@ -90,16 +89,8 @@ document.getElementById('btn-verify-and-register').addEventListener('click', () 
 });
 
 document.getElementById('btn-google-login').addEventListener('click', () => {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    auth.signInWithRedirect(provider); // Ajustado para redirecionamento mobile limpo
+    auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()).catch(err => alert(err.message));
 });
-
-auth.getRedirectResult().then((result) => {
-    if (result.user) {
-        currentUser = result.user;
-        checkUserInDatabase(result.user);
-    }
-}).catch((error) => console.log(error.message));
 
 document.getElementById('btn-save-profile').addEventListener('click', () => {
     const nick = document.getElementById('display-name').value.trim();
@@ -118,6 +109,7 @@ document.getElementById('btn-save-profile').addEventListener('click', () => {
     }).then(() => changeView('chat'));
 });
 
+// MONITOR DE PRESENÇA E MONITOR DE DIGITANDO
 function setupPresenceSystem(userId) {
     const myStatusRef = database.ref(`users/${userId}`);
     database.ref(".info/connected").on("value", (snap) => {
@@ -128,6 +120,7 @@ function setupPresenceSystem(userId) {
     });
 }
 
+// SISTEMA DETECTAR DIGITAÇÃO EM TEMPO REAL
 const msgInput = document.getElementById('message-input');
 msgInput.addEventListener('input', () => {
     if (activeChatId && currentUser) {
@@ -141,6 +134,7 @@ msgInput.addEventListener('blur', () => {
     }
 });
 
+// MONITOR DE ALTERAÇÃO DE DADOS DE CONFIGURAÇÃO DO USUÁRIO
 function loadMyAccountSettingsData(userId) {
     database.ref(`users/${userId}`).on('value', snap => {
         const data = snap.val();
@@ -158,9 +152,13 @@ document.getElementById('btn-save-settings-profile').addEventListener('click', (
     const newBio = document.getElementById('settings-my-bio-input').value.trim();
     if(!newNick) return alert("O apelido não pode ficar em branco!");
     
-    database.ref(`users/${currentUser.uid}`).update({ nickname: newNick, bio: newBio });
+    database.ref(`users/${currentUser.uid}`).update({
+        nickname: newNick,
+        bio: newBio
+    }).then(() => alert("Perfil atualizado com sucesso!"));
 });
 
+// FUNÇÃO DAS BOLINHAS (TICKS VISUAIS)
 function buildTicks(status) {
     if(!status) return '';
     switch(status) {
@@ -172,62 +170,7 @@ function buildTicks(status) {
     return '';
 }
 
-// IMPLEMENTAÇÃO DO DESLIZAR PARA RESPONDER COM ANIMAÇÃO DA SETA SE ABRINDO
-function bindSwipeToReply(rowWrapper, messageBubble, messageData) {
-    let startX = 0;
-    let currentX = 0;
-    const indicator = rowWrapper.querySelector('.swipe-reply-indicator');
-
-    messageBubble.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX;
-    }, { passive: true });
-
-    messageBubble.addEventListener('touchmove', (e) => {
-        currentX = e.touches[0].clientX;
-        let deltaX = currentX - startX;
-
-        // Limita o arrasto apenas para a direita e bota uma resistência física máxima de 75px
-        if (deltaX > 0) {
-            if (deltaX > 75) deltaX = 75;
-            messageBubble.style.transform = `translateX(${deltaX}px)`;
-            
-            // Lógica matemática para abrir a seta proporcionalmente ao movimento da mão
-            let progress = deltaX / 60; // 60px é o ponto perfeito de ativação
-            if (progress > 1) progress = 1;
-            
-            indicator.style.opacity = progress;
-            indicator.style.transform = `scale(${progress})`;
-        }
-    }, { passive: true });
-
-    messageBubble.addEventListener('touchend', () => {
-        let deltaX = currentX - startX;
-        messageBubble.style.transform = 'translateX(0px)';
-        indicator.style.opacity = '0';
-        indicator.style.transform = 'scale(0)';
-
-        // Se arrastou o suficiente, engatilha a resposta no input
-        if (deltaX > 60) {
-            triggerReplyMode(messageData);
-        }
-        startX = 0; currentX = 0;
-    });
-}
-
-function triggerReplyMode(msgData) {
-    currentReplyTargetData = msgData;
-    document.getElementById('reply-preview-user').innerText = msgData.senderId === currentUser.uid ? "Você" : "Mensagem";
-    document.getElementById('reply-preview-body').innerText = msgData.text || (msgData.image ? "Foto" : "Áudio");
-    document.getElementById('reply-preview-bar').classList.remove('hidden');
-    document.getElementById('message-input').focus();
-}
-
-document.getElementById('btn-close-reply-preview').addEventListener('click', () => {
-    currentReplyTargetData = null;
-    document.getElementById('reply-preview-bar').classList.add('hidden');
-});
-
-// ABRIR SESSÃO DO CHAT
+// ABRIR SALA DE CHAT E MONITORAR DIGITAÇÃO DO OUTRO
 function openChatRoom(chatId, recipientData) {
     activeChatId = chatId;
     activeRecipientId = recipientData.uid;
@@ -236,12 +179,11 @@ function openChatRoom(chatId, recipientData) {
     document.getElementById('active-chat-avatar').src = recipientData.avatar;
     document.getElementById('chat-room-screen').classList.remove('hidden');
 
-    // Escuta requisições de chamadas recebidas para este usuário
-    listenForIncomingCalls();
-
+    // Monitora Status e se o Outro está digitando
     database.ref(`chats/${chatId}/typing/${recipientData.uid}`).on('value', tSnap => {
         const currentTypingStatus = tSnap.val();
         const statusTextEl = document.getElementById('active-chat-status');
+        
         if (currentTypingStatus === "digitando...") {
             statusTextEl.innerText = "digitando...";
             statusTextEl.style.color = "var(--ios-green)";
@@ -270,23 +212,13 @@ function openChatRoom(chatId, recipientData) {
         
         snap.forEach(child => {
             const data = child.val();
-            
-            const rowWrapper = document.createElement('div');
-            rowWrapper.className = "message-row-wrapper";
-            
-            // Injeta a seta monocromática invisível que se expande
-            rowWrapper.innerHTML = `<div class="swipe-reply-indicator"><div class="swipe-arrow-icon"></div></div>`;
-            
             const card = document.createElement('div');
             card.className = `message ${data.senderId === currentUser.uid ? 'sent' : 'received'}`;
             
             let content = '';
-            
-            // Se a mensagem contiver uma resposta acoplada
-            if (data.replyTo) {
-                content += `<div class="reply-embedded-card"><strong>${data.replyTo.user}:</strong> ${data.replyTo.body}</div>`;
+            if (data.image) {
+                content += `<img src="${data.image}" class="message-img" onclick="openLightbox('${data.image}')">`;
             }
-            if (data.image) content += `<img src="${data.image}" class="message-img" onclick="openLightbox('${data.image}')">`;
             if (data.audio) {
                 content += `
                 <div class="custom-audio-player">
@@ -294,13 +226,12 @@ function openChatRoom(chatId, recipientData) {
                     <div class="audio-progress-bar"><div class="audio-progress-fill"></div></div>
                 </div>`;
             }
-            if (data.text) content += `<p>${data.text}</p>`;
+            if (data.text) {
+                content += `<p>${data.text}</p>`;
+            }
             
             let ticks = data.senderId === currentUser.uid ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
             card.innerHTML = content + ticks;
-            
-            // Vincula o gesto de arrasto (Swipe)
-            bindSwipeToReply(rowWrapper, card, data);
             
             applyLongPress(card, () => {
                 selectedMessageText = data.text || "";
@@ -312,13 +243,13 @@ function openChatRoom(chatId, recipientData) {
                 document.getElementById('blur-overlay').classList.remove('hidden');
             });
             
-            rowWrapper.appendChild(card);
-            box.appendChild(rowWrapper);
+            box.appendChild(card);
         });
         box.scrollTop = box.scrollHeight;
     });
 }
 
+// ENVIAR QUALQUER MENSAGEM COM EFEITO CASCATA DAS BOLINHAS
 function pushMessage(text, imgBase64 = null, audioBase64 = null) {
     if(!text.trim() && !imgBase64 && !audioBase64) return;
     const ref = database.ref(`chats/${activeChatId}/messages`).push();
@@ -333,17 +264,6 @@ function pushMessage(text, imgBase64 = null, audioBase64 = null) {
     if(imgBase64) payload.image = imgBase64;
     if(audioBase64) payload.audio = audioBase64;
     
-    // Se estiver respondendo a alguém no momento do push
-    if (currentReplyTargetData) {
-        payload.replyTo = {
-            user: currentReplyTargetData.senderId === currentUser.uid ? "Você" : "Mensagem",
-            body: currentReplyTargetData.text || (currentReplyTargetData.image ? "Foto" : "Áudio")
-        };
-        // Reseta o banner de resposta
-        currentReplyTargetData = null;
-        document.getElementById('reply-preview-bar').classList.add('hidden');
-    }
-    
     database.ref(`chats/${activeChatId}/typing/${currentUser.uid}`).set("online");
 
     ref.set(payload).then(() => {
@@ -356,57 +276,7 @@ function pushMessage(text, imgBase64 = null, audioBase64 = null) {
     triggerMicButtonState();
 }
 
-// SISTEMA COMPLETO DE LIGAÇÕES (SINALIZAÇÃO VIA FIREBASE)
-function listenForIncomingCalls() {
-    database.ref(`users/${currentUser.uid}/incomingCall`).on('value', snap => {
-        const callData = snap.val();
-        if (callData && callData.status === "chamando") {
-            // Abre overlay de chamada recebida
-            document.getElementById('call-user-name').innerText = callData.callerName;
-            document.getElementById('call-status-label').innerText = "Chamada de Voz Recebida...";
-            document.getElementById('call-overlay-screen').classList.remove('hidden');
-            
-            // Modifica ação do botão para aceitar
-            const btnMute = document.getElementById('btn-toggle-mute-mic');
-            btnMute.innerText = "Atender";
-            btnMute.onclick = () => {
-                database.ref(`users/${currentUser.uid}/incomingCall`).update({ status: "atendida" });
-                document.getElementById('call-status-label').innerText = "Em Linha";
-                btnMute.innerText = "Mudo";
-            };
-        }
-    });
-}
-
-document.getElementById('btn-start-call').addEventListener('click', () => {
-    if (!activeRecipientId) return;
-    document.getElementById('call-status-label').innerText = "Chamando...";
-    document.getElementById('call-overlay-screen').classList.remove('hidden');
-    
-    // Injeta a chamada no nó do destinatário via Realtime Database
-    database.ref(`users/${activeRecipientId}/incomingCall`).set({
-        callerId: currentUser.uid,
-        callerName: "Alguém",
-        status: "chamando"
-    });
-
-    // Monitora se ele atendeu ou desligou
-    database.ref(`users/${activeRecipientId}/incomingCall/status`).on('value', s => {
-        if (s.val() === "atendida") {
-            document.getElementById('call-status-label').innerText = "Em Linha";
-        }
-    });
-});
-
-document.getElementById('btn-hangup-call').addEventListener('click', () => {
-    document.getElementById('call-overlay-screen').classList.add('hidden');
-    if (activeRecipientId) {
-        database.ref(`users/${activeRecipientId}/incomingCall`).remove();
-    }
-    database.ref(`users/${currentUser.uid}/incomingCall`).remove();
-});
-
-// FUNÇÕES DE ÁUDIO REUTILIZADAS
+// FUNÇÕES DE ÁUDIO
 function startRecordingAudio() {
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         audioChunks = [];
@@ -415,21 +285,25 @@ function startRecordingAudio() {
         mediaRecorder.onstop = () => {
             const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
             const reader = new FileReader();
-            reader.onloadend = () => pushMessage("", null, reader.result);
+            reader.onloadend = () => {
+                pushMessage("", null, reader.result);
+            };
             reader.readAsDataURL(audioBlob);
             stream.getTracks().forEach(track => track.stop());
         };
+
         mediaRecorder.start();
         audioDurationSeconds = 0;
         document.getElementById('audio-timer').innerText = "0:00";
         document.getElementById('audio-recording-ui').classList.remove('hidden');
+
         audioTimerInterval = setInterval(() => {
             audioDurationSeconds++;
             const mins = Math.floor(audioDurationSeconds / 60);
             const secs = audioDurationSeconds % 60;
             document.getElementById('audio-timer').innerText = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
         }, 1000);
-    }).catch(() => alert("Sem permissão para usar o Microfone!"));
+    }).catch(err => alert("Sem permissão para usar o Microfone!"));
 }
 
 function stopRecordingAudio() {
@@ -440,27 +314,33 @@ function stopRecordingAudio() {
     }
 }
 
+// EXECUTAR ÁUDIO NO PLAYER
 function playAudioMessage(btn, audioBase64) {
     const audio = new Audio(audioBase64);
     const fill = btn.nextElementSibling.querySelector('.audio-progress-fill');
+    
     btn.innerText = "Pausar";
     audio.play();
+    
     audio.addEventListener('timeupdate', () => {
         const pct = (audio.currentTime / audio.duration) * 100;
         fill.style.width = pct + "%";
     });
+    
     audio.addEventListener('ended', () => {
         btn.innerText = "Ouvir";
         fill.style.width = "0%";
     });
 }
 
+// VISUALIZADOR DE FOTOS AMPLIADAS (LIGHTBOX)
 function openLightbox(imgSrc) {
     const box = document.getElementById('lightbox-overlay');
     document.getElementById('lightbox-img').src = imgSrc;
     box.classList.remove('hidden');
 }
 
+// GERENCIADOR DE ESTADO DO BOTÃO DE ENTRADA
 function triggerMicButtonState() {
     const btn = document.getElementById('btn-send');
     const val = document.getElementById('message-input').value.trim();
@@ -474,8 +354,130 @@ function triggerMicButtonState() {
 }
 document.getElementById('message-input').addEventListener('input', triggerMicButtonState);
 
+// EVENTO DO BOTÃO DE ENVIO OU GRAVAÇÃO DE ÁUDIO
 document.getElementById('btn-send').addEventListener('click', function() {
     if(this.classList.contains('state-send')) {
         pushMessage(document.getElementById('message-input').value);
     } else {
-        if(this.classList.contains('recording-
+        if(this.classList.contains('recording-active')) {
+            this.classList.remove('recording-active');
+            this.style.transform = "scale(1)";
+            stopRecordingAudio();
+        } else {
+            this.classList.add('recording-active');
+            this.style.transform = "scale(1.1)";
+            startRecordingAudio();
+        }
+    }
+});
+
+// POPUPS FLUTUANTES GLOBAIS
+function listenToGlobalMessages() {
+    database.ref('chats').on('child_changed', snap => {
+        const chat = snap.val();
+        if(!chat || !chat.messages) return;
+        const msgKeys = Object.keys(chat.messages);
+        const lastMsg = chat.messages[msgKeys[msgKeys.length - 1]];
+        
+        if(lastMsg.senderId !== currentUser.uid && lastMsg.status === 'sending') {
+            if (silencedUsers[lastMsg.senderId]) return;
+            if (!document.getElementById('toggle-popup-global').checked) return;
+
+            database.ref(`users/${lastMsg.senderId}`).once('value', uSnap => {
+                const sender = uSnap.val();
+                let textDisplay = lastMsg.text || (lastMsg.image ? "Foto recebida" : "Áudio recebido");
+                triggerPremiumPopup(sender, textDisplay);
+            });
+        }
+    });
+}
+
+function triggerPremiumPopup(sender, text) {
+    const popup = document.getElementById('popup-notification');
+    document.getElementById('popup-avatar').src = sender.avatar;
+    document.getElementById('popup-title').innerText = sender.nickname;
+    document.getElementById('popup-text').innerText = text;
+    
+    popup.classList.remove('hidden');
+    setTimeout(() => popup.classList.add('expanded'), 150);
+    setTimeout(() => {
+        popup.classList.remove('expanded');
+        setTimeout(() => popup.classList.add('hidden'), 400);
+    }, 3500);
+}
+
+// ESTADO INICIAL DA SESSÃO
+auth.onAuthStateChanged(user => {
+    if (user) {
+        currentUser = user;
+        database.ref('users/' + user.uid).once('value').then(snap => {
+            if (snap.exists() && snap.val().username) {
+                changeView('chat');
+                setupPresenceSystem(user.uid);
+                loadChatList();
+                loadMyAccountSettingsData(user.uid);
+                listenToGlobalMessages();
+            } else {
+                changeView('profile');
+            }
+        });
+    } else {
+        changeView('login');
+    }
+});
+
+function applyLongPress(element, actionCallback) {
+    let timer;
+    const start = () => timer = setTimeout(() => actionCallback(), 600);
+    const stop = () => clearTimeout(timer);
+    element.addEventListener('touchstart', start, { passive: true });
+    element.addEventListener('touchend', stop, { passive: true });
+    element.addEventListener('mousedown', start);
+    element.addEventListener('mouseup', stop);
+    element.addEventListener('mouseleave', stop);
+}
+
+function loadChatList() {
+    database.ref('users').on('value', snap => {
+        const parent = document.getElementById('chats-list');
+        parent.innerHTML = '';
+        snap.forEach(child => {
+            const user = child.val();
+            if(user.uid === currentUser.uid) return;
+            
+            const row = document.createElement('div');
+            row.className = "chat-item-row";
+            row.innerHTML = `<img src="${user.avatar}" onerror="this.src='https://via.placeholder.com/150'">
+                             <div class="chat-item-info">
+                                <div class="chat-item-header"><h4>${user.nickname}</h4></div>
+                                <p>${user.username}</p>
+                             </div>`;
+            row.addEventListener('click', () => {
+                const combinedId = currentUser.uid < user.uid ? currentUser.uid + "_" + user.uid : user.uid + "_" + currentUser.uid;
+                openChatRoom(combinedId, user);
+            });
+            parent.appendChild(row);
+        });
+    });
+}
+
+// EVENTOS DE CLIQUES E DEMAIS BOTOES
+document.getElementById('message-input').addEventListener('keypress', (e) => { 
+    if(e.key === 'Enter') {
+        pushMessage(e.target.value);
+    }
+});
+
+document.getElementById('btn-attach').addEventListener('click', () => document.getElementById('media-file-input').click());
+document.getElementById('media-file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0]; if(!file) return;
+    const reader = new FileReader(); reader.onload = (ev) => pushMessage("", ev.target.result); reader.readAsDataURL(file);
+});
+
+document.getElementById('ctx-copy-direct').addEventListener('click', () => { navigator.clipboard.writeText(selectedMessageText).then(() => document.getElementById('blur-overlay').classList.add('hidden')); });
+document.getElementById('ctx-close-menu').addEventListener('click', () => document.getElementById('blur-overlay').classList.add('hidden'));
+document.getElementById('ctx-delete-single').addEventListener('click', () => { if(confirm("Apagar mensagem?")) database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).remove(); document.getElementById('blur-overlay').classList.add('hidden'); });
+
+document.getElementById('btn-main-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.remove('hidden'));
+document.getElementById('btn-back-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.add('hidden'));
+document.getElem
