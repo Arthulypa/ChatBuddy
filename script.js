@@ -1,135 +1,308 @@
-<!DOCTYPE html>
-<html lang="pt-br" translate="no">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ChatBuddy - Neon Edition</title>
-    <meta name="google" content="notranslate">
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
-</head>
-<body>
+// CONFIGURAÇÃO DO FIREBASE
+const firebaseConfig = {
+  apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfyH4", 
+  authDomain: "chatbuddy-96a61.firebaseapp.com",
+  databaseURL: "https://chatbuddy-96a61-default-rtdb.firebaseio.com",
+  projectId: "chatbuddy-96a61",
+  storageBucket: "chatbuddy-96a61.firebasestorage.app",
+  messagingSenderId: "1051493485478",
+  appId: "1:1051493485478:web:1f6a94ef63e665fa539d67",
+  measurementId: "G-7GX1YR6HQL"
+};
 
-    <!-- 1. TELA DE LOGIN -->
-    <div id="login-page" class="auth-container">
-        <div class="auth-box page-transition">
-            <div class="logo-container">
-                <h1 class="neon-text">CHAT<span>BUDDY</span></h1>
-            </div>
-            <h2>Sign In</h2>
-            <div class="input-group">
-                <label>Email</label>
-                <input type="email" id="email-login" placeholder="arthur@cyber.com">
-            </div>
-            <div class="input-group">
-                <label>Password</label>
-                <input type="password" id="password-login" placeholder="••••••••">
-            </div>
-            <button id="btn-login" class="btn-primary">ENTRAR</button>
-            
-            <div class="divider"><span>OU</span></div>
-            <button id="btn-google-login" class="btn-google">
-                <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="Google">
-                Entrar com o Google
-            </button>
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const database = firebase.database();
 
-            <p class="auth-switch">New to the grid? <span id="btn-to-register">Create account</span></p>
-        </div>
-    </div>
+// Mapeamento de Elementos
+const loginPage = document.getElementById('login-page');
+const registerPage = document.getElementById('register-page');
+const profilePage = document.getElementById('profile-page');
+const chatPage = document.getElementById('chat-page');
 
-    <!-- 2. TELA DE REGISTRO (CRIAR CONTA) -->
-    <div id="register-page" class="auth-container hidden">
-        <div class="auth-box page-transition">
-            <div class="logo-container">
-                <h1 class="neon-text">CHAT<span>BUDDY</span></h1>
-            </div>
-            <h2>Create Account</h2>
-            <div class="input-group">
-                <label>Email Address</label>
-                <input type="email" id="email-reg" placeholder="seu-email@cyber.com">
-            </div>
-            <div class="input-group">
-                <label>Choose Password</label>
-                <input type="password" id="password-reg" placeholder="••••••••">
-            </div>
-            <button id="btn-register" class="btn-primary">CONTINUAR</button>
+const btnToRegister = document.getElementById('btn-to-register');
+const btnToLogin = document.getElementById('btn-to-login');
+const btnLogin = document.getElementById('btn-login');
+const btnRegister = document.getElementById('btn-register');
+const btnGoogleLogin = document.getElementById('btn-google-login');
+const btnGoogleReg = document.getElementById('btn-google-reg');
+const btnSaveProfile = document.getElementById('btn-save-profile');
+const btnSendMessage = document.getElementById('btn-send');
+const btnLogout = document.getElementById('btn-logout');
+const btnOpenNewChat = document.getElementById('btn-new-chat');
+const btnCloseModal = document.getElementById('btn-close-modal');
 
-            <div class="divider"><span>OU</span></div>
-            <button id="btn-google-reg" class="btn-google">
-                <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="Google">
-                Cadastrar com o Google
-            </button>
+const emailLoginInput = document.getElementById('email-login');
+const passwordLoginInput = document.getElementById('password-login');
+const emailRegInput = document.getElementById('email-reg');
+const passwordRegInput = document.getElementById('password-reg');
+const displayNameInput = document.getElementById('display-name');
+const usernameInput = document.getElementById('username');
+const messageInput = document.getElementById('message-input');
 
-            <p class="auth-switch">Already initialized? <span id="btn-to-login">Sign In</span></p>
-        </div>
-    </div>
+const currentUserNameHTML = document.getElementById('current-user-name');
+const currentUserTagHTML = document.getElementById('current-user-tag');
+const activeChatNameHTML = document.getElementById('active-chat-name');
+const activeChatStatusHTML = document.getElementById('active-chat-status');
 
-    <!-- 3. TELA DE CONFIGURAÇÃO DE PERFIL -->
-    <div id="profile-page" class="auth-container hidden">
-        <div class="auth-box page-transition">
-            <h2>Setup Profile</h2>
-            <div class="input-group">
-                <label>Display Name</label>
-                <input type="text" id="display-name" placeholder="Ex: Arthur">
+const chatsListContainer = document.getElementById('chats-list');
+const messagesContainer = document.getElementById('messages-container');
+const contactsModal = document.getElementById('contacts-modal');
+const contactsListContainer = document.getElementById('contacts-list');
+
+let currentUser = null;
+let activeChatId = null;
+let activeRecipientId = null;
+
+// Função de troca de página com reset de animação CSS
+function showPage(page) {
+    const pages = [loginPage, registerPage, profilePage, chatPage];
+    pages.forEach(p => {
+      if(p) p.classList.add('hidden');
+    });
+    if(page) {
+      page.classList.remove('hidden');
+      const box = page.querySelector('.page-transition');
+      if(box) {
+          box.style.animation = 'none';
+          box.offsetHeight; // Força reflow do CSS
+          box.style.animation = null;
+      }
+    }
+}
+
+// Vinculação de eventos para navegação entre telas
+if(btnToRegister) btnToRegister.addEventListener('click', () => showPage(registerPage));
+if(btnToLogin) btnToLogin.addEventListener('click', () => showPage(loginPage));
+
+// Monitor de Sessão do Firebase
+auth.onAuthStateChanged(user => {
+  if (user) {
+    currentUser = user;
+    database.ref('users/' + user.uid).once('value').then(snapshot => {
+      if (snapshot.exists() && snapshot.val().username) {
+        loadChatSystem();
+      } else {
+        showPage(profilePage);
+      }
+    });
+  } else {
+    currentUser = null;
+    showPage(loginPage);
+  }
+});
+
+// Registro por Email
+if(btnRegister) {
+  btnRegister.addEventListener('click', () => {
+    const email = emailRegInput.value.trim();
+    const password = passwordRegInput.value.trim();
+    if(!email || !password) return alert('Preencha todos os campos!');
+    auth.createUserWithEmailAndPassword(email, password)
+      .catch(error => alert('Erro: ' + error.message));
+  });
+}
+
+// Login por Email
+if(btnLogin) {
+  btnLogin.addEventListener('click', () => {
+    const email = emailLoginInput.value.trim();
+    const password = passwordLoginInput.value.trim();
+    if(!email || !password) return alert('Preencha todos os campos!');
+    auth.signInWithEmailAndPassword(email, password)
+      .catch(error => alert('Erro: ' + error.message));
+  });
+}
+
+// Login / Cadastro com Google
+function loginComGoogle() {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider)
+      .catch((error) => {
+          alert('Erro na autenticação Google: ' + error.message);
+      });
+}
+
+if(btnGoogleLogin) btnGoogleLogin.addEventListener('click', loginComGoogle);
+if(btnGoogleReg) btnGoogleReg.addEventListener('click', loginComGoogle);
+
+// Salvar Perfil Inicial
+if(btnSaveProfile) {
+  btnSaveProfile.addEventListener('click', () => {
+    const displayName = displayNameInput.value.trim();
+    const username = usernameInput.value.trim().toLowerCase().replace(/\s+/g, '');
+    if(!displayName || !username) return alert('Preencha os dados!');
+    
+    database.ref('usernames/' + username).once('value').then(snapshot => {
+      if(snapshot.exists() && snapshot.val() !== currentUser.uid) {
+        alert('Nome de usuário em uso!');
+      } else {
+        database.ref('users/' + currentUser.uid).update({
+          uid: currentUser.uid,
+          displayName: displayName,
+          username: username,
+          status: 'Online'
+        });
+        database.ref('usernames/' + username).set(currentUser.uid);
+        loadChatSystem();
+      }
+    });
+  });
+}
+
+// Sair do Sistema
+if(btnLogout) {
+  btnLogout.addEventListener('click', () => {
+    if(currentUser) database.ref('users/' + currentUser.uid).update({ status: 'Offline' });
+    auth.signOut();
+  });
+}
+
+function loadChatSystem() {
+  showPage(chatPage);
+  database.ref('users/' + currentUser.uid).on('value', snapshot => {
+    const data = snapshot.val();
+    if(data) {
+      if(currentUserNameHTML) currentUserNameHTML.innerText = data.displayName;
+      if(currentUserTagHTML) currentUserTagHTML.innerText = '@' + data.username;
+    }
+  });
+  database.ref('users/' + currentUser.uid).update({ status: 'Online' });
+  listenToMyChats();
+}
+
+if(btnOpenNewChat) {
+  btnOpenNewChat.addEventListener('click', () => {
+    if(contactsModal) contactsModal.classList.remove('hidden');
+    loadContactsList();
+  });
+}
+if(btnCloseModal) btnCloseModal.addEventListener('click', () => {
+  if(contactsModal) contactsModal.classList.add('hidden');
+});
+
+function loadContactsList() {
+  database.ref('users').once('value', snapshot => {
+    if(!contactsListContainer) return;
+    contactsListContainer.innerHTML = '';
+    snapshot.forEach(childSnapshot => {
+      const user = childSnapshot.val();
+      if(user.uid !== currentUser.uid) {
+        const item = document.createElement('div');
+        item.className = 'chat-item';
+        item.innerHTML = `
+          <div class="avatar">${user.displayName ? user.displayName.charAt(0).toUpperCase() : '?'}</div>
+          <div class="chat-item-details">
+            <p class="name">${user.displayName}</p>
+            <p class="preview">@${user.username}</p>
+          </div>
+        `;
+        item.onclick = () => startConversaCom(user.uid, user.displayName);
+        contactsListContainer.appendChild(item);
+      }
+    });
+  });
+}
+
+function startConversaCom(recipientId, recipientName) {
+  if(contactsModal) contactsModal.classList.add('hidden');
+  const chatId = currentUser.uid < recipientId ? `${currentUser.uid}_${recipientId}` : `${recipientId}_${currentUser.uid}`;
+  activeChatId = chatId;
+  activeRecipientId = recipientId;
+  database.ref(`users/${currentUser.uid}/my_chats/${chatId}`).set({ recipientId: recipientId });
+  database.ref(`users/${recipientId}/my_chats/${chatId}`).set({ recipientId: currentUser.uid });
+  openChatRoom(chatId, recipientName, recipientId);
+}
+
+function listenToMyChats() {
+  database.ref(`users/${currentUser.uid}/my_chats`).on('value', snapshot => {
+    if(!chatsListContainer) return;
+    chatsListContainer.innerHTML = '';
+    if(!snapshot.exists()) {
+      chatsListContainer.innerHTML = '<p class="chat-placeholder">Nenhum canal ativo.</p>';
+      return;
+    }
+    snapshot.forEach(childSnapshot => {
+      const chatId = childSnapshot.key;
+      const chatData = childSnapshot.val();
+      database.ref(`users/${chatData.recipientId}`).once('value', userSnap => {
+        const user = userSnap.val();
+        if(user) {
+          const chatItem = document.createElement('div');
+          chatItem.className = `chat-item ${activeChatId === chatId ? 'active' : ''}`;
+          chatItem.innerHTML = `
+            <div class="avatar">${user.displayName ? user.displayName.charAt(0).toUpperCase() : '?'}</div>
+            <div class="chat-item-details">
+              <p class="name">${user.displayName}</p>
+              <p class="preview">Conexão segura estabelecida...</p>
             </div>
-            <div class="input-group">
-                <label>Username</label>
-                <input type="text" id="username" placeholder="Ex: arthur123">
-            </div>
-            <button id="btn-save-profile" class="btn-primary">SALVAR PERFIL</button>
-        </div>
-    </div>
+          `;
+          chatItem.onclick = () => openChatRoom(chatId, user.displayName, user.uid);
+          chatsListContainer.appendChild(chatItem);
+        }
+      });
+    });
+  });
+}
 
-    <!-- 4. TELA PRINCIPAL DO CHAT -->
-    <div id="chat-page" class="chat-container hidden">
-        <aside class="sidebar page-transition">
-            <header class="sidebar-header">
-                <div class="user-profile-summary">
-                    <h3 id="current-user-name">Carregando...</h3>
-                    <p id="current-user-tag">@username</p>
-                </div>
-                <button id="btn-logout" class="btn-logout">Sair</button>
-            </header>
-            <div class="search-bar">
-                <input type="text" id="search-contact" placeholder="Buscar transmissão...">
-            </div>
-            <div id="chats-list" class="chats-list"></div>
-            <button id="btn-new-chat" class="btn-fab">+</button>
-        </aside>
+function openChatRoom(chatId, recipientName, recipientId) {
+  activeChatId = chatId;
+  activeRecipientId = recipientId;
+  if(activeChatNameHTML) activeChatNameHTML.innerText = recipientName;
+  database.ref(`users/${recipientId}/status`).on('value', snap => {
+    if(activeChatStatusHTML) activeChatStatusHTML.innerText = snap.val() || 'Offline';
+  });
+  database.ref(`chats/${chatId}/messages`).off();
+  database.ref(`chats/${chatId}/messages`).on('value', snapshot => {
+    if(!messagesContainer) return;
+    messagesContainer.innerHTML = '';
+    snapshot.forEach(childSnapshot => {
+      const msg = childSnapshot.val();
+      const msgId = childSnapshot.key;
+      const msgElement = document.createElement('div');
+      msgElement.className = `message ${msg.senderId === currentUser.uid ? 'sent' : 'received'}`;
+      if(msg.isDeleted) {
+        msgElement.innerHTML = `<p class="deleted-text"><em>[MENSAGEM DELETADA]</em></p>`;
+      } else {
+        msgElement.innerHTML = `
+          <p class="text-content">${msg.text}</p>
+          <span class="time-stamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+        `;
+        if(msg.senderId === currentUser.uid) {
+          msgElement.onclick = () => {
+            if(confirm('Apagar registro da mensagem?')) {
+              database.ref(`chats/${chatId}/messages/${msgId}`).update({ isDeleted: true });
+            }
+          };
+        }
+      }
+      messagesContainer.appendChild(msgElement);
+    });
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  });
+}
 
-        <main class="chat-area page-transition">
-            <header class="chat-header">
-                <div class="active-user-info">
-                    <h2 id="active-chat-name">Selecione um canal</h2>
-                    <p id="active-chat-status"></p>
-                </div>
-            </header>
-            <div id="messages-container" class="messages-container">
-                <p class="chat-placeholder">Abra o terminal clicando no botão "+" para buscar usuários.</p>
-            </div>
-            <footer class="chat-footer">
-                <input type="text" id="message-input" placeholder="Digite sua mensagem criptografada...">
-                <button id="btn-send" class="btn-send">ENVIAR</button>
-            </footer>
-        </main>
-    </div>
+function sendMessage() {
+  if(!messageInput) return;
+  const text = messageInput.value.trim();
+  if(!text || !activeChatId) return;
+  const msgRef = database.ref(`chats/${activeChatId}/messages`).push();
+  msgRef.set({
+    senderId: currentUser.uid,
+    text: text,
+    timestamp: firebase.database.ServerValue.TIMESTAMP,
+    isDeleted: false
+  });
+  messageInput.value = '';
+}
 
-    <!-- MODAL DE CONTATOS -->
-    <div id="contacts-modal" class="modal hidden">
-        <div class="modal-content page-transition">
-            <div class="modal-header">
-                <h3>Conectar a um usuário</h3>
-                <button id="btn-close-modal" class="btn-close">&times;</button>
-            </div>
-            <div id="contacts-list" class="contacts-list"></div>
-        </div>
-    </div>
+if(btnSendMessage) btnSendMessage.addEventListener('click', sendMessage);
+if(messageInput) {
+  messageInput.addEventListener('keypress', (e) => {
+    if(e.key === 'Enter') sendMessage();
+  });
+}
 
-    <!-- Scripts do Firebase v10 Compat -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-    <script src="script.js"></script>
-</body>
-</html>
-  
+// ASSEGURA QUE A TELA DE LOGIN APARECERÁ NO INÍCIO
+showPage(loginPage);
+    
