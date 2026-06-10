@@ -89,6 +89,19 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
         border-radius: 14px !important;
         overflow: hidden;
     }
+    #settings-screen {
+        position: absolute !important;
+        left: 340px !important;
+        right: 10px !important;
+        top: 10px !important;
+        bottom: 10px !important;
+        width: calc(100% - 350px) !important;
+        max-width: none !important;
+        height: auto !important;
+        border-radius: 14px !important;
+        border: 1px solid var(--glass-border) !important;
+        overflow-y: auto;
+    }
     .chat-room-screen #btn-back-to-list { display: none !important; }
 
     .empty-chat-panel {
@@ -318,7 +331,7 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.65); z-index: 700; display: flex; justify-content: center; align-items: center; animation: fadeIn 0.2s ease; }
 .modal-content { width: 90%; max-width: 340px; border-radius: 20px; padding: 20px; max-height: 80dvh; display: flex; flex-direction: column; animation: scaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1); }
 
-.settings-screen { position: fixed; top: 0; left: 0; right: 0; bottom: 0; width: 100% !important; max-width: 100% !important; height: 100dvh; background: #000; z-index: 9999; display: flex; flex-direction: column; animation: slideInRight 0.3s cubic-bezier(0.25,0.46,0.45,0.94); overflow-y: auto; }
+.settings-screen { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100% !important; max-width: 100% !important; height: 100%; background: #000; z-index: 400; display: flex; flex-direction: column; animation: slideInRight 0.3s cubic-bezier(0.25,0.46,0.45,0.94); overflow-y: auto; }
 .settings-screen-header { height: 60px; display: flex; align-items: center; padding: 0 16px; gap: 10px; flex-shrink: 0; }
 .settings-screen-body { padding: 16px; display: flex; flex-direction: column; gap: 16px; flex: 1; overflow-y: auto; }
 .settings-section-group { border-radius: 14px; padding: 4px 16px; }
@@ -361,3 +374,16 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .media-viewer { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.98); z-index: 10000; display: flex; justify-content: center; align-items: center; }
 .media-viewer-content { max-width: 95vw; max-height: 85dvh; object-fit: contain; transition: transform 0.2s cubic-bezier(0.1, 0.3, 0.3, 1); user-select: none; }
 .media-viewer-close { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 40px; height: 40px; color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+.requests-badge { display: inline-flex; align-items: center; justify-content: center; background: var(--ios-red); color: #fff; font-size: 10px; font-weight: 700; border-radius: 8px; min-width: 16px; height: 16px; padding: 0 4px; margin-left: 4px; vertical-align: middle; }
+.requests-banner { display: flex; align-items: center; gap: 10px; margin: 4px 12px 4px; padding: 12px 14px; background: rgba(10,132,255,0.1); border: 1px solid rgba(10,132,255,0.25); border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--ios-blue); transition: background 0.2s; }
+.requests-banner:active { background: rgba(10,132,255,0.18); }
+
+.request-row { display: flex; align-items: center; padding: 12px 16px; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.request-row img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.request-row-info { flex: 1; overflow: hidden; }
+.request-row-info h4 { font-size: 15px; font-weight: 600; color: #fff; }
+.request-row-info p  { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.request-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.btn-req-accept { background: var(--ios-green); border: none; border-radius: 20px; color: #fff; font-size: 13px; font-weight: 600; padding: 6px 14px; cursor: pointer; }
+.btn-req-decline { background: rgba(255,69,58,0.15); border: none; border-radius: 20px; color: var(--ios-red); font-size: 13px; font-weight: 600; padding: 6px 14px; cursor: pointer; }
