@@ -156,6 +156,16 @@
 
             <div id="messages-container" class="messages-container"></div>
 
+            <div id="reply-bar" class="reply-bar hidden">
+                <div class="reply-bar-indicator"></div>
+                <div class="reply-bar-content">
+                    <span class="reply-bar-label">Respondendo</span>
+                    <p id="reply-bar-text" class="reply-bar-msg"></p>
+                </div>
+                <button id="btn-cancel-reply" class="reply-cancel-btn">
+                    <svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
             <footer class="chat-footer glass-premium">
                 <div class="footer-input-row">
                     <button id="btn-attach" class="attach-btn" style="background:none; border:none; cursor:pointer;">
@@ -191,6 +201,10 @@
             </div>
 
             <div class="profile-actions-list">
+                <button id="btn-set-nickname" class="action-nickname-btn">
+                    <svg viewBox="0 0 24 24" style="width:16px;height:16px;margin-right:8px;"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    Definir Apelido
+                </button>
                 <div class="action-row-toggle">
                     <span>Silenciar Notificações</span>
                     <label class="ios-switch-wrapper">
@@ -202,6 +216,22 @@
             </div>
 
             <button id="btn-close-info-sheet" class="btn-profile-close">Voltar ao Chat</button>
+        </div>
+    </div>
+
+    <!-- MODAL DEFINIR APELIDO -->
+    <div id="nickname-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:300px; text-align:center;">
+            <h3 style="margin-bottom:6px;">Definir Apelido</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Visível apenas para você</p>
+            <div class="input-group-premium">
+                <input type="text" id="nickname-input" placeholder=" " maxlength="30">
+                <label>Apelido personalizado</label>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+                <button id="btn-cancel-nickname" class="btn-profile-close" style="flex:1;">Cancelar</button>
+                <button id="btn-save-nickname" class="ios-btn-primary" style="flex:1;">Salvar</button>
+            </div>
         </div>
     </div>
 
@@ -237,39 +267,80 @@
             </button>
             <h2>Configurações</h2>
         </header>
+
+        <!-- TABS -->
+        <div class="settings-tabs-bar">
+            <div class="settings-tab active" data-tab="conta">Conta</div>
+            <div class="settings-tab" data-tab="notif">Notificações</div>
+            <div class="settings-tab" data-tab="priv">Privacidade</div>
+            <div class="settings-tab" data-tab="seg">Segurança</div>
+        </div>
+
         <div class="settings-screen-body">
-            <div class="settings-section-group glass-premium">
-                <div class="settings-row-toggle">
-                    <div>
-                        <p class="row-main-title">Notificações Flutuantes</p>
-                        <p class="row-sub-title">Mostrar bolinha expansível ao receber mensagens</p>
+
+            <!-- ABA CONTA -->
+            <div id="stab-conta" class="settings-tab-pane">
+                <div class="settings-section-title">Perfil</div>
+                <div class="settings-section-group glass-premium">
+                    <div class="settings-avatar-row">
+                        <div class="settings-avatar-wrapper">
+                            <img id="settings-avatar-preview" src="" alt="">
+                        </div>
+                        <label for="settings-avatar-input" class="settings-avatar-label">Alterar Foto</label>
+                        <input type="file" id="settings-avatar-input" accept="image/*" class="hidden">
                     </div>
-                    <label class="ios-switch-wrapper">
-                        <input type="checkbox" id="toggle-popup-global" checked>
-                        <span class="ios-switch-slider"></span>
-                    </label>
+                </div>
+                <div class="settings-section-group glass-premium" style="margin-top:12px;">
+                    <div class="input-group-premium" style="margin:12px 0 4px;">
+                        <input type="text" id="settings-nickname" placeholder=" ">
+                        <label>Apelido (Nickname)</label>
+                    </div>
+                    <div class="input-group-premium" style="margin-bottom:4px;">
+                        <input type="text" id="settings-username" placeholder=" ">
+                        <label>Nome de usuário (@)</label>
+                    </div>
+                    <div class="input-group-premium" style="margin-bottom:12px;">
+                        <input type="text" id="settings-bio" placeholder=" ">
+                        <label>Biografia</label>
+                    </div>
+                </div>
+                <button id="btn-save-account" class="ios-btn-primary" style="margin-top:12px;">Salvar Alterações</button>
+                <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red);margin-top:10px;">Desconectar Conta</button>
+            </div>
+
+            <!-- ABA NOTIFICAÇÕES -->
+            <div id="stab-notif" class="settings-tab-pane hidden">
+                <div class="settings-section-title">Notificações</div>
+                <div class="settings-section-group glass-premium">
+                    <div class="settings-row-toggle">
+                        <div>
+                            <p class="row-main-title">Silenciar Tudo</p>
+                            <p class="row-sub-title">Nenhuma notificação será exibida</p>
+                        </div>
+                        <label class="ios-switch-wrapper">
+                            <input type="checkbox" id="toggle-mute-all">
+                            <span class="ios-switch-slider"></span>
+                        </label>
+                    </div>
+                    <div style="height:1px;background:var(--glass-border);"></div>
+                    <div class="settings-row-toggle">
+                        <div>
+                            <p class="row-main-title">Notificações Flutuantes</p>
+                            <p class="row-sub-title">Bolinha que desce, abre e sobe ao receber mensagem</p>
+                        </div>
+                        <label class="ios-switch-wrapper">
+                            <input type="checkbox" id="toggle-popup-global" checked>
+                            <span class="ios-switch-slider"></span>
+                        </label>
+                    </div>
                 </div>
             </div>
-            <div style="padding: 20px;">
-                <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red);">Desconectar Conta</button>
-            </div>
-        </div>
-    </div>
 
-    <div id="contacts-modal" class="modal hidden">
-        <div class="modal-content glass-premium">
-            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
-                <h3>Nova Conversa</h3>
-                <button id="btn-close-modal" class="back-btn"><svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
-            </div>
-            <div id="contacts-list-modal" class="chats-list"></div>
-        </div>
-    </div>
-
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-    <script src="script.js"></script>
-</body>
-        </html>
-    
+            <!-- ABA PRIVACIDADE -->
+            <div id="stab-priv" class="settings-tab-pane hidden">
+                <div class="settings-section-title">Privacidade</div>
+                <div class="settings-section-group glass-premium">
+                    <div class="settings-row-toggle">
+                        <div>
+                            <p class="row-main-title">Confirmação de Leitura</p>
+                            <p class="row-s
