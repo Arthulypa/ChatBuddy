@@ -282,6 +282,10 @@ function openChatRoom(chatId, recipientData) {
     document.getElementById('active-chat-avatar').src      = recipientData.avatar;
     document.getElementById('chat-room-screen').classList.remove('hidden');
 
+    // ESCONDE O AVISO DE SELECIONAR CHAT CASO ESTEJA NO DESKTOP
+    const desktopPlaceholder = document.getElementById('desktop-empty-chat');
+    if (desktopPlaceholder) desktopPlaceholder.classList.add('hidden');
+
     // Estado de bloqueio
     applyBlockedStateToChat(recipientData.uid, isBlocked(recipientData.uid));
 
@@ -750,6 +754,10 @@ document.getElementById('btn-back-to-list').addEventListener('click', () => {
     database.ref(`users/${activeRecipientId}`).off();
     database.ref(`chats/${activeChatId}/messages`).off();
     document.getElementById('chat-room-screen').classList.add('hidden');
+    
+    // CASO VOLTE ATRÁS E FECHE O CHAT NO DESKTOP, EXIBE O AVISO NOVAMENTE
+    const desktopPlaceholder = document.getElementById('desktop-empty-chat');
+    if (desktopPlaceholder) desktopPlaceholder.classList.remove('hidden');
 });
 document.getElementById('btn-back-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.add('hidden'));
 document.getElementById('btn-logout').addEventListener('click', () => { auth.signOut().then(() => window.location.reload()); });
