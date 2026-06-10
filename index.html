@@ -20,6 +20,7 @@
         </div>
     </div>
 
+    <!-- LOGIN -->
     <div id="login-page" class="auth-container">
         <div class="auth-box glass-premium">
             <div class="auth-logo">
@@ -29,7 +30,6 @@
                 <h1 class="ios-title">ChatBuddy</h1>
                 <p class="ios-subtitle">Conectando você ao amanhã</p>
             </div>
-            
             <div class="input-group-premium">
                 <input type="email" id="email-login" required placeholder=" ">
                 <label>E-mail</label>
@@ -48,11 +48,11 @@
         </div>
     </div>
 
+    <!-- REGISTRO -->
     <div id="register-page" class="auth-container hidden">
         <div class="auth-box glass-premium">
             <h1 class="ios-title">Criar Conta</h1>
             <p class="ios-subtitle" style="margin-bottom: 25px;">Rápido, seguro e privado na ChatBuddy.</p>
-            
             <div id="reg-step-1">
                 <div class="input-group-premium">
                     <input type="email" id="email-reg" required placeholder=" ">
@@ -64,9 +64,8 @@
                 </div>
                 <button id="btn-send-code" class="ios-btn-primary">Enviar Código</button>
             </div>
-
             <div id="reg-step-2" class="hidden">
-                <p class="info-text-verify" style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Insira o código de 6 dígitos enviado ao seu e-mail (Simulado: 123456).</p>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Insira o código de 6 dígitos (Simulado: 123456).</p>
                 <div class="input-group-premium">
                     <input type="text" id="verification-code-input" maxlength="6" style="text-align: center; font-size: 22px; letter-spacing: 6px;" required placeholder=" ">
                     <label>Código</label>
@@ -77,11 +76,11 @@
         </div>
     </div>
 
+    <!-- PERFIL INICIAL -->
     <div id="profile-page" class="auth-container hidden">
         <div class="auth-box glass-premium">
             <h2 class="ios-title" style="font-size: 22px;">Configurar Perfil</h2>
             <p class="ios-subtitle">Defina sua identidade no ChatBuddy</p>
-            
             <div class="avatar-upload-container-premium">
                 <div class="avatar-preview-wrapper">
                     <img id="initial-avatar-preview" src="" class="hidden">
@@ -92,7 +91,6 @@
                 <label for="initial-avatar-file" class="avatar-file-label-premium">Escolher Foto</label>
                 <input type="file" id="initial-avatar-file" accept="image/*" class="hidden">
             </div>
-
             <div class="input-group-premium">
                 <input type="text" id="display-name" required placeholder=" ">
                 <label>Apelido (Nickname)</label>
@@ -109,20 +107,19 @@
         </div>
     </div>
 
+    <!-- CHAT PRINCIPAL -->
     <div id="chat-page" class="app-container hidden">
         <header class="app-top-bar glass-premium">
             <h2 class="app-title">ChatBuddy</h2>
             <button id="btn-main-settings" class="config-icon-btn">
-                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5z"/></svg>
+                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
             </button>
         </header>
-
         <nav class="app-tabs glass-premium">
             <div class="tab-item active" id="tab-chats">Conversas</div>
             <div class="tab-item" id="tab-status">Status</div>
             <div class="tab-item" id="tab-calls">Chamadas</div>
         </nav>
-
         <div class="tab-content-container">
             <div id="content-chats" class="tab-pane">
                 <div id="chats-list" class="chats-list"></div>
@@ -134,6 +131,7 @@
             <div id="content-calls" class="tab-pane hidden"><div class="empty-state">Nenhuma chamada efetuada.</div></div>
         </div>
 
+        <!-- SALA DE CHAT -->
         <div id="chat-room-screen" class="chat-room-screen hidden">
             <header class="chat-header glass-premium">
                 <button id="btn-back-to-list" class="back-btn">
@@ -143,6 +141,7 @@
                     <div class="header-avatar-container">
                         <img id="active-chat-avatar" class="header-avatar" src="" alt="">
                         <span id="active-chat-online-badge" class="online-indicator-dot hidden"></span>
+                        <div id="blocked-header-badge" class="blocked-header-badge hidden">BLOQ</div>
                     </div>
                     <div>
                         <h2 id="active-chat-name">Usuário</h2>
@@ -153,6 +152,12 @@
                     <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
                 </button>
             </header>
+
+            <div id="blocked-chat-banner" class="blocked-chat-banner hidden">
+                <svg viewBox="0 0 24 24" style="width:16px;height:16px;margin-right:8px;flex-shrink:0;"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.68L5.68 16.9A7.902 7.902 0 014 12zm8 8c-1.85 0-3.55-.63-4.9-1.68L18.32 7.1A7.902 7.902 0 0120 12c0 4.42-3.58 8-8 8z"/></svg>
+                Você bloqueou este usuário
+                <button id="btn-unblock-banner" class="unblock-btn-inline">Desbloquear</button>
+            </div>
 
             <div id="messages-container" class="messages-container"></div>
 
@@ -166,7 +171,8 @@
                     <svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                 </button>
             </div>
-            <footer class="chat-footer glass-premium">
+
+            <footer id="chat-footer-area" class="chat-footer glass-premium">
                 <div class="footer-input-row">
                     <button id="btn-attach" class="attach-btn" style="background:none; border:none; cursor:pointer;">
                         <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-2.76 2.24-5 5-5s5 2.24 5 5v12.5c0 3.31-2.69 6-6 6s-6-2.69-6-6V6h2v11.5c0 2.21 1.79 4 4 4s4-1.79 4-4V5c0-1.66-1.34-3-3-3s-3 1.34-3 3v12.5c0 1.1.9 2 2 2s2-.9 2-2V6h2z"/></svg>
@@ -181,14 +187,17 @@
         </div>
     </div>
 
+    <!-- SHEET INFO CONTATO -->
     <div id="contact-info-sheet" class="ios-dropdown-overlay hidden">
         <div class="profile-detail-card glass-premium">
             <div class="profile-detail-header">
-                <img id="sheet-contact-avatar" src="" alt="" class="avatar-detail-large">
+                <div class="avatar-detail-wrapper">
+                    <img id="sheet-contact-avatar" src="" alt="" class="avatar-detail-large">
+                    <div id="sheet-blocked-badge" class="sheet-blocked-badge hidden">BLOQUEADO</div>
+                </div>
                 <h3 id="sheet-contact-nick">Nome</h3>
                 <p id="sheet-contact-user">@username</p>
             </div>
-            
             <div class="profile-info-sections">
                 <div class="info-block">
                     <span class="block-label">Biografia</span>
@@ -199,7 +208,6 @@
                     <p id="sheet-contact-wlstwrus" class="block-content">Disponível</p>
                 </div>
             </div>
-
             <div class="profile-actions-list">
                 <button id="btn-set-nickname" class="action-nickname-btn">
                     <svg viewBox="0 0 24 24" style="width:16px;height:16px;margin-right:8px;"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
@@ -213,13 +221,13 @@
                     </label>
                 </div>
                 <button id="btn-sheet-block" class="action-danger-btn">Bloquear Usuário</button>
+                <button id="btn-sheet-unblock" class="action-unblock-btn hidden">Desbloquear Usuário</button>
             </div>
-
             <button id="btn-close-info-sheet" class="btn-profile-close">Voltar ao Chat</button>
         </div>
     </div>
 
-    <!-- MODAL DEFINIR APELIDO -->
+    <!-- MODAL APELIDO -->
     <div id="nickname-modal" class="modal hidden">
         <div class="modal-content glass-premium" style="max-width:300px; text-align:center;">
             <h3 style="margin-bottom:6px;">Definir Apelido</h3>
@@ -235,22 +243,50 @@
         </div>
     </div>
 
+    <!-- BLUR OVERLAY (menu contexto) -->
     <div id="blur-overlay" class="blur-overlay hidden">
-        <div class="focused-container">
-            <div id="focused-message-wrapper" class="focused-message-wrapper">
+        <div id="focused-container" class="focused-container">
+            <div id="focused-message-wrapper" class="focused-message-wrapper"></div>
+            <div class="iphone-context-menu glass-premium" id="context-menu-box">
+                <div class="context-item" id="ctx-reply-msg">
+                    <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
+                    Responder
                 </div>
-            <div class="iphone-context-menu glass-premium">
                 <div class="context-item" id="ctx-info-msg">
-                    <svg viewBox="0 0 24 24" class="mono-icon-light" style="width:16px; margin-right:8px;"><path fill="currentColor" d="M11 9h2V7h-2v2zm1 11c-4.41 0-8-3.59-8-8s3.59-8 8-8s8 3.59 8 8s-3.59 8-8 8zm0-18C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm-1 13h2v-4h-2v4z"/></svg> Dados da Mensagem (Info)
+                    <svg viewBox="0 0 24 24" class="mono-icon-light" style="width:16px; margin-right:8px;"><path fill="currentColor" d="M11 9h2V7h-2v2zm1 11c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-18C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 13h2v-4h-2v4z"/></svg>
+                    Info da Mensagem
                 </div>
-                <div class="context-item" id="ctx-edit-msg">Editar Mensagem</div>
-                <div class="context-item" id="ctx-copy-direct">Copiar Texto</div>
-                <div class="context-item danger" id="ctx-delete-single">Apagar Mensagem</div>
+                <div class="context-item" id="ctx-edit-msg">
+                    <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    Editar Mensagem
+                </div>
+                <div class="context-item" id="ctx-copy-direct">
+                    <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                    Copiar Texto
+                </div>
+                <div class="context-item danger" id="ctx-delete-single">
+                    <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    Apagar Mensagem
+                </div>
                 <div class="context-item cancel" id="ctx-close-menu">Voltar</div>
             </div>
         </div>
     </div>
 
+    <!-- MODAL APAGAR (para todos / só pra mim) -->
+    <div id="delete-options-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:300px; text-align:center;">
+            <h3 style="margin-bottom:6px;">Apagar mensagem</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">Escolha como deseja apagar</p>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <button id="btn-delete-for-all" class="ios-btn-primary" style="background:var(--ios-red);">Apagar para todos</button>
+                <button id="btn-delete-for-me" class="ios-btn-primary" style="background:rgba(255,255,255,0.08);">Apagar só para mim</button>
+                <button id="btn-cancel-delete" class="btn-profile-close">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL INFO MENSAGEM -->
     <div id="msg-info-modal" class="modal hidden">
         <div class="modal-content glass-premium" style="max-width: 280px; text-align: center;">
             <h3 style="margin-bottom:15px;">Detalhes do Envio</h3>
@@ -260,6 +296,22 @@
         </div>
     </div>
 
+    <!-- MODAL EDITAR MENSAGEM -->
+    <div id="edit-msg-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:320px;">
+            <h3 style="margin-bottom:12px; text-align:center;">Editar Mensagem</h3>
+            <div class="input-group-premium">
+                <input type="text" id="edit-msg-input" placeholder=" " maxlength="500">
+                <label>Novo texto</label>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+                <button id="btn-cancel-edit" class="btn-profile-close" style="flex:1;">Cancelar</button>
+                <button id="btn-confirm-edit" class="ios-btn-primary" style="flex:1;">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CONFIGURAÇÕES -->
     <div id="settings-screen" class="settings-screen hidden">
         <header class="settings-screen-header glass-premium">
             <button id="btn-back-settings" class="back-btn">
@@ -267,18 +319,13 @@
             </button>
             <h2>Configurações</h2>
         </header>
-
-        <!-- TABS -->
         <div class="settings-tabs-bar">
             <div class="settings-tab active" data-tab="conta">Conta</div>
             <div class="settings-tab" data-tab="notif">Notificações</div>
             <div class="settings-tab" data-tab="priv">Privacidade</div>
             <div class="settings-tab" data-tab="seg">Segurança</div>
         </div>
-
         <div class="settings-screen-body">
-
-            <!-- ABA CONTA -->
             <div id="stab-conta" class="settings-tab-pane">
                 <div class="settings-section-title">Perfil</div>
                 <div class="settings-section-group glass-premium">
@@ -307,72 +354,41 @@
                 <button id="btn-save-account" class="ios-btn-primary" style="margin-top:12px;">Salvar Alterações</button>
                 <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red);margin-top:10px;">Desconectar Conta</button>
             </div>
-
-            <!-- ABA NOTIFICAÇÕES -->
             <div id="stab-notif" class="settings-tab-pane hidden">
                 <div class="settings-section-title">Notificações</div>
                 <div class="settings-section-group glass-premium">
                     <div class="settings-row-toggle">
-                        <div>
-                            <p class="row-main-title">Silenciar Tudo</p>
-                            <p class="row-sub-title">Nenhuma notificação será exibida</p>
-                        </div>
-                        <label class="ios-switch-wrapper">
-                            <input type="checkbox" id="toggle-mute-all">
-                            <span class="ios-switch-slider"></span>
-                        </label>
+                        <div><p class="row-main-title">Silenciar Tudo</p><p class="row-sub-title">Nenhuma notificação será exibida</p></div>
+                        <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-mute-all"><span class="ios-switch-slider"></span></label>
                     </div>
                     <div style="height:1px;background:var(--glass-border);"></div>
                     <div class="settings-row-toggle">
-                        <div>
-                            <p class="row-main-title">Notificações Flutuantes</p>
-                            <p class="row-sub-title">Bolinha que desce, abre e sobe ao receber mensagem</p>
-                        </div>
-                        <label class="ios-switch-wrapper">
-                            <input type="checkbox" id="toggle-popup-global" checked>
-                            <span class="ios-switch-slider"></span>
-                        </label>
+                        <div><p class="row-main-title">Notificações Flutuantes</p><p class="row-sub-title">Bolinha que desce ao receber mensagem</p></div>
+                        <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-popup-global" checked><span class="ios-switch-slider"></span></label>
                     </div>
                 </div>
             </div>
-
-            <!-- ABA PRIVACIDADE -->
             <div id="stab-priv" class="settings-tab-pane hidden">
                 <div class="settings-section-title">Privacidade</div>
                 <div class="settings-section-group glass-premium">
                     <div class="settings-row-toggle">
-                        <div>
-                            <p class="row-main-title">Confirmação de Leitura</p>
-                            <p class="row-sub-title">Mostrar tique duplo azul ao ler mensagem</p>
-                        </div>
-                        <label class="ios-switch-wrapper">
-                            <input type="checkbox" id="toggle-read-receipts" checked>
-                            <span class="ios-switch-slider"></span>
-                        </label>
+                        <div><p class="row-main-title">Confirmação de Leitura</p><p class="row-sub-title">Mostrar tique duplo verde ao ler</p></div>
+                        <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-read-receipts" checked><span class="ios-switch-slider"></span></label>
                     </div>
                     <div style="height:1px;background:var(--glass-border);"></div>
                     <div class="settings-row-toggle">
-                        <div>
-                            <p class="row-main-title">Confirmação de Online</p>
-                            <p class="row-sub-title">Exibir "online" para outros usuários</p>
-                        </div>
-                        <label class="ios-switch-wrapper">
-                            <input type="checkbox" id="toggle-show-online" checked>
-                            <span class="ios-switch-slider"></span>
-                        </label>
+                        <div><p class="row-main-title">Confirmação de Online</p><p class="row-sub-title">Exibir "online" para outros usuários</p></div>
+                        <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-show-online" checked><span class="ios-switch-slider"></span></label>
                     </div>
                 </div>
             </div>
-
-            <!-- ABA SEGURANÇA -->
             <div id="stab-seg" class="settings-tab-pane hidden">
                 <div class="settings-section-title">Segurança</div>
                 <div class="settings-section-group glass-premium">
                     <button id="btn-change-password" class="ios-btn-primary" style="margin:12px 0 4px;">Alterar Senha</button>
-                    <button id="btn-active-sessions" class="ios-btn-primary" style="background:var(--glass-bg);margin-bottom:12px;">Ver Sessões Ativas</button>
+                    <button id="btn-active-sessions" class="ios-btn-primary" style="background:rgba(255,255,255,0.08);margin-bottom:12px;">Ver Sessões Ativas</button>
                 </div>
             </div>
-
         </div>
     </div>
 
