@@ -29,8 +29,8 @@ const viewPages = {
 };
 
 function changeView(target) {
-    Object.keys(viewPages).forEach(k => viewPages[k].classList.add('hidden'));
-    viewPages[target].classList.remove('hidden');
+    Object.keys(viewPages).forEach(k => { if (viewPages[k]) viewPages[k].classList.add('hidden'); });
+    if (viewPages[target]) viewPages[target].classList.remove('hidden');
 }
 
 function bindImageLoader(inputId, previewId, placeholderId) {
@@ -43,9 +43,13 @@ function bindImageLoader(inputId, previewId, placeholderId) {
         reader.onload = (ev) => {
             base64AvatarString = ev.target.result;
             const imgEl = document.getElementById(previewId);
+            if (!imgEl) return;
             imgEl.src = base64AvatarString;
             imgEl.classList.remove('hidden');
-            if (placeholderId) document.getElementById(placeholderId).classList.add('hidden');
+            if (placeholderId) {
+                const ph = document.getElementById(placeholderId);
+                if (ph) ph.classList.add('hidden');
+            }
         };
         reader.readAsDataURL(file);
     });
@@ -105,6 +109,7 @@ document.getElementById('btn-google-login').addEventListener('click', () => {
 });
 
 document.getElementById('btn-save-profile').addEventListener('click', () => {
+    if (!currentUser) return alert("Sessão expirada. Faça login novamente.");
     const nick = document.getElementById('display-name').value.trim();
     const userAt = document.getElementById('username').value.trim().replace('@','');
     const bio = document.getElementById('user-bio').value.trim() || "Disponível no ChatBuddy";
@@ -148,13 +153,17 @@ function listenToGlobalMessages() {
         
         const msgKeys = Object.keys(chat.messages);
         const lastMsg = chat.messages[msgKeys[msgKeys.length - 1]];
-        
+        if (!lastMsg || !lastMsg.senderId) return;
+
+        if(!currentUser) return;
         if(lastMsg.senderId !== currentUser.uid && lastMsg.status === 'sending') {
             if (silencedUsers[lastMsg.senderId]) return;
-            if (!document.getElementById('toggle-popup-global').checked) return;
+            const toggleEl = document.getElementById('toggle-popup-global');
+            if (!toggleEl || !toggleEl.checked) return;
 
             database.ref(`users/${lastMsg.senderId}`).once('value', uSnap => {
                 const sender = uSnap.val();
+                if (!sender) return;
                 triggerPremiumPopup(sender, lastMsg.text || "Enviou uma mídia");
             });
         }
@@ -163,9 +172,13 @@ function listenToGlobalMessages() {
 
 function triggerPremiumPopup(sender, text) {
     const popup = document.getElementById('popup-notification');
-    document.getElementById('popup-avatar').src = sender.avatar;
-    document.getElementById('popup-title').innerText = sender.nickname;
-    document.getElementById('popup-text').innerText = text;
+    if (!popup) return;
+    const avatarEl = document.getElementById('popup-avatar');
+    const titleEl = document.getElementById('popup-title');
+    const textEl = document.getElementById('popup-text');
+    if (avatarEl) avatarEl.src = sender.avatar || '';
+    if (titleEl) titleEl.innerText = sender.nickname || '';
+    if (textEl) textEl.innerText = text;
     
     popup.classList.remove('hidden');
     setTimeout(() => popup.classList.add('expanded'), 150);
@@ -184,7 +197,7 @@ auth.onAuthStateChanged(user => {
     if (user) {
         currentUser = user;
         database.ref('users/' + user.uid).once('value').then(snap => {
-            if (snap.exists() && snap.val().username) {
+            if (snap.exists() && snap.val() && snap.val().username) {
                 changeView('chat');
                 setupPresenceSystem(user.uid);
                 loadChatList();
@@ -192,8 +205,9 @@ auth.onAuthStateChanged(user => {
             } else {
                 changeView('profile');
             }
-        });
+        }).catch(() => changeView('profile'));
     } else {
+        currentUser = null;
         changeView('login');
     }
 });
@@ -233,40 +247,48 @@ function formatLastSeen(timestamp) {
 }
 
 function openChatRoom(chatId, recipientData) {
+    if (!recipientData || !recipientData.uid) return;
     activeChatId = chatId;
     activeRecipientId = recipientData.uid;
     replyingTo = null;
-    document.getElementById('reply-bar').classList.add('hidden');
+    const replyBar = document.getElementById('reply-bar');
+    if (replyBar) replyBar.classList.add('hidden');
     
     const displayName = getDisplayName(recipientData);
-    document.getElementById('active-chat-name').innerText = displayName;
-    document.getElementById('active-chat-avatar').src = recipientData.avatar;
-    document.getElementById('chat-room-screen').classList.remove('hidden');
+    const nameEl = document.getElementById('active-chat-name');
+    const avatarEl = document.getElementById('active-chat-avatar');
+    const roomEl = document.getElementById('chat-room-screen');
+    if (nameEl) nameEl.innerText = displayName;
+    if (avatarEl) avatarEl.src = recipientData.avatar || '';
+    if (roomEl) roomEl.classList.remove('hidden');
 
     database.ref(`users/${recipientData.uid}`).on('value', rSnap => {
         const rUser = rSnap.val();
+        if (!rUser) return;
         const statusTextEl = document.getElementById('active-chat-status');
         const badgeEl = document.getElementById('active-chat-online-badge');
         const infoHeader = document.getElementById('btn-open-recipient-info');
         
         if(rUser.status === 'online') {
-            infoHeader.classList.add('is-online');
-            statusTextEl.innerText = "online";
-            badgeEl.classList.remove('hidden');
+            if (infoHeader) infoHeader.classList.add('is-online');
+            if (statusTextEl) statusTextEl.innerText = "online";
+            if (badgeEl) badgeEl.classList.remove('hidden');
         } else {
-            infoHeader.classList.remove('is-online');
-            statusTextEl.innerText = formatLastSeen(rUser.lastSeen);
-            badgeEl.classList.add('hidden');
+            if (infoHeader) infoHeader.classList.remove('is-online');
+            if (statusTextEl) statusTextEl.innerText = formatLastSeen(rUser.lastSeen);
+            if (badgeEl) badgeEl.classList.add('hidden');
         }
     });
     
     database.ref(`chats/${chatId}/messages`).off();
     database.ref(`chats/${chatId}/messages`).on('value', snap => {
         const box = document.getElementById('messages-container');
+        if (!box) return;
         box.innerHTML = '';
         
         snap.forEach(child => {
             const data = child.val();
+            if (!data) return;
             
             // Wrapper para swipe
             const wrapper = document.createElement('div');
@@ -296,7 +318,7 @@ function openChatRoom(chatId, recipientData) {
             
             applyLongPress(card, () => {
                 selectedMessageText = data.text || "";
-                selectedMessageId = data.id;
+                selectedMessageId = data.id || "";
                 
                 const clone = card.cloneNode(true);
                 const wrapClone = document.createElement('div');
@@ -304,10 +326,13 @@ function openChatRoom(chatId, recipientData) {
                 wrapClone.appendChild(clone);
 
                 const focusWrapper = document.getElementById('focused-message-wrapper');
-                focusWrapper.innerHTML = '';
-                focusWrapper.appendChild(wrapClone);
+                if (focusWrapper) {
+                    focusWrapper.innerHTML = '';
+                    focusWrapper.appendChild(wrapClone);
+                }
                 
-                document.getElementById('blur-overlay').classList.remove('hidden');
+                const overlay = document.getElementById('blur-overlay');
+                if (overlay) overlay.classList.remove('hidden');
             });
 
             // Swipe to reply
@@ -334,18 +359,23 @@ document.getElementById('ctx-info-msg').addEventListener('click', () => {
         if(!data) return;
         
         const sentDate = new Date(data.timestamp);
-        document.getElementById('info-sent-time').innerText = sentDate.toLocaleTimeString();
+        const sentEl = document.getElementById('info-sent-time');
+        if (sentEl) sentEl.innerText = sentDate.toLocaleTimeString();
         
         const readDate = new Date(data.timestamp + 1200);
-        document.getElementById('info-read-time').innerText = data.status === 'read' ? readDate.toLocaleTimeString() : "Não lido";
+        const readEl = document.getElementById('info-read-time');
+        if (readEl) readEl.innerText = data.status === 'read' ? readDate.toLocaleTimeString() : "Não lido";
         
-        document.getElementById('blur-overlay').classList.add('hidden');
-        document.getElementById('msg-info-modal').classList.remove('hidden');
+        const overlay = document.getElementById('blur-overlay');
+        const modal = document.getElementById('msg-info-modal');
+        if (overlay) overlay.classList.add('hidden');
+        if (modal) modal.classList.remove('hidden');
     });
 });
 
 document.getElementById('btn-close-msg-info').addEventListener('click', () => {
-    document.getElementById('msg-info-modal').classList.add('hidden');
+    const modal = document.getElementById('msg-info-modal');
+    if (modal) modal.classList.add('hidden');
 });
 
 document.getElementById('ctx-edit-msg').addEventListener('click', () => {
@@ -356,17 +386,20 @@ document.getElementById('ctx-edit-msg').addEventListener('click', () => {
             text: newText + " (editada)"
         });
     }
-    document.getElementById('blur-overlay').classList.add('hidden');
+    const overlay = document.getElementById('blur-overlay');
+    if (overlay) overlay.classList.add('hidden');
 });
 
 document.getElementById('ctx-delete-single').addEventListener('click', () => {
     if(confirm("Apagar para todos?")) {
         database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).remove();
     }
-    document.getElementById('blur-overlay').classList.add('hidden');
+    const overlay = document.getElementById('blur-overlay');
+    if (overlay) overlay.classList.add('hidden');
 });
 
 function pushMessage(text, imgBase64 = null) {
+    if (!activeChatId || !currentUser) return;
     if(!text.trim() && !imgBase64) return;
     const ref = database.ref(`chats/${activeChatId}/messages`).push();
     const payload = {
@@ -380,7 +413,8 @@ function pushMessage(text, imgBase64 = null) {
     if(replyingTo) {
         payload.replyTo = { id: replyingTo.id, text: replyingTo.text, senderId: replyingTo.senderId };
         replyingTo = null;
-        document.getElementById('reply-bar').classList.add('hidden');
+        const replyBar = document.getElementById('reply-bar');
+        if (replyBar) replyBar.classList.add('hidden');
     }
     
     ref.set(payload).then(() => {
@@ -388,7 +422,8 @@ function pushMessage(text, imgBase64 = null) {
         setTimeout(() => ref.update({ status: 'delivered' }), 800);
         setTimeout(() => ref.update({ status: 'read' }), 1400);
     });
-    document.getElementById('message-input').value = '';
+    const inputEl = document.getElementById('message-input');
+    if (inputEl) inputEl.value = '';
 }
 
 document.getElementById('message-input').addEventListener('keypress', (e) => {
@@ -397,10 +432,13 @@ document.getElementById('message-input').addEventListener('keypress', (e) => {
 
 document.getElementById('btn-send').addEventListener('click', () => {
     const input = document.getElementById('message-input');
-    pushMessage(input.value);
+    if (input) pushMessage(input.value);
 });
 
-document.getElementById('btn-attach').addEventListener('click', () => document.getElementById('media-file-input').click());
+document.getElementById('btn-attach').addEventListener('click', () => {
+    const fi = document.getElementById('media-file-input');
+    if (fi) fi.click();
+});
 document.getElementById('media-file-input').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if(!file) return;
@@ -410,29 +448,36 @@ document.getElementById('media-file-input').addEventListener('change', (e) => {
 });
 
 document.getElementById('ctx-copy-direct').addEventListener('click', () => {
+    if (!selectedMessageText) return;
     navigator.clipboard.writeText(selectedMessageText).then(() => {
-        document.getElementById('blur-overlay').classList.add('hidden');
+        const overlay = document.getElementById('blur-overlay');
+        if (overlay) overlay.classList.add('hidden');
+    }).catch(() => {
+        alert("Não foi possível copiar o texto.");
     });
 });
 
 function getDisplayName(user) {
-    return customNicknames[user.uid] || user.nickname;
+    if (!user || !user.uid) return '';
+    return customNicknames[user.uid] || user.nickname || '';
 }
 
 function loadChatList() {
     database.ref('users').on('value', snap => {
         const parent = document.getElementById('chats-list');
+        if (!parent) return;
         parent.innerHTML = '';
         snap.forEach(child => {
             const user = child.val();
+            if (!user || !user.uid) return;
             if(user.uid === currentUser.uid) return;
             
             const row = document.createElement('div');
             row.className = "chat-item-row";
-            row.innerHTML = `<img src="${user.avatar}" onerror="this.src='https://via.placeholder.com/150'">
+            row.innerHTML = `<img src="${user.avatar || ''}" onerror="this.src='https://via.placeholder.com/150'">
                              <div class="chat-item-info">
                                 <div class="chat-item-header"><h4>${getDisplayName(user)}</h4></div>
-                                <p>${user.username}</p>
+                                <p>${user.username || ''}</p>
                              </div>`;
             
             row.addEventListener('click', () => {
@@ -445,56 +490,85 @@ function loadChatList() {
 }
 
 document.getElementById('btn-open-recipient-info').addEventListener('click', () => {
+    if (!activeRecipientId) return;
     database.ref('users/' + activeRecipientId).once('value').then(s => {
         const u = s.val();
-        document.getElementById('sheet-contact-nick').innerText = u.nickname;
-        document.getElementById('sheet-contact-user').innerText = u.username;
-        document.getElementById('sheet-contact-avatar').src = u.avatar;
-        document.getElementById('sheet-contact-bio').innerText = u.bio || "Sem biografia.";
-        document.getElementById('sheet-contact-wlstwrus').innerText = u.wlstwrus || "Disponível";
-        
-        document.getElementById('toggle-silence-user').checked = !!silencedUsers[activeRecipientId];
-        document.getElementById('contact-info-sheet').classList.remove('hidden');
+        if (!u) return;
+        const nickEl = document.getElementById('sheet-contact-nick');
+        const userEl = document.getElementById('sheet-contact-user');
+        const avatarEl = document.getElementById('sheet-contact-avatar');
+        const bioEl = document.getElementById('sheet-contact-bio');
+        const wlEl = document.getElementById('sheet-contact-wlstwrus');
+        const toggleEl = document.getElementById('toggle-silence-user');
+        const sheetEl = document.getElementById('contact-info-sheet');
+
+        if (nickEl) nickEl.innerText = u.nickname || '';
+        if (userEl) userEl.innerText = u.username || '';
+        if (avatarEl) avatarEl.src = u.avatar || '';
+        if (bioEl) bioEl.innerText = u.bio || "Sem biografia.";
+        if (wlEl) wlEl.innerText = u.wlstwrus || "Disponível";
+        if (toggleEl) toggleEl.checked = !!silencedUsers[activeRecipientId];
+        if (sheetEl) sheetEl.classList.remove('hidden');
     });
 });
 
 document.getElementById('toggle-silence-user').addEventListener('change', (e) => {
-    silencedUsers[activeRecipientId] = e.target.checked;
+    if (activeRecipientId) silencedUsers[activeRecipientId] = e.target.checked;
 });
 
-document.getElementById('ctx-close-menu').addEventListener('click', () => document.getElementById('blur-overlay').classList.add('hidden'));
-document.getElementById('btn-close-info-sheet').addEventListener('click', () => document.getElementById('contact-info-sheet').classList.add('hidden'));
-document.getElementById('btn-back-to-list').addEventListener('click', () => {
-    database.ref(`users/${activeRecipientId}`).off();
-    document.getElementById('chat-room-screen').classList.add('hidden');
+document.getElementById('ctx-close-menu').addEventListener('click', () => {
+    const overlay = document.getElementById('blur-overlay');
+    if (overlay) overlay.classList.add('hidden');
 });
-document.getElementById('btn-back-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.add('hidden'));
+document.getElementById('btn-close-info-sheet').addEventListener('click', () => {
+    const sheet = document.getElementById('contact-info-sheet');
+    if (sheet) sheet.classList.add('hidden');
+});
+document.getElementById('btn-back-to-list').addEventListener('click', () => {
+    if (activeRecipientId) database.ref(`users/${activeRecipientId}`).off();
+    const room = document.getElementById('chat-room-screen');
+    if (room) room.classList.add('hidden');
+});
+document.getElementById('btn-back-settings').addEventListener('click', () => {
+    const screen = document.getElementById('settings-screen');
+    if (screen) screen.classList.add('hidden');
+});
 document.getElementById('btn-logout').addEventListener('click', () => { auth.signOut().then(() => window.location.reload()); });
 document.getElementById('btn-to-register').addEventListener('click', () => changeView('register'));
 document.getElementById('btn-to-login').addEventListener('click', () => changeView('login'));
-document.getElementById('btn-contact-menu').addEventListener('click', () => document.getElementById('btn-open-recipient-info').click());
+document.getElementById('btn-contact-menu').addEventListener('click', () => {
+    const btn = document.getElementById('btn-open-recipient-info');
+    if (btn) btn.click();
+});
 
 document.getElementById('btn-new-chat').addEventListener('click', () => {
     database.ref('users').once('value').then(snap => {
         const list = document.getElementById('contacts-list-modal');
+        if (!list) return;
         list.innerHTML = '';
         snap.forEach(c => {
             const u = c.val();
-            if(u.uid === currentUser.uid) return;
+            if (!u || !u.uid) return;
+            if(!currentUser || u.uid === currentUser.uid) return;
             const item = document.createElement('div');
             item.className = "chat-item-row";
-            item.innerHTML = `<img src="${u.avatar}"><div><h4>${u.nickname}</h4></div>`;
+            item.innerHTML = `<img src="${u.avatar || ''}" onerror="this.src='https://via.placeholder.com/150'"><div><h4>${u.nickname || ''}</h4></div>`;
             item.addEventListener('click', () => {
-                document.getElementById('contacts-modal').classList.add('hidden');
+                const modal = document.getElementById('contacts-modal');
+                if (modal) modal.classList.add('hidden');
                 const combinedId = currentUser.uid < u.uid ? currentUser.uid + "_" + u.uid : u.uid + "_" + currentUser.uid;
                 openChatRoom(combinedId, u);
             });
             list.appendChild(item);
         });
-        document.getElementById('contacts-modal').classList.remove('hidden');
+        const modal = document.getElementById('contacts-modal');
+        if (modal) modal.classList.remove('hidden');
     });
 });
-document.getElementById('btn-close-modal').addEventListener('click', () => document.getElementById('contacts-modal').classList.add('hidden'));
+document.getElementById('btn-close-modal').addEventListener('click', () => {
+    const modal = document.getElementById('contacts-modal');
+    if (modal) modal.classList.add('hidden');
+});
 
 // ─── SWIPE TO REPLY ───────────────────────────────────────────────────────────
 function applySwipeToReply(wrapper, card, arrow, data) {
@@ -514,7 +588,6 @@ function applySwipeToReply(wrapper, card, arrow, data) {
     const onMove = (clientX) => {
         if (!isDragging) return;
         const diff = clientX - startX;
-        // Sent: swipe left (diff < 0), Received: swipe right (diff > 0)
         if (isSent && diff > 0) return;
         if (!isSent && diff < 0) return;
         currentX = isSent ? Math.max(diff, -threshold * 1.2) : Math.min(diff, threshold * 1.2);
@@ -537,9 +610,11 @@ function applySwipeToReply(wrapper, card, arrow, data) {
         if (triggered) {
             replyingTo = { id: data.id, text: data.text || '', senderId: data.senderId };
             const replyBar = document.getElementById('reply-bar');
-            document.getElementById('reply-bar-text').innerText = data.text || '📷 Mídia';
-            replyBar.classList.remove('hidden');
-            document.getElementById('message-input').focus();
+            const replyText = document.getElementById('reply-bar-text');
+            const msgInput = document.getElementById('message-input');
+            if (replyText) replyText.innerText = data.text || '📷 Mídia';
+            if (replyBar) replyBar.classList.remove('hidden');
+            if (msgInput) msgInput.focus();
         }
     };
 
@@ -553,33 +628,44 @@ function applySwipeToReply(wrapper, card, arrow, data) {
 
 document.getElementById('btn-cancel-reply').addEventListener('click', () => {
     replyingTo = null;
-    document.getElementById('reply-bar').classList.add('hidden');
+    const replyBar = document.getElementById('reply-bar');
+    if (replyBar) replyBar.classList.add('hidden');
 });
 
 // ─── DEFINIR APELIDO ─────────────────────────────────────────────────────────
 document.getElementById('btn-set-nickname').addEventListener('click', () => {
-    document.getElementById('nickname-input').value = customNicknames[activeRecipientId] || '';
-    document.getElementById('nickname-modal').classList.remove('hidden');
-    document.getElementById('contact-info-sheet').classList.add('hidden');
+    const input = document.getElementById('nickname-input');
+    const modal = document.getElementById('nickname-modal');
+    const sheet = document.getElementById('contact-info-sheet');
+    if (input) input.value = customNicknames[activeRecipientId] || '';
+    if (modal) modal.classList.remove('hidden');
+    if (sheet) sheet.classList.add('hidden');
 });
 document.getElementById('btn-cancel-nickname').addEventListener('click', () => {
-    document.getElementById('nickname-modal').classList.add('hidden');
-    document.getElementById('contact-info-sheet').classList.remove('hidden');
+    const modal = document.getElementById('nickname-modal');
+    const sheet = document.getElementById('contact-info-sheet');
+    if (modal) modal.classList.add('hidden');
+    if (sheet) sheet.classList.remove('hidden');
 });
 document.getElementById('btn-save-nickname').addEventListener('click', () => {
-    const nick = document.getElementById('nickname-input').value.trim();
+    const input = document.getElementById('nickname-input');
+    const nick = input ? input.value.trim() : '';
     if (nick) {
         customNicknames[activeRecipientId] = nick;
     } else {
         delete customNicknames[activeRecipientId];
     }
     localStorage.setItem('customNicknames', JSON.stringify(customNicknames));
-    document.getElementById('nickname-modal').classList.add('hidden');
+    const modal = document.getElementById('nickname-modal');
+    if (modal) modal.classList.add('hidden');
     // Atualiza nome no header do chat
     database.ref('users/' + activeRecipientId).once('value').then(s => {
         const u = s.val();
-        document.getElementById('active-chat-name').innerText = getDisplayName(u);
-        document.getElementById('sheet-contact-nick').innerText = nick || u.nickname;
+        if (!u) return;
+        const nameEl = document.getElementById('active-chat-name');
+        const sheetNick = document.getElementById('sheet-contact-nick');
+        if (nameEl) nameEl.innerText = getDisplayName(u);
+        if (sheetNick) sheetNick.innerText = nick || u.nickname || '';
     });
     loadChatList();
 });
@@ -590,21 +676,27 @@ document.querySelectorAll('.settings-tab').forEach(tab => {
         document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.settings-tab-pane').forEach(p => p.classList.add('hidden'));
         tab.classList.add('active');
-        document.getElementById('stab-' + tab.dataset.tab).classList.remove('hidden');
+        const pane = document.getElementById('stab-' + tab.dataset.tab);
+        if (pane) pane.classList.remove('hidden');
     });
 });
 
 // Preenche campos da aba Conta ao abrir settings
 document.getElementById('btn-main-settings').addEventListener('click', () => {
-    document.getElementById('settings-screen').classList.remove('hidden');
+    const screen = document.getElementById('settings-screen');
+    if (screen) screen.classList.remove('hidden');
     if (currentUser) {
         database.ref('users/' + currentUser.uid).once('value').then(snap => {
             const u = snap.val();
             if (!u) return;
-            document.getElementById('settings-nickname').value = u.nickname || '';
-            document.getElementById('settings-username').value = (u.username || '').replace('@','');
-            document.getElementById('settings-bio').value = u.bio || '';
-            document.getElementById('settings-avatar-preview').src = u.avatar || '';
+            const nickEl = document.getElementById('settings-nickname');
+            const userEl = document.getElementById('settings-username');
+            const bioEl = document.getElementById('settings-bio');
+            const avatarEl = document.getElementById('settings-avatar-preview');
+            if (nickEl) nickEl.value = u.nickname || '';
+            if (userEl) userEl.value = (u.username || '').replace('@','');
+            if (bioEl) bioEl.value = u.bio || '';
+            if (avatarEl) avatarEl.src = u.avatar || '';
         });
     }
 });
@@ -616,13 +708,15 @@ document.getElementById('settings-avatar-input').addEventListener('change', e =>
     const reader = new FileReader();
     reader.onload = ev => {
         base64AvatarString = ev.target.result;
-        document.getElementById('settings-avatar-preview').src = base64AvatarString;
+        const preview = document.getElementById('settings-avatar-preview');
+        if (preview) preview.src = base64AvatarString;
     };
     reader.readAsDataURL(file);
 });
 
 // Salvar conta
 document.getElementById('btn-save-account').addEventListener('click', () => {
+    if (!currentUser) return alert("Sessão expirada. Faça login novamente.");
     const nick = document.getElementById('settings-nickname').value.trim();
     const userAt = document.getElementById('settings-username').value.trim().replace('@','');
     const bio = document.getElementById('settings-bio').value.trim() || "Disponível no ChatBuddy";
@@ -634,14 +728,14 @@ document.getElementById('btn-save-account').addEventListener('click', () => {
         base64AvatarString = '';
     });
 });
-                                                           
 
-// ─── BOTÕES SEM LISTENER (CORRIGIDOS) ────────────────────────────────────────
+// ─── BOTÕES EXTRAS ────────────────────────────────────────────────────────────
 document.getElementById('btn-sheet-block').addEventListener('click', () => {
     if (!activeRecipientId) return;
     if (confirm("Bloquear este usuário? Você não receberá mais mensagens dele.")) {
         silencedUsers[activeRecipientId] = true;
-        document.getElementById('contact-info-sheet').classList.add('hidden');
+        const sheet = document.getElementById('contact-info-sheet');
+        if (sheet) sheet.classList.add('hidden');
         alert("Usuário bloqueado.");
     }
 });
@@ -654,5 +748,6 @@ document.getElementById('btn-change-password').addEventListener('click', () => {
 });
 
 document.getElementById('btn-active-sessions').addEventListener('click', () => {
-    alert("Sessão atual:\n\nDispositivo: " + navigator.userAgent.split(')')[0].split('(')[1] + "\nLogado como: " + (currentUser ? currentUser.email : "—"));
+    const device = (navigator.userAgent.split(')')[0].split('(')[1] || 'desconhecido');
+    alert("Sessão atual:\n\nDispositivo: " + device + "\nLogado como: " + (currentUser ? currentUser.email : "—"));
 });
