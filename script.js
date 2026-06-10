@@ -18,6 +18,8 @@ let base64AvatarString = "";
 let selectedMessageText = "";
 let selectedMessageId = "";
 let silencedUsers = {};
+let customNicknames = JSON.parse(localStorage.getItem('customNicknames') || '{}');
+let replyingTo = null; // { id, text, senderId }
 
 const viewPages = {
     login: document.getElementById('login-page'),
@@ -211,8 +213,11 @@ function formatLastSeen(timestamp) {
 function openChatRoom(chatId, recipientData) {
     activeChatId = chatId;
     activeRecipientId = recipientData.uid;
+    replyingTo = null;
+    document.getElementById('reply-bar').classList.add('hidden');
     
-    document.getElementById('active-chat-name').innerText = recipientData.nickname;
+    const displayName = getDisplayName(recipientData);
+    document.getElementById('active-chat-name').innerText = displayName;
     document.getElementById('active-chat-avatar').src = recipientData.avatar;
     document.getElementById('chat-room-screen').classList.remove('hidden');
 
@@ -240,29 +245,61 @@ function openChatRoom(chatId, recipientData) {
         
         snap.forEach(child => {
             const data = child.val();
+            
+            // Wrapper para swipe
+            const wrapper = document.createElement('div');
+            wrapper.className = `message-wrapper ${data.senderId === currentUser.uid ? 'sent' : 'received'}`;
+            wrapper.dataset.msgId = data.id;
+
+            // Seta de reply
+            const arrow = document.createElement('div');
+            arrow.className = 'reply-arrow';
+            arrow.innerHTML = `<svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>`;
+
             const card = document.createElement('div');
             card.className = `message ${data.senderId === currentUser.uid ? 'sent' : 'received'}`;
             
-            let content = data.image ? `<img src="${data.image}" class="message-img">` : '';
+            let quotedHtml = '';
+            if(data.replyTo) {
+                const who = data.replyTo.senderId === currentUser.uid ? 'Você' : getDisplayName(recipientData);
+                quotedHtml = `<div class="quoted-msg"><span>${who}</span>${data.replyTo.text || '📷 Mídia'}</div>`;
+            }
+
+            let content = quotedHtml;
+            content += data.image ? `<img src="${data.image}" class="message-img">` : '';
             content += data.text ? `<p>${data.text}</p>` : '';
             
             let ticks = data.senderId === currentUser.uid ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
             card.innerHTML = content + ticks;
             
-            // EXECUÇÃO DO CLIQUE LONGO COM MANTENÇÃO DO LADO DA MENSAGEM
             applyLongPress(card, () => {
                 selectedMessageText = data.text || "";
                 selectedMessageId = data.id;
                 
                 const clone = card.cloneNode(true);
-                const wrapper = document.getElementById('focused-message-wrapper');
-                wrapper.innerHTML = '';
-                wrapper.appendChild(clone);
+                const wrapClone = document.createElement('div');
+                wrapClone.className = `message-wrapper ${data.senderId === currentUser.uid ? 'sent' : 'received'}`;
+                wrapClone.appendChild(clone);
+
+                const focusWrapper = document.getElementById('focused-message-wrapper');
+                focusWrapper.innerHTML = '';
+                focusWrapper.appendChild(wrapClone);
                 
                 document.getElementById('blur-overlay').classList.remove('hidden');
             });
-            
-            box.appendChild(card);
+
+            // Swipe to reply
+            applySwipeToReply(wrapper, card, arrow, data);
+
+            if(data.senderId === currentUser.uid) {
+                wrapper.appendChild(card);
+                wrapper.appendChild(arrow);
+            } else {
+                wrapper.appendChild(arrow);
+                wrapper.appendChild(card);
+            }
+
+            box.appendChild(wrapper);
         });
         box.scrollTop = box.scrollHeight;
     });
@@ -318,6 +355,11 @@ function pushMessage(text, imgBase64 = null) {
         timestamp: firebase.database.ServerValue.TIMESTAMP
     };
     if(imgBase64) payload.image = imgBase64;
+    if(replyingTo) {
+        payload.replyTo = { id: replyingTo.id, text: replyingTo.text, senderId: replyingTo.senderId };
+        replyingTo = null;
+        document.getElementById('reply-bar').classList.add('hidden');
+    }
     
     ref.set(payload).then(() => {
         setTimeout(() => ref.update({ status: 'sent' }), 300);
@@ -346,6 +388,10 @@ document.getElementById('ctx-copy-direct').addEventListener('click', () => {
     });
 });
 
+function getDisplayName(user) {
+    return customNicknames[user.uid] || user.nickname;
+}
+
 function loadChatList() {
     database.ref('users').on('value', snap => {
         const parent = document.getElementById('chats-list');
@@ -358,7 +404,7 @@ function loadChatList() {
             row.className = "chat-item-row";
             row.innerHTML = `<img src="${user.avatar}" onerror="this.src='https://via.placeholder.com/150'">
                              <div class="chat-item-info">
-                                <div class="chat-item-header"><h4>${user.nickname}</h4></div>
+                                <div class="chat-item-header"><h4>${getDisplayName(user)}</h4></div>
                                 <p>${user.username}</p>
                              </div>`;
             
@@ -395,7 +441,6 @@ document.getElementById('btn-back-to-list').addEventListener('click', () => {
     database.ref(`users/${activeRecipientId}`).off();
     document.getElementById('chat-room-screen').classList.add('hidden');
 });
-document.getElementById('btn-main-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.remove('hidden'));
 document.getElementById('btn-back-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.add('hidden'));
 document.getElementById('btn-logout').addEventListener('click', () => { auth.signOut().then(() => window.location.reload()); });
 document.getElementById('btn-to-register').addEventListener('click', () => changeView('register'));
@@ -416,11 +461,4 @@ document.getElementById('btn-new-chat').addEventListener('click', () => {
                 document.getElementById('contacts-modal').classList.add('hidden');
                 const combinedId = currentUser.uid < u.uid ? currentUser.uid + "_" + u.uid : u.uid + "_" + currentUser.uid;
                 openChatRoom(combinedId, u);
-            });
-            list.appendChild(item);
-        });
-        document.getElementById('contacts-modal').classList.remove('hidden');
-    });
-});
-document.getElementById('btn-close-modal').addEventListener('click', () => document.getElementById('contacts-modal').classList.add('hidden'));
-                                                           
+  
