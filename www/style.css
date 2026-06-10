@@ -33,22 +33,89 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification) {
 .mono-icon-light { width: 22px; height: 22px; color: #ffffff; }
 .mono-icon-gray  { width: 22px; height: 22px; color: #636366; }
 
-/* ─── DESKTOP: FUNDO COM PADRÃO ─── */
-@media (min-width: 601px) {
+/* Estilização da Nova Barra de Pesquisa */
+.search-bar-wrapper {
+    padding: 10px 16px;
+    background: transparent;
+}
+.search-bar-wrapper input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--glass-border);
+    padding: 10px 14px;
+    border-radius: 10px;
+    color: #fff;
+    font-size: 14px;
+    outline: none;
+    transition: background 0.2s, border-color 0.2s;
+}
+.search-bar-wrapper input:focus {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: var(--ios-blue);
+}
+
+/* Indicador de linha ativa na versão expandida */
+.active-desktop-chat {
+    background: rgba(10, 132, 255, 0.15) !important;
+    border-left: 4px solid var(--ios-blue);
+}
+
+/* ─── DESKTOP E TABLET: ADAPTAÇÃO COMPLETA DE UI ─── */
+@media (min-width: 768px) {
+    :root {
+        --app-max-width: 100vw; /* Utiliza todo o espaço disponível dinamicamente */
+    }
     body {
         background: #0a0a0f;
         background-image: radial-gradient(ellipse at 20% 20%, rgba(10,132,255,0.06) 0%, transparent 50%),
                           radial-gradient(ellipse at 80% 80%, rgba(48,209,88,0.04) 0%, transparent 50%);
     }
-    body > .app-container,
+    /* Organização estrutural em colunas */
+    body > .app-container {
+        flex-direction: row !important;
+        max-width: 1200px !important;
+        margin: 20px;
+        height: calc(100dvh - 40px) !important;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 40px 80px rgba(0,0,0,0.8);
+        border: 1px solid var(--glass-border);
+    }
+    
+    /* Divide o bloco da esquerda (Lista e Menus) */
+    .app-container > header, 
+    .app-container > nav, 
+    .app-container > .tab-content-container {
+        width: 380px !important;
+        flex-shrink: 0;
+        position: absolute;
+        left: 0;
+    }
+    .app-container > header { top: 0; height: 60px; z-index: 10; border-right: 1px solid var(--glass-border); }
+    .app-container > nav { top: 60px; height: 44px; z-index: 10; border-right: 1px solid var(--glass-border); }
+    .app-container > .tab-content-container { top: 104px; bottom: 0; height: auto !important; border-right: 1px solid var(--glass-border); }
+
+    /* Sala de chat assume o lado direito permanentemente se ativa */
+    .chat-room-screen {
+        position: absolute !important;
+        left: auto !important;
+        right: 0 !important;
+        top: 0 !important;
+        width: calc(100% - 380px) !important;
+        max-width: none !important;
+        height: 100% !important;
+        transform: none !important;
+        animation: none !important;
+        border-left: 1px solid var(--glass-border);
+    }
+    .chat-room-screen #btn-back-to-list {
+        display: none !important; /* Remove seta de voltar desnecessária no Desktop */
+    }
+    
     body > .auth-container,
     body > .settings-screen {
+        max-width: 450px !important;
         box-shadow: 0 0 0 1px rgba(255,255,255,0.05), 0 40px 80px rgba(0,0,0,0.8);
-    }
-    .chat-room-screen {
-        max-width: var(--app-max-width) !important;
-        left: 50% !important;
-        transform: translateX(-50%) !important;
     }
 }
 
@@ -318,28 +385,4 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification) {
 .quoted-msg { background: rgba(255,255,255,0.07); border-left: 3px solid var(--ios-blue); border-radius: 8px; padding: 6px 10px; margin-bottom: 6px; font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .quoted-msg span { display: block; font-size: 11px; color: var(--ios-blue); font-weight: 600; margin-bottom: 2px; }
 
-.action-nickname-btn { width: 100%; background: rgba(10,132,255,0.1); border: none; padding: 14px 16px; border-radius: 14px; color: var(--ios-blue); font-size: 15px; font-weight: 600; cursor: pointer; text-align: left; display: flex; align-items: center; transition: background 0.2s; }
-
-/* ─── ANIMAÇÕES GLOBAIS ─── */
-@keyframes fadeIn      { from { opacity: 0; } to { opacity: 1; } }
-@keyframes fadeInUp    { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes scaleIn     { from { transform: scale(0.88); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-@keyframes popIn       { from { transform: translate(-50%, -20px) scale(0.8); opacity: 0; } to { transform: translate(-50%, 0) scale(1); opacity: 1; } }
-.animate-pop { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-
-/* ─── SCROLLBAR GLOBAL ─── */
-::-webkit-scrollbar { width: 3px; height: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 4px; }
-
-/* ─── TABLET/DESKTOP (>600px) ─── */
-@media (min-width: 601px) {
-    :root { --app-max-width: 520px; }
-    .message { max-width: 65%; }
-    .auth-box { padding: 40px 32px; }
-    .messages-container { padding: 24px; gap: 6px; }
-    .chat-item-row { padding: 14px 20px; }
-}
-@media (min-width: 900px) {
-    :root { --app-max-width: 480px; }
-}
+.action-nickname-btn { width: 100%; background: rgba(10,132,255,0.1); border: none; padding: 14px 16px; border-radius: 14px; color: var(--ios-blue); font-size: 15px; font-weight: 600; cursor: pointer; }
