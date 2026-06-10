@@ -134,12 +134,6 @@
             <div id="content-calls" class="tab-pane hidden"><div class="empty-state">Nenhuma chamada efetuada.</div></div>
         </div>
 
-        <!-- INDICADOR PARA QUANDO NENHUM CHAT ESTÁ SELECIONADO NO DESKTOP -->
-        <div id="desktop-empty-chat" class="desktop-empty-chat-state">
-            <svg viewBox="0 0 24 24" class="mono-icon-gray" style="width:48px; height:48px;"><path fill="currentColor" d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM6 9h12v2H6V9zm8 5H6v-2h8v2zm4-6H6V6h12v2z"/></svg>
-            <span>Clique em qualquer mensagem para abrir</span>
-        </div>
-
         <!-- SALA DE CHAT -->
         <div id="chat-room-screen" class="chat-room-screen hidden">
             <header class="chat-header glass-premium">
@@ -351,14 +345,72 @@
                         <input type="text" id="settings-nickname" placeholder=" ">
                         <label>Apelido (Nickname)</label>
                     </div>
+                    <div class="input-group-premium" style="margin-bottom:4px;">
+                        <input type="text" id="settings-username" placeholder=" ">
+                        <label>Nome de usuário (@)</label>
+                    </div>
+                    <div class="input-group-premium" style="margin-bottom:12px;">
+                        <input type="text" id="settings-bio" placeholder=" ">
+                        <label>Biografia</label>
+                    </div>
+                </div>
+                <button id="btn-save-account" class="ios-btn-primary" style="margin-top:12px;">Salvar Alterações</button>
+                <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red);margin-top:10px;">Desconectar Conta</button>
+            </div>
+            <div id="stab-notif" class="settings-tab-pane hidden">
+                <div class="settings-section-title">Notificações</div>
+                <div class="settings-section-group glass-premium">
+                    <div class="settings-row-toggle">
+                        <div><p class="row-main-title">Silenciar Tudo</p><p class="row-sub-title">Nenhuma notificação será exibida</p></div>
+                        <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-mute-all"><span class="ios-switch-slider"></span></label>
+                    </div>
+                    <div style="height:1px;background:var(--glass-border);"></div>
+                    <div class="settings-row-toggle">
+                        <div><p class="row-main-title">Notificações Flutuantes</p><p class="row-sub-title">Bolinha que desce ao receber mensagem</p></div>
+                        <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-popup-global" checked><span class="ios-switch-slider"></span></label>
+                    </div>
+                </div>
+            </div>
+            <div id="stab-priv" class="settings-tab-pane hidden">
+                <div class="settings-section-title">Privacidade</div>
+                <div class="settings-section-group glass-premium">
+                    <div class="settings-row-toggle">
+                        <div><p class="row-main-title">Confirmação de Leitura</p><p class="row-sub-title">Mostrar tique duplo verde ao ler</p></div>
+                        <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-read-receipts" checked><span class="ios-switch-slider"></span></label>
+                    </div>
+                    <div style="height:1px;background:var(--glass-border);"></div>
+                    <div class="settings-row-toggle">
+                        <div><p class="row-main-title">Confirmação de Online</p><p class="row-sub-title">Exibir "online" para outros usuários</p></div>
+                        <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-show-online" checked><span class="ios-switch-slider"></span></label>
+                    </div>
+                </div>
+            </div>
+            <div id="stab-seg" class="settings-tab-pane hidden">
+                <div class="settings-section-title">Segurança</div>
+                <div class="settings-section-group glass-premium">
+                    <button id="btn-change-password" class="ios-btn-primary" style="margin:12px 0 4px;">Alterar Senha</button>
+                    <button id="btn-active-sessions" class="ios-btn-primary" style="background:rgba(255,255,255,0.08);margin-bottom:12px;">Ver Sessões Ativas</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <script src="app.js"></script>
+    <!-- MODAL NOVA CONVERSA -->
+    <div id="contacts-modal" class="modal hidden">
+        <div class="modal-content glass-premium">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
+                <h3>Nova Conversa</h3>
+                <button id="btn-close-modal" class="back-btn">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div id="contacts-list-modal" class="chats-list"></div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>
