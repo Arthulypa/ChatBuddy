@@ -343,4 +343,99 @@
                     <div class="settings-row-toggle">
                         <div>
                             <p class="row-main-title">Confirmação de Leitura</p>
-                            <p class="row-s
+                            <p class="row-sub-title">Mostrar quando você leu uma mensagem</p>
+                        </div>
+                        <label class="ios-switch-wrapper">
+                            <input type="checkbox" id="toggle-read-receipts" checked>
+                            <span class="ios-switch-slider"></span>
+                        </label>
+                    </div>
+                    <div style="height:1px;background:var(--glass-border);"></div>
+                    <div class="settings-row-toggle">
+                        <div>
+                            <p class="row-main-title">Exibir Status Online</p>
+                            <p class="row-sub-title">Outros podem ver se você está online</p>
+                        </div>
+                        <label class="ios-switch-wrapper">
+                            <input type="checkbox" id="toggle-show-online" checked>
+                            <span class="ios-switch-slider"></span>
+                        </label>
+                    </div>
+                    <div style="height:1px;background:var(--glass-border);"></div>
+                    <div class="settings-row-toggle">
+                        <div>
+                            <p class="row-main-title">Último Acesso</p>
+                            <p class="row-sub-title">Mostrar quando você foi visto por último</p>
+                        </div>
+                        <label class="ios-switch-wrapper">
+                            <input type="checkbox" id="toggle-last-seen" checked>
+                            <span class="ios-switch-slider"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ABA SEGURANÇA -->
+            <div id="stab-seg" class="settings-tab-pane hidden">
+                <div class="settings-section-title">Segurança</div>
+                <div class="settings-section-group glass-premium">
+                    <div class="settings-row-toggle">
+                        <div>
+                            <p class="row-main-title">Bloqueio por Senha</p>
+                            <p class="row-sub-title">Exigir senha ao abrir o app</p>
+                        </div>
+                        <label class="ios-switch-wrapper">
+                            <input type="checkbox" id="toggle-app-lock">
+                            <span class="ios-switch-slider"></span>
+                        </label>
+                    </div>
+                    <div style="height:1px;background:var(--glass-border);"></div>
+                    <div class="settings-row-toggle">
+                        <div>
+                            <p class="row-main-title">Verificação em Duas Etapas</p>
+                            <p class="row-sub-title">Camada extra de proteção na conta</p>
+                        </div>
+                        <label class="ios-switch-wrapper">
+                            <input type="checkbox" id="toggle-2fa">
+                            <span class="ios-switch-slider"></span>
+                        </label>
+                    </div>
+                    <div style="height:1px;background:var(--glass-border);"></div>
+                    <div class="settings-row-toggle">
+                        <div>
+                            <p class="row-main-title">Alertas de Acesso</p>
+                            <p class="row-sub-title">Notificar ao detectar login suspeito</p>
+                        </div>
+                        <label class="ios-switch-wrapper">
+                            <input type="checkbox" id="toggle-login-alert" checked>
+                            <span class="ios-switch-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="settings-section-group glass-premium" style="margin-top:12px;">
+                    <button id="btn-change-password" class="settings-action-btn">Alterar Senha</button>
+                    <div style="height:1px;background:var(--glass-border);"></div>
+                    <button id="btn-active-sessions" class="settings-action-btn">Sessões Ativas</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <div id="contacts-modal" class="modal hidden">
+        <div class="modal-content glass-premium">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
+                <h3>Nova Conversa</h3>
+                <button id="btn-close-modal" class="back-btn"><svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
+            </div>
+            <div id="contacts-list-modal" class="chats-list"></div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="script.js"></script>
+</body>
+        </html>
+    
