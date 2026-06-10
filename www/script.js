@@ -254,6 +254,7 @@ auth.onAuthStateChanged(user => {
                 loadChatList();
                 updateHeaderUserInfo();
                 listenToGlobalMessages();
+                listenToChatRequests();
             } else {
                 changeView('profile');
             }
@@ -1123,14 +1124,24 @@ function startNewChatRoomWithUser(targetUser) {
         if (existingChatId) {
             openChatRoom(existingChatId, targetUser);
         } else {
-            const newChatRef = database.ref('chats').push();
-            const newChatId = newChatRef.key;
-            const chatPayload = {
-                id: newChatId, lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP,
-                participants: { [currentUser.uid]: true, [targetUser.uid]: true }
-            };
-            newChatRef.set(chatPayload).then(() => {
-                openChatRoom(newChatId, targetUser);
+            // Verifica se já existe solicitação pendente enviada por mim
+            database.ref(`chatRequests/${targetUser.uid}/${currentUser.uid}`).once('value', reqSnap => {
+                if (reqSnap.exists()) {
+                    alert("Você já enviou uma solicitação para este usuário. Aguarde a resposta.");
+                    return;
+                }
+                // Envia solicitação
+                const myProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
+                database.ref(`chatRequests/${targetUser.uid}/${currentUser.uid}`).set({
+                    fromUid: currentUser.uid,
+                    fromNickname: myProfile.nickname || currentUser.email,
+                    fromUsername: myProfile.username || '',
+                    fromAvatar: myProfile.avatar || '',
+                    timestamp: firebase.database.ServerValue.TIMESTAMP,
+                    status: 'pending'
+                }).then(() => {
+                    triggerSystemPopup("Solicitação enviada", `Aguardando ${targetUser.nickname} aceitar.`, targetUser.avatar || '');
+                });
             });
         }
     });
@@ -1243,4 +1254,119 @@ document.getElementById('btn-back-to-list').addEventListener('click', () => {
     document.querySelectorAll('.chat-item-row').forEach(el => el.classList.remove('active-desktop-chat'));
     const emptyPanel = document.getElementById('empty-chat-panel');
     if (emptyPanel) emptyPanel.classList.remove('hidden');
+});
+
+// ─── SISTEMA DE SOLICITAÇÕES DE CONVERSA ────────────────────────────────────
+function listenToChatRequests() {
+    if (!currentUser || currentUser.uid === "offline_user") return;
+    database.ref(`chatRequests/${currentUser.uid}`).on('value', snap => {
+        const badge   = document.getElementById('requests-badge');
+        const banner  = document.getElementById('requests-banner');
+        const bannerText = document.getElementById('requests-banner-text');
+        if (!snap.exists()) {
+            badge  && badge.classList.add('hidden');
+            banner && banner.classList.add('hidden');
+            return;
+        }
+        let count = 0;
+        snap.forEach(child => { if (child.val().status === 'pending') count++; });
+        if (count > 0) {
+            badge.innerText = count;
+            badge.classList.remove('hidden');
+            bannerText.innerText = count === 1 ? '1 solicitação de conversa pendente' : `${count} solicitações de conversa pendentes`;
+            banner.classList.remove('hidden');
+        } else {
+            badge.classList.add('hidden');
+            banner.classList.add('hidden');
+        }
+    });
+}
+
+function renderRequestsList() {
+    if (!currentUser || currentUser.uid === "offline_user") return;
+    const list = document.getElementById('requests-list');
+    list.innerHTML = '<div class="empty-state" style="padding:20px;">Carregando...</div>';
+
+    database.ref(`chatRequests/${currentUser.uid}`).once('value', snap => {
+        list.innerHTML = '';
+        if (!snap.exists()) {
+            list.innerHTML = '<div class="empty-state" style="padding:20px;">Nenhuma solicitação pendente.</div>';
+            return;
+        }
+        let hasAny = false;
+        snap.forEach(child => {
+            const req = child.val();
+            if (req.status !== 'pending') return;
+            hasAny = true;
+            const row = document.createElement('div');
+            row.className = 'request-row';
+            row.innerHTML = `
+                <img src="${req.fromAvatar || 'https://via.placeholder.com/150'}" alt="">
+                <div class="request-row-info">
+                    <h4>${req.fromNickname || 'Usuário'}</h4>
+                    <p>${req.fromUsername || ''}</p>
+                </div>
+                <div class="request-row-actions">
+                    <button class="btn-req-accept">Aceitar</button>
+                    <button class="btn-req-decline">Recusar</button>
+                </div>
+            `;
+            row.querySelector('.btn-req-accept').addEventListener('click', () => acceptChatRequest(req, child.key, row));
+            row.querySelector('.btn-req-decline').addEventListener('click', () => declineChatRequest(child.key, row));
+            list.appendChild(row);
+        });
+        if (!hasAny) {
+            list.innerHTML = '<div class="empty-state" style="padding:20px;">Nenhuma solicitação pendente.</div>';
+        }
+    });
+}
+
+function acceptChatRequest(req, fromUid, rowEl) {
+    const newChatRef = database.ref('chats').push();
+    const newChatId  = newChatRef.key;
+    const chatPayload = {
+        id: newChatId,
+        lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP,
+        participants: { [currentUser.uid]: true, [fromUid]: true }
+    };
+    newChatRef.set(chatPayload).then(() => {
+        database.ref(`chatRequests/${currentUser.uid}/${fromUid}`).update({ status: 'accepted' });
+        rowEl.remove();
+        const list = document.getElementById('requests-list');
+        if (!list.querySelector('.request-row')) {
+            list.innerHTML = '<div class="empty-state" style="padding:20px;">Nenhuma solicitação pendente.</div>';
+        }
+        document.getElementById('requests-modal').classList.add('hidden');
+        // Abre o chat com o usuário aceito
+        const recipientObj = {
+            uid: fromUid,
+            nickname: req.fromNickname || 'Usuário',
+            username: req.fromUsername || '',
+            avatar: req.fromAvatar || 'https://via.placeholder.com/150'
+        };
+        openChatRoom(newChatId, recipientObj);
+    });
+}
+
+function declineChatRequest(fromUid, rowEl) {
+    database.ref(`chatRequests/${currentUser.uid}/${fromUid}`).update({ status: 'declined' });
+    rowEl.remove();
+    const list = document.getElementById('requests-list');
+    if (!list.querySelector('.request-row')) {
+        list.innerHTML = '<div class="empty-state" style="padding:20px;">Nenhuma solicitação pendente.</div>';
+    }
+}
+
+document.getElementById('btn-close-requests-modal').addEventListener('click', () => {
+    document.getElementById('requests-modal').classList.add('hidden');
+});
+document.getElementById('requests-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'requests-modal') document.getElementById('requests-modal').classList.add('hidden');
+});
+// Abre a lista ao clicar no banner (já tem onclick inline, mas também via JS para o modal)
+document.getElementById('requests-modal').addEventListener('show', renderRequestsList);
+// Abrir modal via banner renderiza a lista
+document.getElementById('requests-banner').addEventListener('click', () => {
+    renderRequestsList();
+    document.getElementById('requests-modal').classList.remove('hidden');
 });
