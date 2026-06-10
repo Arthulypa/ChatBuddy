@@ -57,7 +57,25 @@ document.getElementById('btn-login').addEventListener('click', () => {
     const email = document.getElementById('email-login').value.trim();
     const pass = document.getElementById('password-login').value;
     if(!email || !pass) return alert("Preencha todos os campos!");
-    auth.signInWithEmailAndPassword(email, pass).catch(err => alert("Erro: " + err.message));
+    
+    const btn = document.getElementById('btn-login');
+    btn.disabled = true;
+    btn.innerText = 'Entrando...';
+    
+    auth.signInWithEmailAndPassword(email, pass)
+        .catch(err => {
+            btn.disabled = false;
+            btn.innerText = 'Entrar';
+            const msgs = {
+                'auth/user-not-found': 'Usuário não encontrado.',
+                'auth/wrong-password': 'Senha incorreta.',
+                'auth/invalid-email': 'E-mail inválido.',
+                'auth/too-many-requests': 'Muitas tentativas. Tente mais tarde.',
+                'auth/network-request-failed': 'Sem conexão com a internet.',
+                'auth/invalid-credential': 'E-mail ou senha inválidos.'
+            };
+            alert(msgs[err.code] || 'Erro: ' + err.message);
+        });
 });
 
 document.getElementById('btn-send-code').addEventListener('click', () => {
@@ -159,6 +177,10 @@ function triggerPremiumPopup(sender, text) {
 }
 
 auth.onAuthStateChanged(user => {
+    // Reseta botão de login se estiver travado
+    const btnLogin = document.getElementById('btn-login');
+    if (btnLogin) { btnLogin.disabled = false; btnLogin.innerText = 'Entrar'; }
+
     if (user) {
         currentUser = user;
         database.ref('users/' + user.uid).once('value').then(snap => {
@@ -373,6 +395,11 @@ document.getElementById('message-input').addEventListener('keypress', (e) => {
     if(e.key === 'Enter') pushMessage(e.target.value);
 });
 
+document.getElementById('btn-send').addEventListener('click', () => {
+    const input = document.getElementById('message-input');
+    pushMessage(input.value);
+});
+
 document.getElementById('btn-attach').addEventListener('click', () => document.getElementById('media-file-input').click());
 document.getElementById('media-file-input').addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -461,4 +488,171 @@ document.getElementById('btn-new-chat').addEventListener('click', () => {
                 document.getElementById('contacts-modal').classList.add('hidden');
                 const combinedId = currentUser.uid < u.uid ? currentUser.uid + "_" + u.uid : u.uid + "_" + currentUser.uid;
                 openChatRoom(combinedId, u);
-  
+            });
+            list.appendChild(item);
+        });
+        document.getElementById('contacts-modal').classList.remove('hidden');
+    });
+});
+document.getElementById('btn-close-modal').addEventListener('click', () => document.getElementById('contacts-modal').classList.add('hidden'));
+
+// ─── SWIPE TO REPLY ───────────────────────────────────────────────────────────
+function applySwipeToReply(wrapper, card, arrow, data) {
+    let startX = 0;
+    let currentX = 0;
+    let isDragging = false;
+    let triggered = false;
+    const threshold = 60;
+    const isSent = data.senderId === currentUser.uid;
+
+    const onStart = (clientX) => {
+        startX = clientX;
+        isDragging = true;
+        triggered = false;
+        card.style.transition = 'none';
+    };
+    const onMove = (clientX) => {
+        if (!isDragging) return;
+        const diff = clientX - startX;
+        // Sent: swipe left (diff < 0), Received: swipe right (diff > 0)
+        if (isSent && diff > 0) return;
+        if (!isSent && diff < 0) return;
+        currentX = isSent ? Math.max(diff, -threshold * 1.2) : Math.min(diff, threshold * 1.2);
+        card.style.transform = `translateX(${currentX}px)`;
+        const progress = Math.abs(currentX) / threshold;
+        arrow.style.opacity = Math.min(progress, 1);
+        arrow.classList.toggle('visible', progress > 0.2);
+        if (Math.abs(currentX) >= threshold && !triggered) {
+            triggered = true;
+            arrow.classList.add('bounce');
+            setTimeout(() => arrow.classList.remove('bounce'), 300);
+        }
+    };
+    const onEnd = () => {
+        if (!isDragging) return;
+        isDragging = false;
+        card.style.transition = 'transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+        card.style.transform = 'translateX(0)';
+        arrow.style.opacity = '0';
+        if (triggered) {
+            replyingTo = { id: data.id, text: data.text || '', senderId: data.senderId };
+            const replyBar = document.getElementById('reply-bar');
+            document.getElementById('reply-bar-text').innerText = data.text || '📷 Mídia';
+            replyBar.classList.remove('hidden');
+            document.getElementById('message-input').focus();
+        }
+    };
+
+    wrapper.addEventListener('touchstart', e => onStart(e.touches[0].clientX), { passive: true });
+    wrapper.addEventListener('touchmove', e => onMove(e.touches[0].clientX), { passive: true });
+    wrapper.addEventListener('touchend', onEnd, { passive: true });
+    wrapper.addEventListener('mousedown', e => onStart(e.clientX));
+    window.addEventListener('mousemove', e => { if (isDragging) onMove(e.clientX); });
+    window.addEventListener('mouseup', () => { if (isDragging) onEnd(); });
+}
+
+document.getElementById('btn-cancel-reply').addEventListener('click', () => {
+    replyingTo = null;
+    document.getElementById('reply-bar').classList.add('hidden');
+});
+
+// ─── DEFINIR APELIDO ─────────────────────────────────────────────────────────
+document.getElementById('btn-set-nickname').addEventListener('click', () => {
+    document.getElementById('nickname-input').value = customNicknames[activeRecipientId] || '';
+    document.getElementById('nickname-modal').classList.remove('hidden');
+    document.getElementById('contact-info-sheet').classList.add('hidden');
+});
+document.getElementById('btn-cancel-nickname').addEventListener('click', () => {
+    document.getElementById('nickname-modal').classList.add('hidden');
+    document.getElementById('contact-info-sheet').classList.remove('hidden');
+});
+document.getElementById('btn-save-nickname').addEventListener('click', () => {
+    const nick = document.getElementById('nickname-input').value.trim();
+    if (nick) {
+        customNicknames[activeRecipientId] = nick;
+    } else {
+        delete customNicknames[activeRecipientId];
+    }
+    localStorage.setItem('customNicknames', JSON.stringify(customNicknames));
+    document.getElementById('nickname-modal').classList.add('hidden');
+    // Atualiza nome no header do chat
+    database.ref('users/' + activeRecipientId).once('value').then(s => {
+        const u = s.val();
+        document.getElementById('active-chat-name').innerText = getDisplayName(u);
+        document.getElementById('sheet-contact-nick').innerText = nick || u.nickname;
+    });
+    loadChatList();
+});
+
+// ─── SETTINGS TABS ───────────────────────────────────────────────────────────
+document.querySelectorAll('.settings-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+        document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+        document.querySelectorAll('.settings-tab-pane').forEach(p => p.classList.add('hidden'));
+        tab.classList.add('active');
+        document.getElementById('stab-' + tab.dataset.tab).classList.remove('hidden');
+    });
+});
+
+// Preenche campos da aba Conta ao abrir settings
+document.getElementById('btn-main-settings').addEventListener('click', () => {
+    document.getElementById('settings-screen').classList.remove('hidden');
+    if (currentUser) {
+        database.ref('users/' + currentUser.uid).once('value').then(snap => {
+            const u = snap.val();
+            if (!u) return;
+            document.getElementById('settings-nickname').value = u.nickname || '';
+            document.getElementById('settings-username').value = (u.username || '').replace('@','');
+            document.getElementById('settings-bio').value = u.bio || '';
+            document.getElementById('settings-avatar-preview').src = u.avatar || '';
+        });
+    }
+});
+
+// Carregar avatar nas configs
+document.getElementById('settings-avatar-input').addEventListener('change', e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+        base64AvatarString = ev.target.result;
+        document.getElementById('settings-avatar-preview').src = base64AvatarString;
+    };
+    reader.readAsDataURL(file);
+});
+
+// Salvar conta
+document.getElementById('btn-save-account').addEventListener('click', () => {
+    const nick = document.getElementById('settings-nickname').value.trim();
+    const userAt = document.getElementById('settings-username').value.trim().replace('@','');
+    const bio = document.getElementById('settings-bio').value.trim() || "Disponível no ChatBuddy";
+    if (!nick || !userAt) return alert("Nickname e usuário são obrigatórios!");
+    const updates = { nickname: nick, username: '@' + userAt, bio: bio };
+    if (base64AvatarString) updates.avatar = base64AvatarString;
+    database.ref('users/' + currentUser.uid).update(updates).then(() => {
+        alert("Perfil atualizado!");
+        base64AvatarString = '';
+    });
+});
+                                                           
+
+// ─── BOTÕES SEM LISTENER (CORRIGIDOS) ────────────────────────────────────────
+document.getElementById('btn-sheet-block').addEventListener('click', () => {
+    if (!activeRecipientId) return;
+    if (confirm("Bloquear este usuário? Você não receberá mais mensagens dele.")) {
+        silencedUsers[activeRecipientId] = true;
+        document.getElementById('contact-info-sheet').classList.add('hidden');
+        alert("Usuário bloqueado.");
+    }
+});
+
+document.getElementById('btn-change-password').addEventListener('click', () => {
+    if (!currentUser || !currentUser.email) return alert("Nenhum usuário logado.");
+    auth.sendPasswordResetEmail(currentUser.email)
+        .then(() => alert("E-mail de redefinição de senha enviado para " + currentUser.email))
+        .catch(err => alert("Erro: " + err.message));
+});
+
+document.getElementById('btn-active-sessions').addEventListener('click', () => {
+    alert("Sessão atual:\n\nDispositivo: " + navigator.userAgent.split(')')[0].split('(')[1] + "\nLogado como: " + (currentUser ? currentUser.email : "—"));
+});
