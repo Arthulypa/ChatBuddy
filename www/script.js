@@ -644,31 +644,60 @@ document.getElementById('media-file-input').addEventListener('change', e => {
     reader.readAsDataURL(file);
 });
 
-// ─── LISTA DE CHATS ──────────────────────────────────────────────────────────
+// ─── LISTA DE CHATS CONFORME PRIVACIDADE ISOLADA (CADA UM NO SEU QUADRADO) + PESQUISA ───
 function loadChatList() {
-    database.ref('users').on('value', snap => {
-        const parent = document.getElementById('chats-list');
-        parent.innerHTML = '';
-        snap.forEach(child => {
-            const user = child.val();
-            if (!user || !user.uid || user.uid === currentUser.uid) return;
-            const row = document.createElement('div');
-            row.className = "chat-item-row";
-            const blockedBadge = isBlocked(user.uid) ? `<span class="blocked-list-badge">BLOQ</span>` : '';
-            row.innerHTML = `
-                <img src="${user.avatar}" onerror="this.src='https://via.placeholder.com/150'">
-                <div class="chat-item-info">
-                    <div class="chat-item-header"><h4>${getDisplayName(user)}${blockedBadge}</h4></div>
-                    <p>${user.username}</p>
-                </div>`;
-            row.addEventListener('click', () => {
+    const searchQuery = document.getElementById('search-contacts-input').value.toLowerCase();
+    
+    // Puxa as relações de quem iniciou conversas para aplicar o isolamento
+    database.ref('chat_relations').once('value', relationSnap => {
+        const relations = relationSnap.val() || {};
+
+        database.ref('users').on('value', snap => {
+            const parent = document.getElementById('chats-list');
+            parent.innerHTML = '';
+            snap.forEach(child => {
+                const user = child.val();
+                if (!user || !user.uid || user.uid === currentUser.uid) return;
+
+                // Identificador único da sala de chat
                 const combinedId = currentUser.uid < user.uid ? currentUser.uid + "_" + user.uid : user.uid + "_" + currentUser.uid;
-                openChatRoom(combinedId, user);
+                
+                // Validação "Cada um no seu quadrado": 
+                // Só exibe se a conta atual adicionou a outra pessoa (marcado na chave da relação)
+                const relationData = relations[combinedId];
+                const iAddedThem = relationData && relationData[currentUser.uid] === true;
+                if (!iAddedThem) return;
+
+                // Lógica de filtro da barra de pesquisa por Nome de Exibição ou @Username
+                const displayName = getDisplayName(user).toLowerCase();
+                const username = (user.username || '').toLowerCase();
+                if (searchQuery && !displayName.includes(searchQuery) && !username.includes(searchQuery)) {
+                    return;
+                }
+
+                const row = document.createElement('div');
+                row.className = "chat-item-row";
+                if(activeRecipientId === user.uid) row.classList.add('active-desktop-chat');
+                const blockedBadge = isBlocked(user.uid) ? `<span class="blocked-list-badge">BLOQ</span>` : '';
+                row.innerHTML = `
+                    <img src="${user.avatar}" onerror="this.src='https://via.placeholder.com/150'">
+                    <div class="chat-item-info">
+                        <div class="chat-item-header"><h4>${getDisplayName(user)}${blockedBadge}</h4></div>
+                        <p>${user.username}</p>
+                    </div>`;
+                row.addEventListener('click', () => {
+                    document.querySelectorAll('.chat-item-row').forEach(r => r.classList.remove('active-desktop-chat'));
+                    row.classList.add('active-desktop-chat');
+                    openChatRoom(combinedId, user);
+                });
+                parent.appendChild(row);
             });
-            parent.appendChild(row);
         });
     });
 }
+
+// Vincula o evento de digitação do input de busca para recarregar a lista filtrada instantaneamente
+document.getElementById('search-contacts-input').addEventListener('input', loadChatList);
 
 // ─── INFO DO CONTATO ─────────────────────────────────────────────────────────
 document.getElementById('btn-open-recipient-info').addEventListener('click', () => {
@@ -741,7 +770,12 @@ document.getElementById('btn-new-chat').addEventListener('click', () => {
             item.addEventListener('click', () => {
                 document.getElementById('contacts-modal').classList.add('hidden');
                 const combinedId = currentUser.uid < u.uid ? currentUser.uid + "_" + u.uid : u.uid + "_" + currentUser.uid;
-                openChatRoom(combinedId, u);
+                
+                // Registra de forma isolada na base que EU estou adicionando este usuário
+                database.ref(`chat_relations/${combinedId}/${currentUser.uid}`).set(true).then(() => {
+                    openChatRoom(combinedId, u);
+                    loadChatList();
+                });
             });
             list.appendChild(item);
         });
@@ -797,7 +831,7 @@ document.getElementById('btn-save-account').addEventListener('click', () => {
     if (!nick || !userAt) return alert("Nickname e usuário são obrigatórios!");
     const updates = { nickname: nick, username: '@' + userAt, bio: bio };
     if (base64AvatarString) updates.avatar = base64AvatarString;
-    database.ref('users/' + currentUser.uid).update(updates).then(() => { alert("Perfil atualizado!"); base64AvatarString = ''; });
+    database.ref('users/' + currentUser.uid).update(updates).then(() => { alert("Perfil updated!"); base64AvatarString = ''; });
 });
 
 document.getElementById('btn-change-password').addEventListener('click', () => {
