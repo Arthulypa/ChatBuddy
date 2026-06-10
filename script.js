@@ -171,13 +171,10 @@ function triggerPremiumPopup(sender, text) {
 }
 
 auth.onAuthStateChanged(user => {
-    const btnLogin = document.getElementById('btn-login');
-    if (btnLogin) { btnLogin.disabled = false; btnLogin.innerText = 'Entrar'; }
-
     if (user) {
         currentUser = user;
         database.ref('users/' + user.uid).once('value').then(snap => {
-            if (snap.exists() && snap.val() && snap.val().username) {
+            if (snap.exists() && snap.val().username) {
                 changeView('chat');
                 setupPresenceSystem(user.uid);
                 loadChatList();
@@ -187,7 +184,6 @@ auth.onAuthStateChanged(user => {
             }
         });
     } else {
-        currentUser = null;
         changeView('login');
     }
 });
