@@ -17,13 +17,61 @@ let activeChatId       = null;
 let activeRecipientId  = null;
 let base64AvatarString = "";
 let selectedMessageId  = "";
-let selectedMessageData = null;   // objeto completo da msg selecionada
+let selectedMessageData = null;
 let silencedUsers      = {};
 let blockedUsers       = JSON.parse(localStorage.getItem('blockedUsers') || '{}');
 let deletedForMe       = JSON.parse(localStorage.getItem('deletedForMe') || '{}');
 let customNicknames    = JSON.parse(localStorage.getItem('customNicknames') || '{}');
-let replyingTo         = null;    // { id, text, senderId }
+let replyingTo         = null;
 let longPressTimer     = null;
+let isOnline           = navigator.onLine;
+let pendingMessages    = JSON.parse(localStorage.getItem('pendingMessages') || '[]');
+
+// ─── OFFLINE / RECONEXÃO ────────────────────────────────────────────────────
+function showNetPopup(type) {
+    const offlineEl   = document.getElementById('offline-popup');
+    const reconnectEl = document.getElementById('reconnect-popup');
+    if (type === 'offline') {
+        offlineEl.classList.remove('hidden');
+    } else {
+        offlineEl.classList.add('hidden');
+        reconnectEl.classList.remove('hidden');
+        setTimeout(() => reconnectEl.classList.add('hidden'), 3000);
+    }
+}
+
+window.addEventListener('online', () => {
+    if (!isOnline) {
+        isOnline = true;
+        showNetPopup('online');
+        flushPendingMessages();
+    }
+});
+window.addEventListener('offline', () => {
+    isOnline = false;
+    showNetPopup('offline');
+});
+// Initial check
+if (!navigator.onLine) showNetPopup('offline');
+
+function savePendingMessages() {
+    localStorage.setItem('pendingMessages', JSON.stringify(pendingMessages));
+}
+
+function flushPendingMessages() {
+    if (!pendingMessages.length || !currentUser) return;
+    const toSend = [...pendingMessages];
+    pendingMessages = [];
+    savePendingMessages();
+    toSend.forEach(msg => {
+        const ref = database.ref(`chats/${msg.chatId}/messages`).push();
+        ref.set({ ...msg.payload, id: ref.key, status: 'sending', timestamp: firebase.database.ServerValue.TIMESTAMP })
+            .then(() => {
+                setTimeout(() => ref.update({ status: 'sent' }),      400);
+                setTimeout(() => ref.update({ status: 'delivered' }), 900);
+            });
+    });
+}
 
 // ─── VIEWS ──────────────────────────────────────────────────────────────────
 const viewPages = {
@@ -156,6 +204,8 @@ function triggerPremiumPopup(sender, text) {
     setTimeout(() => popup.classList.add('expanded'), 150);
     setTimeout(() => { popup.classList.remove('expanded'); setTimeout(() => popup.classList.add('hidden'), 400); }, 3500);
 }
+
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
 
 auth.onAuthStateChanged(user => {
     if (user) {
@@ -608,30 +658,51 @@ document.getElementById('btn-cancel-reply').addEventListener('click', () => {
 });
 
 // ─── ENVIO DE MENSAGENS ──────────────────────────────────────────────────────
-function pushMessage(text, imgBase64 = null) {
+function pushMessage(text, imgBase64 = null, audioBase64 = null) {
     if (!activeChatId || !currentUser) return;
-    if (!text.trim() && !imgBase64) return;
+    if (!text.trim() && !imgBase64 && !audioBase64) return;
     if (isBlocked(activeRecipientId)) return alert("Você bloqueou este usuário.");
 
-    const ref = database.ref(`chats/${activeChatId}/messages`).push();
     const payload = {
-        id: ref.key,
         senderId: currentUser.uid,
         text: text.trim(),
         status: 'sending',
-        timestamp: firebase.database.ServerValue.TIMESTAMP
+        timestamp: Date.now()
     };
-    if (imgBase64)  payload.image   = imgBase64;
+    if (imgBase64)   payload.image = imgBase64;
+    if (audioBase64) payload.audio = audioBase64;
     if (replyingTo) {
         payload.replyTo = { id: replyingTo.id, text: replyingTo.text, senderId: replyingTo.senderId };
         replyingTo = null;
         document.getElementById('reply-bar').classList.add('hidden');
     }
-    // Status em tempo real: sending → sent → delivered → read
+
+    if (!isOnline) {
+        // Store locally as pending
+        const pendingId = 'pending_' + Date.now();
+        pendingMessages.push({ chatId: activeChatId, payload: { ...payload, id: pendingId } });
+        savePendingMessages();
+        // Render locally as pending bubble
+        const box = document.getElementById('messages-container');
+        const wrapper = document.createElement('div');
+        wrapper.className = 'message-wrapper sent';
+        wrapper.dataset.pendingId = pendingId;
+        const card = document.createElement('div');
+        card.className = 'message sent pending';
+        card.innerHTML = buildMessageContent({ ...payload, id: pendingId }, true);
+        wrapper.appendChild(card);
+        box.appendChild(wrapper);
+        box.scrollTop = box.scrollHeight;
+        document.getElementById('message-input').value = '';
+        return;
+    }
+
+    const ref = database.ref(`chats/${activeChatId}/messages`).push();
+    payload.id = ref.key;
+    payload.timestamp = firebase.database.ServerValue.TIMESTAMP;
     ref.set(payload).then(() => {
         setTimeout(() => ref.update({ status: 'sent' }),      400);
         setTimeout(() => ref.update({ status: 'delivered' }), 900);
-        // 'read' é atualizado pelo destinatário ao abrir o chat (no renderMessages)
     });
     document.getElementById('message-input').value = '';
 }
