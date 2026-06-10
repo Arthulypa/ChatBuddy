@@ -10,22 +10,7 @@
 </head>
 <body>
 
-    <!-- POPUP OFFLINE/RECONEXÃO -->
-    <div id="network-popup" class="network-popup hidden"></div>
-
-    <!-- VISUALIZADOR DE MÍDIA (imagem/vídeo) -->
-    <div id="media-viewer" class="media-viewer hidden">
-        <div class="media-viewer-backdrop"></div>
-        <button id="media-viewer-close" class="media-viewer-close">
-            <svg viewBox="0 0 24 24" style="width:24px;height:24px;"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-        </button>
-        <div class="media-viewer-content">
-            <img id="media-viewer-img" src="" alt="" class="hidden">
-            <video id="media-viewer-video" controls class="hidden"></video>
-        </div>
-    </div>
-
-    <div id="popup-notification" class="popup-notification hidden animate-pop">
+    <div id="popup-notification" class="popup-notification hidden">
         <div class="popup-avatar-wrapper">
             <img id="popup-avatar" src="" alt="">
         </div>
@@ -197,42 +182,19 @@
             </div>
 
             <footer id="chat-footer-area" class="chat-footer glass-premium">
-                <div class="footer-input-row-wrap">
-                <div class="footer-input-row">
+                <div class="footer-input-row" id="footer-input-row">
                     <button id="btn-attach" class="attach-btn" style="background:none; border:none; cursor:pointer;">
                         <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-2.76 2.24-5 5-5s5 2.24 5 5v12.5c0 3.31-2.69 6-6 6s-6-2.69-6-6V6h2v11.5c0 2.21 1.79 4 4 4s4-1.79 4-4V5c0-1.66-1.34-3-3-3s-3 1.34-3 3v12.5c0 1.1.9 2 2 2s2-.9 2-2V6h2z"/></svg>
                     </button>
                     <input type="file" id="media-file-input" class="hidden" accept="image/*,video/*">
                     <input type="text" id="message-input" placeholder="Mensagem">
                 </div>
-                <!-- Botão de áudio (microfone) - visível quando input vazio -->
-                <button id="btn-mic" class="btn-send-round btn-mic-idle" title="Segure para gravar">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:16px;height:16px;"><path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm-1 1.93c-3.94-.49-7-3.85-7-7.93H5c0 3.53 2.61 6.43 6 6.92V18h2v-2.07c3.39-.49 6-3.39 6-6.93h1c0 4.08-3.06 7.44-7 7.93V19h-2v-1.07z"/></svg>
-                </button>
                 <button id="btn-send" class="btn-send-round hidden">
                     <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:16px;height:16px;transform: rotate(-45deg) translate(2px, -1px);"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                 </button>
-            </div>
-            </div><!-- end footer-input-row-wrap -->
-            <!-- UI de gravação de áudio -->
-            <div id="audio-recording-ui" class="audio-recording-ui hidden">
-                <button id="btn-cancel-audio" class="audio-cancel-btn">
-                    <svg viewBox="0 0 24 24" style="width:22px;height:22px;"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                <button id="btn-mic" class="btn-mic-round">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
                 </button>
-                <div class="audio-rec-center">
-                    <div class="audio-rec-dot"></div>
-                    <span id="audio-rec-timer">0:00</span>
-                    <div class="audio-waveform">
-                        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
-                        <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
-                        <div class="wave-bar"></div><div class="wave-bar"></div>
-                    </div>
-                    <span id="audio-lock-hint" class="audio-lock-hint">↑ Deslize para travar</span>
-                </div>
-                <button id="btn-send-audio" class="btn-send-round">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:16px;height:16px;transform: rotate(-45deg) translate(2px, -1px);"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                </button>
-            </div>
             </footer>
         </div>
     </div>
@@ -323,7 +285,7 @@
         </div>
     </div>
 
-    <!-- MODAL APAGAR (para todos / só pra mim) -->
+    <!-- MODAL APAGAR -->
     <div id="delete-options-modal" class="modal hidden">
         <div class="modal-content glass-premium" style="max-width:300px; text-align:center;">
             <h3 style="margin-bottom:6px;">Apagar mensagem</h3>
@@ -401,6 +363,7 @@
                         <label>Biografia</label>
                     </div>
                 </div>
+                <!-- Funcionalidade de salvamento local inclusa nativamente nos botões -->
                 <button id="btn-save-account" class="ios-btn-primary" style="margin-top:12px;">Salvar Alterações</button>
                 <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red);margin-top:10px;">Desconectar Conta</button>
             </div>
@@ -453,6 +416,12 @@
             </div>
             <div id="contacts-list-modal" class="chats-list"></div>
         </div>
+    </div>
+
+    <!-- VISUALIZADOR DE MÍDIA PREMIUM (ZOOM) -->
+    <div id="media-viewer" class="media-viewer hidden">
+        <button id="media-viewer-close" class="media-viewer-close">&times;</button>
+        <div id="media-viewer-container" style="position:relative; overflow:hidden; display:flex; justify-content:center; align-items:center; width:100%; height:100%;"></div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
