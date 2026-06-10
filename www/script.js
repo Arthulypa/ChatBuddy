@@ -281,6 +281,8 @@ function openChatRoom(chatId, recipientData) {
     document.getElementById('active-chat-name').innerText  = getDisplayName(recipientData);
     document.getElementById('active-chat-avatar').src      = recipientData.avatar;
     document.getElementById('chat-room-screen').classList.remove('hidden');
+    const emptyPanel = document.getElementById('empty-chat-panel');
+    if (emptyPanel) emptyPanel.classList.add('hidden');
 
     // Estado de bloqueio
     applyBlockedStateToChat(recipientData.uid, isBlocked(recipientData.uid));
@@ -750,6 +752,8 @@ document.getElementById('btn-back-to-list').addEventListener('click', () => {
     database.ref(`users/${activeRecipientId}`).off();
     database.ref(`chats/${activeChatId}/messages`).off();
     document.getElementById('chat-room-screen').classList.add('hidden');
+    const emptyPanel = document.getElementById('empty-chat-panel');
+    if (emptyPanel) emptyPanel.classList.remove('hidden');
 });
 document.getElementById('btn-back-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.add('hidden'));
 document.getElementById('btn-logout').addEventListener('click', () => { auth.signOut().then(() => window.location.reload()); });
