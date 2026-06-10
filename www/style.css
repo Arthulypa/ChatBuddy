@@ -65,7 +65,7 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
     .app-container > header, 
     .app-container > nav, 
     .app-container > .tab-content-container {
-        width: 320px !important; /* Painel lateral menor */
+        width: 320px !important;
         flex-shrink: 0;
         position: absolute;
         left: 10px;
@@ -221,7 +221,6 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .message.deleted-msg { opacity: 0.45; font-style: italic; color: var(--text-muted); }
 .message.pressing { transform: scale(0.97); box-shadow: 0 6px 24px rgba(0,0,0,0.4); }
 
-/* Mensagens Offline Piscando */
 .message.is-offline-pending { animation: offlineBlink 1.5s infinite alternate; opacity: 0.7; }
 @keyframes offlineBlink { from { opacity: 0.4; } to { opacity: 0.9; } }
 
@@ -231,6 +230,25 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 
 .edited-tag { font-size: 10px; color: rgba(255,255,255,0.45); margin-top: 2px; align-self: flex-end; font-style: italic; }
 .message.sent .edited-tag { color: rgba(255,255,255,0.5); }
+
+/* ─── MENU CONTEXTO IOS PREMIUM AUTOMÁTICO ─── */
+.blur-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.55); backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); z-index: 600; animation: fadeIn 0.2s ease; }
+.focused-container { position: absolute; display: flex; flex-direction: row; gap: 14px; align-items: center; justify-content: flex-start; box-sizing: border-box; padding: 0 16px; }
+.focused-container.align-right { flex-direction: row-reverse; justify-content: flex-end; }
+
+.focused-message-wrapper { max-width: 65%; display: flex; flex-direction: column; }
+.focused-message-wrapper .message-wrapper { width: 100%; display: flex; }
+.focused-message-wrapper .message { max-width: 100% !important; box-shadow: 0 12px 36px rgba(0,0,0,0.5); transform: scale(1.02); animation: msgPopUp 0.22s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes msgPopUp { from { transform: scale(0.94); opacity: 0.6; } to { transform: scale(1.02); opacity: 1; } }
+
+.iphone-context-menu { background: rgba(30, 30, 35, 0.88); backdrop-filter: blur(20px); border: 1px solid var(--glass-border); border-radius: 16px; padding: 4px; display: flex; flex-direction: column; width: 200px; box-shadow: 0 20px 40px rgba(0,0,0,0.6); animation: scaleInMenu 0.2s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes scaleInMenu { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+.context-item { padding: 11px 14px; font-size: 14px; display: flex; align-items: center; cursor: pointer; border-radius: 10px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; color: #fff; }
+.context-item:last-child { border-bottom: none; }
+.context-item:active { background: rgba(255,255,255,0.1); }
+.context-item.danger { color: var(--ios-red); }
+.context-item.cancel { background: rgba(255,255,255,0.06); justify-content: center; font-weight: 500; margin-top: 4px; }
 
 .msg-meta-row { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 4px; min-height: 8px; }
 .status-dot-wrapper { display: flex; align-items: center; gap: 2.5px; }
@@ -251,7 +269,6 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .btn-mic-round.recording { background: var(--ios-red); animation: pulseRecord 1s infinite alternate; }
 @keyframes pulseRecord { from { transform: scale(1); } to { transform: scale(1.1); } }
 
-/* Interface do Gravador de Áudio */
 .audio-recorder-overlay { position: absolute; left: 12px; right: 58px; background: #1c1c1e; height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; z-index: 10; animation: fadeIn 0.2s ease; }
 .recorder-info { display: flex; align-items: center; gap: 8px; color: var(--ios-red); font-size: 14px; font-weight: 500; }
 .recorder-blink { width: 8px; height: 8px; background: var(--ios-red); border-radius: 50%; animation: pulseDot 0.5s infinite alternate; }
@@ -283,22 +300,6 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .ios-switch-slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
 .ios-switch-wrapper input:checked + .ios-switch-slider { background-color: var(--ios-green); }
 .ios-switch-wrapper input:checked + .ios-switch-slider:before { transform: translateX(20px); }
-
-.blur-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.5); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: 600; animation: fadeIn 0.2s ease; }
-.focused-container { position: absolute; display: flex; flex-direction: column; gap: 10px; max-width: min(90vw, 360px); }
-.focused-container.align-right  { align-items: flex-end;  }
-.focused-container.align-left   { align-items: flex-start; }
-.focused-message-wrapper { width: 100%; }
-.focused-message-wrapper .message-wrapper { width: 100%; }
-.focused-message-wrapper .message { max-width: 78%; box-shadow: 0 12px 36px rgba(0,0,0,0.6); transform: scale(1.03); animation: msgPopUp 0.25s cubic-bezier(0.34,1.56,0.64,1); }
-@keyframes msgPopUp { from { transform: scale(0.92); opacity: 0.6; } to { transform: scale(1.03); opacity: 1; } }
-
-.iphone-context-menu { border-radius: 16px; padding: 4px; display: flex; flex-direction: column; width: 220px; animation: scaleIn 0.2s cubic-bezier(0.34,1.56,0.64,1); }
-.context-item { padding: 13px 16px; font-size: 15px; display: flex; align-items: center; cursor: pointer; border-radius: 10px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
-.context-item:last-child { border-bottom: none; }
-.context-item:active { background: rgba(255,255,255,0.08); }
-.context-item.danger { color: var(--ios-red); }
-.context-item.cancel { background: rgba(255,255,255,0.06); justify-content: center; font-weight: 500; margin-top: 4px; }
 
 .modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.65); z-index: 700; display: flex; justify-content: center; align-items: center; animation: fadeIn 0.2s ease; }
 .modal-content { width: 90%; max-width: 340px; border-radius: 20px; padding: 20px; max-height: 80dvh; display: flex; flex-direction: column; animation: scaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1); }
@@ -345,7 +346,9 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 
 .action-nickname-btn { width: 100%; background: rgba(10,132,255,0.1); border: none; padding: 14px 16px; border-radius: 14px; color: var(--ios-blue); font-size: 15px; font-weight: 600; cursor: pointer; }
 
-/* Visualizador de Mídia (Zoom Premium) */
 .media-viewer { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.98); z-index: 10000; display: flex; justify-content: center; align-items: center; }
 .media-viewer-content { max-width: 95vw; max-height: 85dvh; object-fit: contain; transition: transform 0.2s cubic-bezier(0.1, 0.3, 0.3, 1); user-select: none; }
 .media-viewer-close { position: absolute; top: 20px; right: 20px; background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 40px; height: 40px; color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scaleIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
