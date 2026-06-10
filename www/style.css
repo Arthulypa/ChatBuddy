@@ -69,22 +69,26 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification) {
         background: #0a0a0f;
         background-image: radial-gradient(ellipse at 20% 20%, rgba(10,132,255,0.06) 0%, transparent 50%),
                           radial-gradient(ellipse at 80% 80%, rgba(48,209,88,0.04) 0%, transparent 50%);
+        align-items: center;
+        justify-content: center;
     }
     body > .app-container {
         flex-direction: row !important;
         max-width: 1200px !important;
-        margin: 20px;
+        width: calc(100vw - 40px) !important;
+        margin: 0 auto;
         height: calc(100dvh - 40px) !important;
         border-radius: 20px;
         overflow: hidden;
         box-shadow: 0 40px 80px rgba(0,0,0,0.8);
         border: 1px solid var(--glass-border);
+        position: relative;
     }
     
     .app-container > header, 
     .app-container > nav, 
     .app-container > .tab-content-container {
-        width: 380px !important;
+        width: 340px !important;
         flex-shrink: 0;
         position: absolute;
         left: 0;
@@ -95,10 +99,10 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification) {
 
     .chat-room-screen {
         position: absolute !important;
-        left: auto !important;
+        left: 340px !important;
         right: 0 !important;
         top: 0 !important;
-        width: calc(100% - 380px) !important;
+        width: calc(100% - 340px) !important;
         max-width: none !important;
         height: 100% !important;
         transform: none !important;
@@ -112,7 +116,7 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification) {
     /* Painel vazio no lado direito (desktop) */
     .empty-chat-panel {
         position: absolute !important;
-        left: 380px !important;
+        left: 340px !important;
         right: 0 !important;
         top: 0 !important;
         bottom: 0 !important;
@@ -216,12 +220,12 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification) {
     align-items: center;
     justify-content: center;
     flex: 1;
-    width: calc(100% - 380px);
+    width: calc(100% - 340px);
     height: 100%;
     pointer-events: none;
     user-select: none;
     position: absolute;
-    left: 380px;
+    left: 340px;
     top: 0;
     bottom: 0;
 }
@@ -430,3 +434,255 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification) {
 .quoted-msg span { display: block; font-size: 11px; color: var(--ios-blue); font-weight: 600; margin-bottom: 2px; }
 
 .action-nickname-btn { width: 100%; background: rgba(10,132,255,0.1); border: none; padding: 14px 16px; border-radius: 14px; color: var(--ios-blue); font-size: 15px; font-weight: 600; cursor: pointer; }
+
+/* ─── FOOTER AJUSTADO PARA MIC/SEND TOGGLE ─── */
+.chat-footer {
+    flex-direction: column;
+    gap: 0;
+}
+.footer-input-row-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding-bottom: 0;
+}
+.chat-footer .footer-input-row { flex: 1; }
+.btn-mic-idle { background: var(--ios-blue); }
+
+/* ─── ÁUDIO RECORDER UI ─── */
+.audio-recording-ui {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    gap: 10px;
+    padding: 4px 0;
+    animation: slideUp 0.2s ease;
+}
+.audio-cancel-btn {
+    background: rgba(255,69,58,0.15);
+    border: none;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: var(--ios-red);
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+.audio-cancel-btn:active { background: rgba(255,69,58,0.3); }
+.audio-rec-center {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.04);
+    border-radius: 20px;
+    padding: 6px 14px;
+    border: 1px solid rgba(255,255,255,0.06);
+    min-height: 36px;
+    position: relative;
+    overflow: hidden;
+}
+.audio-rec-dot {
+    width: 8px; height: 8px;
+    background: var(--ios-red);
+    border-radius: 50%;
+    flex-shrink: 0;
+    animation: recBlink 1s infinite;
+}
+@keyframes recBlink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+#audio-rec-timer {
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    min-width: 28px;
+    flex-shrink: 0;
+}
+.audio-waveform {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+}
+.wave-bar {
+    width: 3px;
+    background: var(--ios-blue);
+    border-radius: 2px;
+    animation: waveAnim 0.6s ease-in-out infinite alternate;
+    min-height: 4px;
+}
+.wave-bar:nth-child(1) { animation-delay: 0s;    height: 8px; }
+.wave-bar:nth-child(2) { animation-delay: 0.1s;  height: 14px; }
+.wave-bar:nth-child(3) { animation-delay: 0.2s;  height: 10px; }
+.wave-bar:nth-child(4) { animation-delay: 0.3s;  height: 18px; }
+.wave-bar:nth-child(5) { animation-delay: 0.15s; height: 12px; }
+.wave-bar:nth-child(6) { animation-delay: 0.25s; height: 16px; }
+.wave-bar:nth-child(7) { animation-delay: 0.05s; height: 10px; }
+.wave-bar:nth-child(8) { animation-delay: 0.35s; height: 14px; }
+@keyframes waveAnim { from{transform:scaleY(0.4)} to{transform:scaleY(1)} }
+.audio-lock-hint {
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.audio-lock-hint.locked {
+    color: var(--ios-green);
+}
+
+/* Mensagem de áudio no chat */
+.audio-msg-bubble {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 180px;
+    padding: 4px 0;
+}
+.audio-play-btn {
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    flex-shrink: 0;
+    transition: background 0.2s;
+}
+.audio-play-btn:active { background: rgba(255,255,255,0.25); }
+.audio-progress-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.audio-progress {
+    width: 100%;
+    height: 3px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+    overflow: hidden;
+}
+.audio-progress-fill {
+    height: 100%;
+    background: #fff;
+    border-radius: 3px;
+    width: 0%;
+    transition: width 0.1s linear;
+}
+.audio-duration {
+    font-size: 11px;
+    color: rgba(255,255,255,0.6);
+}
+
+/* Mensagem piscando (offline) */
+.message.pending-offline {
+    opacity: 0.65;
+    animation: pendingPulse 1.4s ease-in-out infinite;
+}
+@keyframes pendingPulse { 0%,100%{opacity:0.65} 50%{opacity:0.35} }
+
+/* ─── NETWORK POPUP ─── */
+.network-popup {
+    position: fixed;
+    bottom: 90px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(30,30,35,0.97);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 22px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.6);
+    animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
+    white-space: nowrap;
+    max-width: 90vw;
+}
+.network-popup.hidden { display: none !important; }
+.network-popup.offline { border-color: rgba(255,69,58,0.4); }
+.network-popup.online  { border-color: rgba(48,209,88,0.4); }
+.net-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.network-popup.offline .net-dot { background: var(--ios-red); animation: recBlink 1s infinite; }
+.network-popup.online  .net-dot { background: var(--ios-green); }
+
+/* ─── MEDIA VIEWER ─── */
+.media-viewer {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.media-viewer.hidden { display: none !important; }
+.media-viewer-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.95);
+}
+.media-viewer-close {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    z-index: 2;
+    background: rgba(255,255,255,0.1);
+    border: none;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    color: #fff;
+    transition: background 0.2s;
+}
+.media-viewer-close:active { background: rgba(255,255,255,0.2); }
+.media-viewer-content {
+    position: relative;
+    z-index: 1;
+    max-width: 95vw;
+    max-height: 90dvh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+}
+#media-viewer-img {
+    max-width: 95vw;
+    max-height: 90dvh;
+    border-radius: 10px;
+    object-fit: contain;
+    touch-action: pinch-zoom;
+    cursor: zoom-in;
+    transition: transform 0.2s ease;
+    transform-origin: center center;
+}
+#media-viewer-video {
+    max-width: 95vw;
+    max-height: 90dvh;
+    border-radius: 10px;
+    background: #000;
+}
+
+/* Imagens no chat clicáveis */
+.message-img { cursor: pointer; transition: opacity 0.2s; }
+.message-img:active { opacity: 0.8; }
+.message-video { max-width: 200px; border-radius: 12px; margin-bottom: 4px; display: block; cursor: pointer; }
+
+/* ─── CONFIGURAÇÕES: SALVAR COM FEEDBACK ─── */
+.settings-save-feedback {
+    font-size: 12px;
+    color: var(--ios-green);
+    text-align: center;
+    margin-top: 6px;
+    animation: fadeIn 0.3s ease;
+}
