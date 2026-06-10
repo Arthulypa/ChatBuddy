@@ -121,7 +121,7 @@
             </button>
         </header>
         <nav class="app-tabs glass-premium">
-            <div class="tab-item active" id="tab-chats">Conversas</div>
+            <div class="tab-item active" id="tab-chats">Conversas <span id="requests-badge" class="requests-badge hidden"></span></div>
             <div class="tab-item" id="tab-status">Status</div>
             <div class="tab-item" id="tab-calls">Chamadas</div>
         </nav>
@@ -131,6 +131,12 @@
                     <input type="text" id="search-contacts-input" placeholder="Buscar conversas pelo nome...">
                 </div>
                 <div id="chats-list" class="chats-list"></div>
+                <!-- Banner de solicitações pendentes -->
+                <div id="requests-banner" class="requests-banner hidden" onclick="document.getElementById('requests-modal').classList.remove('hidden')">
+                    <svg viewBox="0 0 24 24" style="width:18px;height:18px;flex-shrink:0;"><path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 9l-8-5V6l8 5 8-5v2l-8 5z"/></svg>
+                    <span id="requests-banner-text">Você tem solicitações de conversa</span>
+                    <svg viewBox="0 0 24 24" style="width:16px;height:16px;flex-shrink:0;opacity:0.5;"><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+                </div>
                 <button id="btn-new-chat" class="btn-fab">
                     <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                 </button>
@@ -202,7 +208,89 @@
                 </button>
             </footer>
         </div>
-    </div>
+
+        <!-- CONFIGURAÇÕES (dentro do frame) -->
+        <div id="settings-screen" class="settings-screen hidden">
+            <header class="settings-screen-header glass-premium">
+                <button id="btn-back-settings" class="back-btn">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                </button>
+                <h2>Configurações</h2>
+            </header>
+            <div class="settings-tabs-bar">
+                <div class="settings-tab active" data-tab="conta">Conta</div>
+                <div class="settings-tab" data-tab="notif">Notificações</div>
+                <div class="settings-tab" data-tab="priv">Privacidade</div>
+                <div class="settings-tab" data-tab="seg">Segurança</div>
+            </div>
+            <div class="settings-screen-body">
+                <div id="stab-conta" class="settings-tab-pane">
+                    <div class="settings-section-title">Perfil</div>
+                    <div class="settings-section-group glass-premium">
+                        <div class="settings-avatar-row">
+                            <div class="settings-avatar-wrapper">
+                                <img id="settings-avatar-preview" src="" alt="">
+                            </div>
+                            <label for="settings-avatar-input" class="settings-avatar-label">Alterar Foto</label>
+                            <input type="file" id="settings-avatar-input" accept="image/*" class="hidden">
+                        </div>
+                    </div>
+                    <div class="settings-section-group glass-premium" style="margin-top:12px;">
+                        <div class="input-group-premium" style="margin:12px 0 4px;">
+                            <input type="text" id="settings-nickname" placeholder=" ">
+                            <label>Apelido (Nickname)</label>
+                        </div>
+                        <div class="input-group-premium" style="margin-bottom:4px;">
+                            <input type="text" id="settings-username" placeholder=" ">
+                            <label>Nome de usuário (@)</label>
+                        </div>
+                        <div class="input-group-premium" style="margin-bottom:12px;">
+                            <input type="text" id="settings-bio" placeholder=" ">
+                            <label>Biografia</label>
+                        </div>
+                    </div>
+                    <button id="btn-save-account" class="ios-btn-primary" style="margin-top:12px;">Salvar Alterações</button>
+                    <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red);margin-top:10px;">Desconectar Conta</button>
+                </div>
+                <div id="stab-notif" class="settings-tab-pane hidden">
+                    <div class="settings-section-title">Notificações</div>
+                    <div class="settings-section-group glass-premium">
+                        <div class="settings-row-toggle">
+                            <div><p class="row-main-title">Silenciar Tudo</p><p class="row-sub-title">Nenhuma notificação será exibida</p></div>
+                            <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-mute-all"><span class="ios-switch-slider"></span></label>
+                        </div>
+                        <div style="height:1px;background:var(--glass-border);"></div>
+                        <div class="settings-row-toggle">
+                            <div><p class="row-main-title">Notificações Flutuantes</p><p class="row-sub-title">Bolinha que desce ao receber mensagem</p></div>
+                            <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-popup-global" checked><span class="ios-switch-slider"></span></label>
+                        </div>
+                    </div>
+                </div>
+                <div id="stab-priv" class="settings-tab-pane hidden">
+                    <div class="settings-section-title">Privacidade</div>
+                    <div class="settings-section-group glass-premium">
+                        <div class="settings-row-toggle">
+                            <div><p class="row-main-title">Confirmação de Leitura</p><p class="row-sub-title">Mostrar tique duplo verde ao ler</p></div>
+                            <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-read-receipts" checked><span class="ios-switch-slider"></span></label>
+                        </div>
+                        <div style="height:1px;background:var(--glass-border);"></div>
+                        <div class="settings-row-toggle">
+                            <div><p class="row-main-title">Confirmação de Online</p><p class="row-sub-title">Exibir "online" para outros usuários</p></div>
+                            <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-show-online" checked><span class="ios-switch-slider"></span></label>
+                        </div>
+                    </div>
+                </div>
+                <div id="stab-seg" class="settings-tab-pane hidden">
+                    <div class="settings-section-title">Segurança</div>
+                    <div class="settings-section-group glass-premium">
+                        <button id="btn-change-password" class="ios-btn-primary" style="margin:12px 0 4px;">Alterar Senha</button>
+                        <button id="btn-active-sessions" class="ios-btn-primary" style="background:rgba(255,255,255,0.08);margin-bottom:12px;">Ver Sessões Ativas</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /chat-page -->
 
     <!-- SHEET INFO CONTATO -->
     <div id="contact-info-sheet" class="ios-dropdown-overlay hidden">
@@ -328,87 +416,6 @@
         </div>
     </div>
 
-    <!-- CONFIGURAÇÕES -->
-    <div id="settings-screen" class="settings-screen hidden">
-        <header class="settings-screen-header glass-premium">
-            <button id="btn-back-settings" class="back-btn">
-                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-            </button>
-            <h2>Configurações</h2>
-        </header>
-        <div class="settings-tabs-bar">
-            <div class="settings-tab active" data-tab="conta">Conta</div>
-            <div class="settings-tab" data-tab="notif">Notificações</div>
-            <div class="settings-tab" data-tab="priv">Privacidade</div>
-            <div class="settings-tab" data-tab="seg">Segurança</div>
-        </div>
-        <div class="settings-screen-body">
-            <div id="stab-conta" class="settings-tab-pane">
-                <div class="settings-section-title">Perfil</div>
-                <div class="settings-section-group glass-premium">
-                    <div class="settings-avatar-row">
-                        <div class="settings-avatar-wrapper">
-                            <img id="settings-avatar-preview" src="" alt="">
-                        </div>
-                        <label for="settings-avatar-input" class="settings-avatar-label">Alterar Foto</label>
-                        <input type="file" id="settings-avatar-input" accept="image/*" class="hidden">
-                    </div>
-                </div>
-                <div class="settings-section-group glass-premium" style="margin-top:12px;">
-                    <div class="input-group-premium" style="margin:12px 0 4px;">
-                        <input type="text" id="settings-nickname" placeholder=" ">
-                        <label>Apelido (Nickname)</label>
-                    </div>
-                    <div class="input-group-premium" style="margin-bottom:4px;">
-                        <input type="text" id="settings-username" placeholder=" ">
-                        <label>Nome de usuário (@)</label>
-                    </div>
-                    <div class="input-group-premium" style="margin-bottom:12px;">
-                        <input type="text" id="settings-bio" placeholder=" ">
-                        <label>Biografia</label>
-                    </div>
-                </div>
-                <button id="btn-save-account" class="ios-btn-primary" style="margin-top:12px;">Salvar Alterações</button>
-                <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red);margin-top:10px;">Desconectar Conta</button>
-            </div>
-            <div id="stab-notif" class="settings-tab-pane hidden">
-                <div class="settings-section-title">Notificações</div>
-                <div class="settings-section-group glass-premium">
-                    <div class="settings-row-toggle">
-                        <div><p class="row-main-title">Silenciar Tudo</p><p class="row-sub-title">Nenhuma notificação será exibida</p></div>
-                        <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-mute-all"><span class="ios-switch-slider"></span></label>
-                    </div>
-                    <div style="height:1px;background:var(--glass-border);"></div>
-                    <div class="settings-row-toggle">
-                        <div><p class="row-main-title">Notificações Flutuantes</p><p class="row-sub-title">Bolinha que desce ao receber mensagem</p></div>
-                        <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-popup-global" checked><span class="ios-switch-slider"></span></label>
-                    </div>
-                </div>
-            </div>
-            <div id="stab-priv" class="settings-tab-pane hidden">
-                <div class="settings-section-title">Privacidade</div>
-                <div class="settings-section-group glass-premium">
-                    <div class="settings-row-toggle">
-                        <div><p class="row-main-title">Confirmação de Leitura</p><p class="row-sub-title">Mostrar tique duplo verde ao ler</p></div>
-                        <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-read-receipts" checked><span class="ios-switch-slider"></span></label>
-                    </div>
-                    <div style="height:1px;background:var(--glass-border);"></div>
-                    <div class="settings-row-toggle">
-                        <div><p class="row-main-title">Confirmação de Online</p><p class="row-sub-title">Exibir "online" para outros usuários</p></div>
-                        <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-show-online" checked><span class="ios-switch-slider"></span></label>
-                    </div>
-                </div>
-            </div>
-            <div id="stab-seg" class="settings-tab-pane hidden">
-                <div class="settings-section-title">Segurança</div>
-                <div class="settings-section-group glass-premium">
-                    <button id="btn-change-password" class="ios-btn-primary" style="margin:12px 0 4px;">Alterar Senha</button>
-                    <button id="btn-active-sessions" class="ios-btn-primary" style="background:rgba(255,255,255,0.08);margin-bottom:12px;">Ver Sessões Ativas</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- MODAL NOVA CONVERSA (Com Input de Busca Segura por @) -->
     <div id="contacts-modal" class="modal hidden">
         <div class="modal-content glass-premium">
@@ -429,6 +436,19 @@
     <div id="media-viewer" class="media-viewer hidden">
         <button id="media-viewer-close" class="media-viewer-close">&times;</button>
         <div id="media-viewer-container" style="position:relative; overflow:hidden; display:flex; justify-content:center; align-items:center; width:100%; height:100%;"></div>
+    </div>
+
+    <!-- MODAL SOLICITAÇÕES DE CONVERSA -->
+    <div id="requests-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:360px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:15px;">
+                <h3>Solicitações</h3>
+                <button id="btn-close-requests-modal" class="back-btn">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div id="requests-list" class="chats-list" style="max-height:60dvh;overflow-y:auto;"></div>
+        </div>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
