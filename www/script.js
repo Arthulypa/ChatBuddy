@@ -98,7 +98,7 @@ document.getElementById('btn-login').addEventListener('click', () => {
     btn.disabled = true; btn.innerText = 'Entrando...';
     
     auth.signInWithEmailAndPassword(email, pass).then((userCredential) => {
-        localStorage.setItem('localLoggedUser', JSON.stringify({email, pass}));
+        localStorage.setItem('localLoggedUser', JSON.stringify({email, pass: btoa(unescape(encodeURIComponent(pass)))}));
     }).catch(err => {
         btn.disabled = false; btn.innerText = 'Entrar';
         const msgs = {
@@ -128,7 +128,7 @@ document.getElementById('btn-verify-and-register').addEventListener('click', () 
     const pass  = document.getElementById('password-reg').value;
     auth.createUserWithEmailAndPassword(email, pass)
         .then(() => {
-            localStorage.setItem('localLoggedUser', JSON.stringify({email, pass}));
+            localStorage.setItem('localLoggedUser', JSON.stringify({email, pass: btoa(unescape(encodeURIComponent(pass)))}));
             changeView('profile');
         })
         .catch(err => alert("Erro: " + err.message));
@@ -167,7 +167,8 @@ function checkLocalSessionAndLogin() {
             updateHeaderUserInfo();
             triggerSystemPopup("Modo Offline", "Você entrou usando dados salvos localmente.", "https://cdn-icons-png.flaticon.com/512/565/565340.png");
         } else {
-            auth.signInWithEmailAndPassword(creds.email, creds.pass).catch(() => {
+            const decodedPass = decodeURIComponent(escape(atob(creds.pass)));
+            auth.signInWithEmailAndPassword(creds.email, decodedPass).catch(() => {
                 changeView('login');
             });
         }
@@ -188,8 +189,8 @@ function updateHeaderUserInfo() {
         database.ref('users/' + currentUser.uid).once('value', snap => {
             if (snap.exists()) {
                 const p = snap.val();
-                document.getElementById('current-user-header-avatar').src = p.avatar;
-                document.getElementById('current-user-header-nick').innerText = p.nickname;
+                document.getElementById('current-user-header-avatar').src = p.avatar || "https://via.placeholder.com/150";
+                document.getElementById('current-user-header-nick').innerText = p.nickname || "Eu";
             }
         });
     }
@@ -208,12 +209,15 @@ function setupPresenceSystem(userId) {
 
 function listenToGlobalMessages() {
     if (currentUser.uid === "offline_user") return;
+    const listenStartTime = Date.now();
     database.ref('chats').on('child_changed', snap => {
         const chat = snap.val();
         if (!chat || !chat.messages) return;
         const msgKeys = Object.keys(chat.messages);
         const lastMsg = chat.messages[msgKeys[msgKeys.length - 1]];
         if (!lastMsg || !lastMsg.senderId) return;
+        // Ignora mensagens que já existiam antes do listener ser registrado
+        if (lastMsg.timestamp && lastMsg.timestamp < listenStartTime) return;
         if (lastMsg.senderId !== currentUser.uid && lastMsg.status === 'sending') {
             if (blockedUsers[lastMsg.senderId]) return;
             if (silencedUsers[lastMsg.senderId]) return;
@@ -367,8 +371,8 @@ function openChatRoom(chatId, recipientData) {
     activeRecipientId = recipientData.uid;
     replyingTo        = null;
     document.getElementById('reply-bar').classList.add('hidden');
-    document.getElementById('active-chat-name').innerText  = getDisplayName(recipientData);
-    document.getElementById('active-chat-avatar').src      = recipientData.avatar;
+    document.getElementById('active-chat-name').innerText  = getDisplayName(recipientData) || recipientData.nickname || 'Usuário';
+    document.getElementById('active-chat-avatar').src      = recipientData.avatar || "https://via.placeholder.com/150";
     document.getElementById('chat-room-screen').classList.remove('hidden');
     
     document.querySelectorAll('.chat-item-row').forEach(el => el.classList.remove('active-desktop-chat'));
@@ -717,7 +721,10 @@ document.getElementById('btn-delete-for-me').addEventListener('click', () => {
     localStorage.setItem('deletedForMe', JSON.stringify(deletedForMe));
     document.getElementById('delete-options-modal').classList.add('hidden');
     if(currentUser.uid === "offline_user") {
-        openChatRoom(activeChatId, {uid: activeRecipientId});
+        const cachedList = JSON.parse(localStorage.getItem('offline_chat_list') || '{}');
+        const cachedChat = cachedList[activeChatId];
+        const recipientObj = cachedChat ? cachedChat.recipient : { uid: activeRecipientId, avatar: "https://via.placeholder.com/150", nickname: "Usuário" };
+        openChatRoom(activeChatId, recipientObj);
     }
 });
 document.getElementById('btn-cancel-delete').addEventListener('click', () => document.getElementById('delete-options-modal').classList.add('hidden'));
@@ -942,14 +949,18 @@ btnSend.addEventListener('click', () => {
 
 function processOfflineQueue() {
     if(offlineMessageQueue.length === 0 || currentUser.uid === "offline_user") return;
-    const item = offlineMessageQueue.shift();
-    localStorage.setItem('offlineMessageQueue', JSON.stringify(offlineMessageQueue));
+    const item = offlineMessageQueue[0];
     database.ref(`chats/${item.chatId}/messages`).push().set({
         ...item.payload,
         status: 'sending',
         timestamp: firebase.database.ServerValue.TIMESTAMP
     }).then(() => {
+        offlineMessageQueue.shift();
+        localStorage.setItem('offlineMessageQueue', JSON.stringify(offlineMessageQueue));
         processOfflineQueue();
+    }).catch(() => {
+        // Mantém o item na fila para tentar novamente depois
+        console.warn("Falha ao enviar mensagem offline, será tentado novamente.");
     });
 }
 
@@ -1003,13 +1014,18 @@ window.addEventListener('touchend', stopAudioRecording);
 function stopAudioRecording() {
     if(!isRecording) return;
     isRecording = false;
+    const recordStopTime = Date.now();
     btnMic.classList.remove('recording');
     triggerAudioOverlayUI(false);
-    if(mediaRecorder) mediaRecorder.stop();
+    if(mediaRecorder) {
+        mediaRecorder._recordStopTime = recordStopTime;
+        mediaRecorder.stop();
+    }
 }
 
 function saveAndSendAudioPayload() {
-    const durationSeconds = Math.max(1, Math.floor((Date.now() - recordStartTime) / 1000));
+    const stopTime = (mediaRecorder && mediaRecorder._recordStopTime) ? mediaRecorder._recordStopTime : Date.now();
+    const durationSeconds = Math.max(1, Math.floor((stopTime - recordStartTime) / 1000));
     const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
     const reader = new FileReader();
     reader.onload = (e) => {
