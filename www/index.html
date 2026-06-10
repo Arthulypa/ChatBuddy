@@ -134,7 +134,6 @@
             <div id="content-calls" class="tab-pane hidden"><div class="empty-state">Nenhuma chamada efetuada.</div></div>
         </div>
 
-        <!-- EMPTY STATE PAINEL DIREITO -->
         <div id="empty-chat-panel" class="empty-chat-panel">
             <svg viewBox="0 0 24 24" style="width:56px;height:56px;opacity:0.2;margin-bottom:16px;"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
             <p style="color:#8e8e93;font-size:14px;font-weight:500;text-align:center;opacity:0.6;">Clique em qualquer mensagem para abrir</p>
@@ -255,18 +254,18 @@
         </div>
     </div>
 
-    <!-- BLUR OVERLAY (menu contexto) -->
+    <!-- BLUR OVERLAY (menu contexto completo e ajustado) -->
     <div id="blur-overlay" class="blur-overlay hidden">
         <div id="focused-container" class="focused-container">
             <div id="focused-message-wrapper" class="focused-message-wrapper"></div>
-            <div class="iphone-context-menu glass-premium" id="context-menu-box">
+            <div class="iphone-context-menu" id="context-menu-box">
                 <div class="context-item" id="ctx-reply-msg">
                     <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
                     Responder
                 </div>
                 <div class="context-item" id="ctx-info-msg">
                     <svg viewBox="0 0 24 24" class="mono-icon-light" style="width:16px; margin-right:8px;"><path fill="currentColor" d="M11 9h2V7h-2v2zm1 11c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-18C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 13h2v-4h-2v4z"/></svg>
-                    Info da Mensagem
+                    Info
                 </div>
                 <div class="context-item" id="ctx-edit-msg">
                     <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
@@ -363,7 +362,6 @@
                         <label>Biografia</label>
                     </div>
                 </div>
-                <!-- Funcionalidade de salvamento local inclusa nativamente nos botões -->
                 <button id="btn-save-account" class="ios-btn-primary" style="margin-top:12px;">Salvar Alterações</button>
                 <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red);margin-top:10px;">Desconectar Conta</button>
             </div>
@@ -405,7 +403,7 @@
         </div>
     </div>
 
-    <!-- MODAL NOVA CONVERSA -->
+    <!-- MODAL NOVA CONVERSA COM BUSCA PRIVADA POR USERNAME -->
     <div id="contacts-modal" class="modal hidden">
         <div class="modal-content glass-premium">
             <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
@@ -414,7 +412,12 @@
                     <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                 </button>
             </div>
-            <div id="contacts-list-modal" class="chats-list"></div>
+            <div class="search-bar-wrapper" style="padding: 0 0 10px 0;">
+                <input type="text" id="search-by-username-input" placeholder="Digite o @ de quem procura...">
+            </div>
+            <div id="contacts-list-modal" class="chats-list">
+                <p id="search-placeholder-text" style="color:var(--text-muted);font-size:13px;text-align:center;padding:20px 10px;">Digite um username iniciando com '@' para iniciar uma busca privada.</p>
+            </div>
         </div>
     </div>
 
