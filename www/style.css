@@ -414,3 +414,118 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .message.received.bubble-last-received {
     border-radius: 6px 18px 18px 18px;
 }
+
+/* ── DESABILITAR SELEÇÃO DE TEXTO NAS MENSAGENS ────────────────── */
+.message,
+.message p,
+.message-wrapper,
+.quoted-msg,
+.audio-message-container,
+.chat-item-row,
+.chat-item-info {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+}
+
+/* ── DESABILITAR SELEÇÃO DE TEXTO NAS MENSAGENS ─────────────────── */
+.message,
+.message p,
+.message-wrapper,
+.quoted-msg,
+.audio-message-container,
+.chat-item-row,
+.chats-list {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+}
+
+/* ── MENU DE ANEXO ────────────────────────────────────────────────── */
+.attach-menu {
+    position: absolute;
+    bottom: 70px;
+    left: 10px;
+    background: rgba(30,30,35,0.97);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 10px;
+    display: flex;
+    gap: 8px;
+    z-index: 200;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.attach-menu-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #fff;
+    font-size: 11px;
+    padding: 4px 8px;
+}
+.attach-menu-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── DOCUMENTO NA MENSAGEM ─────────────────────────────────────────── */
+.doc-message-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 10px;
+    padding: 8px 10px;
+    text-decoration: none;
+    color: #fff;
+    margin-bottom: 4px;
+}
+.doc-name { display: block; font-size: 13px; font-weight: 500; }
+.doc-size { display: block; font-size: 11px; opacity: 0.6; }
+
+/* ── NOME DO REMETENTE NO GRUPO ────────────────────────────────────── */
+.group-sender-name {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #0a84ff;
+    margin-bottom: 3px;
+}
+
+/* ── TAGS DE ROLE (Dono / Admin) ──────────────────────────────────── */
+.member-role-tag {
+    font-size: 10px;
+    border-radius: 8px;
+    padding: 1px 6px;
+    margin-left: 5px;
+    font-weight: 600;
+}
+.owner-tag  { background: rgba(255,159,10,0.25); color: #ff9f0a; }
+.admin-tag  { background: rgba(10,132,255,0.25); color: #0a84ff; }
+
+/* ── GROUP ROOM (reutiliza estilos do chat-room-screen) ────────────── */
+#group-room-screen {
+    position: absolute;
+    inset: 0;
+    z-index: 50;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-primary);
+}
+#group-room-screen.hidden { display: none !important; }
+
+/* ── CHIP DE MEMBRO SELECIONADO ───────────────────────────────────── */
+#group-selected-members { min-height: 28px; }
