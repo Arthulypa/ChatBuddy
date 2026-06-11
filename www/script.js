@@ -117,21 +117,65 @@ document.getElementById('btn-send-code').addEventListener('click', () => {
     const email = document.getElementById('email-reg').value.trim();
     const pass  = document.getElementById('password-reg').value;
     if (!email || !pass) return alert("Insira credenciais válidas.");
-    document.getElementById('reg-step-1').classList.add('hidden');
-    document.getElementById('reg-step-2').classList.remove('hidden');
+    if (pass.length < 6) return alert("A senha deve ter pelo menos 6 caracteres.");
+
+    const btn = document.getElementById('btn-send-code');
+    btn.disabled = true; btn.innerText = 'Enviando...';
+
+    // Cria a conta temporariamente para enviar o email de verificação
+    auth.createUserWithEmailAndPassword(email, pass)
+        .then(cred => {
+            return cred.user.sendEmailVerification().then(() => {
+                // Salva as credenciais para usar após verificação
+                localStorage.setItem('pendingReg', JSON.stringify({ email, pass: btoa(unescape(encodeURIComponent(pass))) }));
+                // Faz logout temporário — usuário só entra após verificar
+                return auth.signOut();
+            });
+        })
+        .then(() => {
+            btn.disabled = false; btn.innerText = 'Enviar Código';
+            document.getElementById('reg-step-1').classList.add('hidden');
+            document.getElementById('reg-step-2').classList.remove('hidden');
+            document.getElementById('reg-step-2-info').innerText = `Enviamos um link de verificação para ${email}. Após clicar no link, volte aqui e pressione "Já verifiquei".`;
+        })
+        .catch(err => {
+            btn.disabled = false; btn.innerText = 'Enviar Código';
+            const msgs = {
+                'auth/email-already-in-use': 'Este e-mail já está cadastrado.',
+                'auth/invalid-email': 'E-mail inválido.',
+                'auth/weak-password': 'Senha muito fraca (mínimo 6 caracteres).',
+                'auth/network-request-failed': 'Sem conexão com a internet.'
+            };
+            alert(msgs[err.code] || 'Erro: ' + err.message);
+        });
 });
 
 document.getElementById('btn-verify-and-register').addEventListener('click', () => {
-    const code = document.getElementById('verification-code-input').value.trim();
-    if (code !== "123456") return alert("Código inválido!");
-    const email = document.getElementById('email-reg').value.trim();
-    const pass  = document.getElementById('password-reg').value;
-    auth.createUserWithEmailAndPassword(email, pass)
-        .then(() => {
-            localStorage.setItem('localLoggedUser', JSON.stringify({email, pass: btoa(unescape(encodeURIComponent(pass)))}));
+    const pending = localStorage.getItem('pendingReg');
+    if (!pending) return alert("Sessão expirada. Tente novamente.");
+    const { email, pass } = JSON.parse(pending);
+    const decodedPass = decodeURIComponent(escape(atob(pass)));
+
+    const btn = document.getElementById('btn-verify-and-register');
+    btn.disabled = true; btn.innerText = 'Verificando...';
+
+    auth.signInWithEmailAndPassword(email, decodedPass)
+        .then(cred => {
+            if (!cred.user.emailVerified) {
+                auth.signOut();
+                btn.disabled = false; btn.innerText = 'Já verifiquei';
+                alert("E-mail ainda não verificado. Clique no link que enviamos e tente novamente.");
+                return;
+            }
+            localStorage.removeItem('pendingReg');
+            localStorage.setItem('localLoggedUser', JSON.stringify({ email, pass }));
+            btn.disabled = false; btn.innerText = 'Já verifiquei';
             changeView('profile');
         })
-        .catch(err => alert("Erro: " + err.message));
+        .catch(err => {
+            btn.disabled = false; btn.innerText = 'Já verifiquei';
+            alert("Erro ao verificar: " + err.message);
+        });
 });
 
 document.getElementById('btn-google-login').addEventListener('click', () => {
@@ -207,6 +251,48 @@ function setupPresenceSystem(userId) {
     });
 }
 
+// ─── NOTIFICAÇÕES NATIVAS (Web Notifications API + Capacitor) ────────────────
+function setupPushNotifications() {
+    if (!('Notification' in window)) return;
+    if (Notification.permission === 'granted') return;
+    if (Notification.permission !== 'denied') {
+        Notification.requestPermission();
+    }
+}
+
+function sendNativeNotification(title, body, iconUrl) {
+    // Não dispara se o app estiver em foco e o chat do remetente aberto
+    if (document.visibilityState === 'visible' && activeChatId) return;
+
+    const muteToggle = document.getElementById('toggle-mute-all');
+    if (muteToggle && muteToggle.checked) return;
+
+    if (Notification.permission !== 'granted') {
+        Notification.requestPermission().then(perm => {
+            if (perm === 'granted') _fireNotification(title, body, iconUrl);
+        });
+        return;
+    }
+    _fireNotification(title, body, iconUrl);
+}
+
+function _fireNotification(title, body, iconUrl) {
+    try {
+        const n = new Notification(title, {
+            body: body,
+            icon: iconUrl || '',
+            badge: iconUrl || '',
+            vibrate: [200, 100, 200],
+            tag: 'chatbuddy-msg',          // agrupa notificações do mesmo app
+            renotify: true,
+            silent: false
+        });
+        n.onclick = () => { window.focus(); n.close(); };
+    } catch(e) {
+        console.warn('Notification error:', e);
+    }
+}
+
 function listenToGlobalMessages() {
     if (currentUser.uid === "offline_user") return;
     const listenStartTime = Date.now();
@@ -216,17 +302,21 @@ function listenToGlobalMessages() {
         const msgKeys = Object.keys(chat.messages);
         const lastMsg = chat.messages[msgKeys[msgKeys.length - 1]];
         if (!lastMsg || !lastMsg.senderId) return;
-        // Ignora mensagens que já existiam antes do listener ser registrado
         if (lastMsg.timestamp && lastMsg.timestamp < listenStartTime) return;
         if (lastMsg.senderId !== currentUser.uid && lastMsg.status === 'sending') {
             if (blockedUsers[lastMsg.senderId]) return;
             if (silencedUsers[lastMsg.senderId]) return;
-            const toggle = document.getElementById('toggle-popup-global');
-            if (!toggle || !toggle.checked) return;
             database.ref(`users/${lastMsg.senderId}`).once('value', uSnap => {
                 const sender = uSnap.val();
                 if (!sender) return;
-                triggerPremiumPopup(sender, lastMsg.text || "Enviou uma mídia");
+                const msgText = lastMsg.text || (lastMsg.audio ? '🎵 Áudio' : '📷 Mídia');
+                // Popup in-app
+                const toggle = document.getElementById('toggle-popup-global');
+                if (toggle && toggle.checked) {
+                    triggerPremiumPopup(sender, msgText);
+                }
+                // Notificação nativa do sistema
+                sendNativeNotification(sender.nickname || 'Nova mensagem', msgText, sender.avatar || '');
             });
         }
     });
@@ -255,6 +345,7 @@ auth.onAuthStateChanged(user => {
                 updateHeaderUserInfo();
                 listenToGlobalMessages();
                 listenToChatRequests();
+                setupPushNotifications();
             } else {
                 changeView('profile');
             }
@@ -292,10 +383,10 @@ function formatLastSeen(timestamp) {
 function buildTicks(status) {
     if (!status) return '';
     switch (status) {
-        case 'offline_pending': return `<span style="color:var(--text-muted); font-size:11px;">🕒</span>`;
-        case 'sending':   return `<div class="status-dot-wrapper"><span class="status-dot dot-sending"></span></div>`;
-        case 'sent':      return `<div class="status-dot-wrapper"><span class="status-dot dot-sent"></span></div>`;
-        case 'delivered': return `<div class="status-dot-wrapper"><span class="status-dot dot-delivered"></span><span class="status-dot dot-delivered"></span></div>`;
+        case 'offline_pending': return `<div class="status-dot-wrapper"><span class="status-dot dot-sending"></span></div>`;
+        case 'sending':   return `<div class="status-dot-wrapper"><span class="status-dot dot-sending blink"></span></div>`;
+        case 'sent':      return `<div class="status-dot-wrapper"><span class="status-dot dot-sent"></span><span class="status-dot dot-sent"></span></div>`;
+        case 'delivered': return `<div class="status-dot-wrapper"><span class="status-dot dot-sent"></span><span class="status-dot dot-sent"></span></div>`;
         case 'read':      return `<div class="status-dot-wrapper"><span class="status-dot dot-read"></span><span class="status-dot dot-read"></span></div>`;
     }
     return '';
@@ -546,6 +637,11 @@ function playAudioMessage(src, btn) {
     }
 
     const audio = new Audio(src);
+    audio.volume = 1.0;
+    // Força volume de mídia (não chamada) no Android WebView
+    if (typeof audio.mozAudioChannelType !== 'undefined') {
+        audio.mozAudioChannelType = 'content';
+    }
     window.currentPlayingAudio = audio;
     window.currentPlayingAudioContainer = container;
 
@@ -831,22 +927,31 @@ function loadChatList() {
         });
 
         rawChats.sort((a,b) => b.lastTimestamp - a.lastTimestamp);
-        
-        const cacheListRows = {};
+
         if(rawChats.length === 0) {
             listContainer.innerHTML = `<div class="empty-state">Nenhuma conversa ativa.</div>`;
             return;
         }
 
-        rawChats.forEach(item => {
+        // Busca todos os usuários em paralelo e só renderiza quando TODOS chegaram
+        const cacheListRows = {};
+        let resolved = 0;
+        const results = new Array(rawChats.length).fill(null);
+
+        rawChats.forEach((item, idx) => {
             database.ref(`users/${item.recipientId}`).once('value', uSnap => {
                 const uData = uSnap.val();
-                if (!uData) return;
-
-                cacheListRows[item.chatId] = { chatId: item.chatId, recipient: uData, lastTimestamp: item.lastTimestamp, chatData: item.chatData };
-                localStorage.setItem('offline_chat_list', JSON.stringify(cacheListRows));
-
-                createChatRowElement(item.chatId, uData, item.chatData);
+                resolved++;
+                if (uData) results[idx] = { chatId: item.chatId, uData, chatData: item.chatData };
+                if (resolved === rawChats.length) {
+                    listContainer.innerHTML = '';
+                    results.forEach(r => {
+                        if (!r) return;
+                        cacheListRows[r.chatId] = { chatId: r.chatId, recipient: r.uData, chatData: r.chatData };
+                        createChatRowElement(r.chatId, r.uData, r.chatData);
+                    });
+                    localStorage.setItem('offline_chat_list', JSON.stringify(cacheListRows));
+                }
             });
         });
     });
