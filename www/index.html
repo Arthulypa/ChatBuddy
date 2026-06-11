@@ -118,6 +118,7 @@
         </header>
         <nav class="app-tabs glass-premium">
             <div class="tab-item active" id="tab-chats">Conversas <span id="requests-badge" class="requests-badge hidden"></span></div>
+            <div class="tab-item" id="tab-groups">Grupos</div>
             <div class="tab-item" id="tab-status">Status</div>
             <div class="tab-item" id="tab-calls">Chamadas</div>
         </nav>
@@ -139,6 +140,12 @@
             </div>
             <div id="content-status" class="tab-pane hidden"><div class="empty-state">Nenhum status postado.</div></div>
             <div id="content-calls" class="tab-pane hidden"><div class="empty-state">Nenhuma chamada efetuada.</div></div>
+            <div id="content-groups" class="tab-pane hidden">
+                <div id="groups-list" class="chats-list"></div>
+                <button id="btn-new-group" class="btn-fab">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+                </button>
+            </div>
         </div>
 
         <!-- EMPTY STATE PAINEL DIREITO -->
@@ -189,11 +196,33 @@
             </div>
 
             <footer id="chat-footer-area" class="chat-footer glass-premium">
+                <!-- MENU DE ANEXO -->
+                <div id="attach-menu" class="attach-menu hidden">
+                    <button class="attach-menu-item" id="attach-image">
+                        <span class="attach-menu-icon" style="background:#0a84ff;">
+                            <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                        </span>
+                        <span>Foto</span>
+                    </button>
+                    <button class="attach-menu-item" id="attach-video">
+                        <span class="attach-menu-icon" style="background:#30d158;">
+                            <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                        </span>
+                        <span>Vídeo</span>
+                    </button>
+                    <button class="attach-menu-item" id="attach-doc">
+                        <span class="attach-menu-icon" style="background:#ff9f0a;">
+                            <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                        </span>
+                        <span>Arquivo</span>
+                    </button>
+                </div>
                 <div class="footer-input-row" id="footer-input-row">
                     <button id="btn-attach" class="attach-btn" style="background:none; border:none; cursor:pointer;">
                         <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-2.76 2.24-5 5-5s5 2.24 5 5v12.5c0 3.31-2.69 6-6 6s-6-2.69-6-6V6h2v11.5c0 2.21 1.79 4 4 4s4-1.79 4-4V5c0-1.66-1.34-3-3-3s-3 1.34-3 3v12.5c0 1.1.9 2 2 2s2-.9 2-2V6h2z"/></svg>
                     </button>
                     <input type="file" id="media-file-input" class="hidden" accept="image/*,video/*">
+                    <input type="file" id="doc-file-input" class="hidden" accept=".pdf,.doc,.docx,.txt,.zip,.xls,.xlsx,.ppt,.pptx">
                     <input type="text" id="message-input" placeholder="Mensagem">
                 </div>
                 <button id="btn-send" class="btn-send-round hidden">
@@ -444,6 +473,123 @@
                 </button>
             </div>
             <div id="requests-list" class="chats-list" style="max-height:60dvh;overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- MODAL CRIAR GRUPO -->
+    <div id="create-group-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:360px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:15px;">
+                <h3>Criar Grupo</h3>
+                <button id="btn-close-create-group" class="back-btn">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div class="avatar-upload-container-premium" style="margin-bottom:12px;">
+                <div class="avatar-preview-wrapper">
+                    <img id="group-avatar-preview" src="" class="hidden" style="width:64px;height:64px;border-radius:50%;object-fit:cover;">
+                    <div id="group-avatar-placeholder" style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
+                        <svg viewBox="0 0 24 24" style="width:28px;height:28px;opacity:0.5;"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    </div>
+                </div>
+                <label for="group-avatar-file" class="avatar-file-label-premium" style="font-size:12px;">Foto do Grupo</label>
+                <input type="file" id="group-avatar-file" accept="image/*" class="hidden">
+            </div>
+            <div class="input-group-premium" style="margin-bottom:12px;">
+                <input type="text" id="group-name-input" placeholder=" " maxlength="50">
+                <label>Nome do Grupo</label>
+            </div>
+            <div class="input-group-premium" style="margin-bottom:12px;">
+                <input type="text" id="group-desc-input" placeholder=" " maxlength="120">
+                <label>Descrição (opcional)</label>
+            </div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Adicionar membros (busque pelo @):</p>
+            <div class="search-bar-wrapper" style="padding:0 0 8px 0;">
+                <input type="text" id="group-member-search" placeholder="Ex: @usuario">
+            </div>
+            <div id="group-member-results" class="chats-list" style="max-height:140px;overflow-y:auto;margin-bottom:10px;"></div>
+            <div id="group-selected-members" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;min-height:28px;"></div>
+            <button id="btn-confirm-create-group" class="ios-btn-primary">Criar Grupo</button>
+        </div>
+    </div>
+
+    <!-- TELA DE CHAT DE GRUPO -->
+    <div id="group-room-screen" class="chat-room-screen hidden">
+        <header class="chat-header glass-premium">
+            <button id="btn-back-group" class="back-btn">
+                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+            <div class="active-user-info" id="btn-open-group-info" style="cursor:pointer;">
+                <div class="header-avatar-container">
+                    <img id="active-group-avatar" class="header-avatar" src="" alt="">
+                </div>
+                <div>
+                    <h2 id="active-group-name">Grupo</h2>
+                    <p id="active-group-members-count" style="font-size:11px;color:var(--text-muted);">0 membros</p>
+                </div>
+            </div>
+            <button id="btn-group-menu" class="icon-btn-dots">
+                <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+            </button>
+        </header>
+        <div id="group-messages-container" class="messages-container"></div>
+        <div id="group-reply-bar" class="reply-bar hidden">
+            <div class="reply-bar-indicator"></div>
+            <div class="reply-bar-content">
+                <span class="reply-bar-label">Respondendo</span>
+                <p id="group-reply-bar-text" class="reply-bar-msg"></p>
+            </div>
+            <button id="btn-cancel-group-reply" class="reply-cancel-btn">
+                <svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+        </div>
+        <div id="group-readonly-banner" class="blocked-chat-banner hidden" style="justify-content:center;">
+            <svg viewBox="0 0 24 24" style="width:15px;height:15px;margin-right:6px;"><path fill="currentColor" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            Apenas admins podem enviar mensagens
+        </div>
+        <footer id="group-footer-area" class="chat-footer glass-premium">
+            <div class="footer-input-row">
+                <button id="btn-group-attach" class="attach-btn" style="background:none;border:none;cursor:pointer;">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-2.76 2.24-5 5-5s5 2.24 5 5v12.5c0 3.31-2.69 6-6 6s-6-2.69-6-6V6h2v11.5c0 2.21 1.79 4 4 4s4-1.79 4-4V5c0-1.66-1.34-3-3-3s-3 1.34-3 3v12.5c0 1.1.9 2 2 2s2-.9 2-2V6h2z"/></svg>
+                </button>
+                <input type="file" id="group-media-input" class="hidden" accept="image/*,video/*">
+                <input type="text" id="group-message-input" placeholder="Mensagem">
+            </div>
+            <button id="btn-group-send" class="btn-send-round hidden">
+                <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:16px;height:16px;transform:rotate(-45deg) translate(2px,-1px);"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+            <button id="btn-group-mic" class="btn-mic-round">
+                <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+            </button>
+        </footer>
+    </div>
+
+    <!-- SHEET INFO DO GRUPO -->
+    <div id="group-info-sheet" class="ios-dropdown-overlay hidden">
+        <div class="profile-detail-card glass-premium">
+            <div class="profile-detail-header">
+                <img id="sheet-group-avatar" src="" alt="" class="avatar-detail-large">
+                <h3 id="sheet-group-name">Grupo</h3>
+                <p id="sheet-group-desc" style="font-size:13px;color:var(--text-muted);text-align:center;margin-top:4px;"></p>
+            </div>
+            <div id="sheet-group-members-list" class="chats-list" style="max-height:45dvh;overflow-y:auto;margin:10px 0;"></div>
+            <div id="group-admin-actions" class="hidden" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+                <button id="btn-add-group-member" class="ios-btn-primary" style="font-size:13px;padding:10px;">+ Adicionar Membro</button>
+            </div>
+            <button id="btn-leave-group" class="action-danger-btn" style="margin-bottom:8px;">Sair do Grupo</button>
+            <button id="btn-close-group-info" class="btn-profile-close">Fechar</button>
+        </div>
+    </div>
+
+    <!-- MODAL ADICIONAR MEMBRO AO GRUPO -->
+    <div id="add-member-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:340px;">
+            <h3 style="margin-bottom:12px;text-align:center;">Adicionar Membro</h3>
+            <div class="search-bar-wrapper" style="padding:0 0 8px 0;">
+                <input type="text" id="add-member-search" placeholder="Buscar pelo @">
+            </div>
+            <div id="add-member-results" class="chats-list" style="max-height:200px;overflow-y:auto;"></div>
+            <button id="btn-close-add-member" class="btn-profile-close" style="margin-top:10px;">Cancelar</button>
         </div>
     </div>
 
