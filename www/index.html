@@ -65,12 +65,8 @@
                 <button id="btn-send-code" class="ios-btn-primary">Enviar Código</button>
             </div>
             <div id="reg-step-2" class="hidden">
-                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">Insira o código de 6 dígitos (Simulado: 123456).</p>
-                <div class="input-group-premium">
-                    <input type="text" id="verification-code-input" maxlength="6" style="text-align: center; font-size: 22px; letter-spacing: 6px;" required placeholder=" ">
-                    <label>Código</label>
-                </div>
-                <button id="btn-verify-and-register" class="ios-btn-primary">Verificar e Criar</button>
+                <p id="reg-step-2-info" style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;">Enviamos um link de verificação para o seu e-mail. Após clicar no link, volte aqui e pressione o botão abaixo.</p>
+                <button id="btn-verify-and-register" class="ios-btn-primary">Já verifiquei ✓</button>
             </div>
             <p class="auth-switch" style="margin-top:20px;">Já tem uma conta? <span id="btn-to-login">Fazer Login</span></p>
         </div>
@@ -454,6 +450,11 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
