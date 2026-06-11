@@ -25,6 +25,14 @@ let customNicknames    = JSON.parse(localStorage.getItem('customNicknames') || '
 let offlineMessageQueue = JSON.parse(localStorage.getItem('offlineMessageQueue') || '[]');
 let replyingTo         = null;    
 let longPressTimer     = null;
+let activeGroupId      = null;
+let activeGroupData    = null;
+let groupReplyingTo    = null;
+let groupAvatarString  = "";
+
+// Admins do grupo principal
+const MAIN_GROUP_ADMINS = ['@arthurscs', '@arthur', '@julioeeu'];
+const MAIN_GROUP_ID_KEY = 'chatbuddy_main_group_id';
 
 // Variáveis para Gravação de Áudio
 let mediaRecorder = null;
@@ -350,6 +358,7 @@ auth.onAuthStateChanged(user => {
                 listenToGlobalMessages();
                 listenToChatRequests();
                 setupPushNotifications();
+                ensureMainGroup();
             } else {
                 changeView('profile');
             }
@@ -596,6 +605,12 @@ function renderMessages(snap, recipientData, isRawArray = false) {
             content += `<img src="${data.image}" class="message-img media-target">`;
         } else if (data.video) {
             content += `<video src="${data.video}" class="message-video media-target" controls></video>`;
+        } else if (data.document) {
+            const sizeKB = data.documentSize ? Math.round(data.documentSize/1024) : '?';
+            content += `<a href="${data.document}" download="${data.documentName || 'arquivo'}" class="doc-message-link" onclick="event.stopPropagation()">
+                <svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><path fill="currentColor" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                <div><span class="doc-name">${data.documentName || 'Arquivo'}</span><span class="doc-size">${sizeKB} KB</span></div>
+            </a>`;
         } else if (data.audio) {
             const durationFormatted = data.audioDuration ? formatAudioTime(data.audioDuration) : "0:00";
             content += `
@@ -764,27 +779,43 @@ function openContextMenu(data, card, wrapper, event) {
     const container = document.getElementById('focused-container');
     overlay.classList.remove('hidden');
 
-    const rect = card.getBoundingClientRect();
-    const vpW = window.innerWidth;
-    const vpH = window.innerHeight;
-    const menuW = 240; 
-    
-    // Força o container a se alinhar na direita ou na esquerda com base no remetente
     container.classList.toggle('align-right', isSent);
     container.classList.toggle('align-left',  !isSent);
 
-    // X: Alinhado no mesmo lado da mensagem original
-    let leftX = isSent ? (rect.right - menuW) : rect.left;
-    if (leftX < 10) leftX = 10;
-    if (leftX + menuW > vpW - 10) leftX = vpW - menuW - 10;
+    // Posiciona fora da tela primeiro para medir a altura real do menu
+    container.style.visibility = 'hidden';
+    container.style.top  = '-9999px';
+    container.style.left = '-9999px';
 
-    // Y: CENTRALIZADO na altura da mensagem para não cortar opções superiores/inferiores
-    let centerRefY = rect.top + (rect.height / 2) - 130; 
-    if (centerRefY < 20) centerRefY = 20;
-    if (centerRefY + 280 > vpH) centerRefY = vpH - 300;
+    requestAnimationFrame(() => {
+        const rect  = card.getBoundingClientRect();
+        const vpW   = window.innerWidth;
+        const vpH   = window.innerHeight;
+        const menuW = 240;
+        const menuH = container.offsetHeight || 320; // altura REAL medida
 
-    container.style.left = leftX + 'px';
-    container.style.top  = centerRefY + 'px';
+        // X
+        let leftX = isSent ? (rect.right - menuW) : rect.left;
+        if (leftX < 10) leftX = 10;
+        if (leftX + menuW > vpW - 10) leftX = vpW - menuW - 10;
+
+        // Y: prefere abaixo, senão acima, senão centraliza
+        let topY;
+        if (vpH - rect.bottom >= menuH + 16) {
+            topY = rect.bottom + 6;
+        } else if (rect.top >= menuH + 16) {
+            topY = rect.top - menuH - 6;
+        } else {
+            topY = rect.top + (rect.height / 2) - (menuH / 2);
+        }
+
+        if (topY < 10) topY = 10;
+        if (topY + menuH > vpH - 10) topY = vpH - menuH - 10;
+
+        container.style.left = leftX + 'px';
+        container.style.top  = topY + 'px';
+        container.style.visibility = 'visible';
+    });
 }
 
 // ─── AÇÕES DO MENU DE CONTEXTO ───────────────────────────────────────────────
@@ -1022,6 +1053,82 @@ function createChatRowElement(chatId, uData, chatData) {
     row.addEventListener('click', () => openChatRoom(chatId, uData));
     listContainer.appendChild(row);
 }
+
+// ─── BOTÃO ANEXAR — MENU DE MÍDIAS ──────────────────────────────────────────
+document.getElementById('btn-attach').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const menu = document.getElementById('attach-menu');
+    menu.classList.toggle('hidden');
+});
+
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('attach-menu');
+    if (!menu.classList.contains('hidden') && !e.target.closest('#attach-menu') && !e.target.closest('#btn-attach')) {
+        menu.classList.add('hidden');
+    }
+});
+
+document.getElementById('attach-image').addEventListener('click', () => {
+    document.getElementById('attach-menu').classList.add('hidden');
+    const input = document.getElementById('media-file-input');
+    input.accept = 'image/*';
+    input.click();
+});
+
+document.getElementById('attach-video').addEventListener('click', () => {
+    document.getElementById('attach-menu').classList.add('hidden');
+    const input = document.getElementById('media-file-input');
+    input.accept = 'video/*';
+    input.click();
+});
+
+document.getElementById('attach-doc').addEventListener('click', () => {
+    document.getElementById('attach-menu').classList.add('hidden');
+    document.getElementById('doc-file-input').click();
+});
+
+document.getElementById('media-file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file || !activeChatId) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        const isVideo = file.type.startsWith('video/');
+        const newMsgRef = database.ref(`chats/${activeChatId}/messages`).push();
+        const payload = {
+            id: newMsgRef.key, senderId: currentUser.uid,
+            [isVideo ? 'video' : 'image']: ev.target.result,
+            timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'sending'
+        };
+        newMsgRef.set(payload).then(() => {
+            database.ref(`chats/${activeChatId}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
+            newMsgRef.update({ status: 'sent' });
+        });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+});
+
+document.getElementById('doc-file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file || !activeChatId) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        const newMsgRef = database.ref(`chats/${activeChatId}/messages`).push();
+        const payload = {
+            id: newMsgRef.key, senderId: currentUser.uid,
+            document: ev.target.result,
+            documentName: file.name,
+            documentSize: file.size,
+            timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'sending'
+        };
+        newMsgRef.set(payload).then(() => {
+            database.ref(`chats/${activeChatId}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
+            newMsgRef.update({ status: 'sent' });
+        });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+});
 
 // ─── ALTERAÇÃO INTERATIVA DE BOTÃO AUDIO/ENVIAR E PREVENÇÃO DE SUMIÇO ───
 const msgInput = document.getElementById('message-input');
@@ -1381,6 +1488,7 @@ document.getElementById('btn-logout').addEventListener('click', () => {
 
 // Navegação de abas nativa principal
 document.getElementById('tab-chats').addEventListener('click', () => switchMainTab('chats'));
+document.getElementById('tab-groups').addEventListener('click', () => { switchMainTab('groups'); loadGroupsList(); });
 document.getElementById('tab-status').addEventListener('click', () => switchMainTab('status'));
 document.getElementById('tab-calls').addEventListener('click', () => switchMainTab('calls'));
 
@@ -1514,3 +1622,585 @@ document.getElementById('requests-banner').addEventListener('click', () => {
     renderRequestsList();
     document.getElementById('requests-modal').classList.remove('hidden');
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ─── SISTEMA DE GRUPOS ─────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Verifica se o username é admin do grupo principal
+function isMainGroupAdmin(username) {
+    return MAIN_GROUP_ADMINS.includes((username || '').toLowerCase());
+}
+
+// Verifica se o usuário atual é admin de um grupo específico
+function isGroupAdmin(groupData) {
+    if (!groupData || !currentUser) return false;
+    return groupData.admins && groupData.admins[currentUser.uid];
+}
+
+// Verifica se o usuário atual é dono de um grupo
+function isGroupOwner(groupData) {
+    if (!groupData || !currentUser) return false;
+    return groupData.ownerUid === currentUser.uid;
+}
+
+// ─── GRUPO PRINCIPAL: Cria se não existir e adiciona o usuário ──────────────
+function ensureMainGroup() {
+    if (!currentUser || currentUser.uid === 'offline_user') return;
+    const cachedProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
+    const myUsername = (cachedProfile.username || '').toLowerCase();
+
+    // Procura o grupo principal pelo nome
+    database.ref('groups').orderByChild('isMainGroup').equalTo(true).once('value', snap => {
+        if (snap.exists()) {
+            // Grupo principal já existe — adiciona o usuário como membro se não estiver
+            snap.forEach(child => {
+                const gId = child.key;
+                const gData = child.val();
+                if (!gData.members || !gData.members[currentUser.uid]) {
+                    const memberRole = isMainGroupAdmin(myUsername) ? 'admin' : 'member';
+                    const updates = {};
+                    updates[`groups/${gId}/members/${currentUser.uid}`] = true;
+                    if (memberRole === 'admin') updates[`groups/${gId}/admins/${currentUser.uid}`] = true;
+                    database.ref().update(updates);
+                }
+            });
+        } else {
+            // Cria o grupo principal
+            const ref = database.ref('groups').push();
+            const adminUids = {}; // será preenchido quando os admins entrarem
+            const payload = {
+                id: ref.key,
+                name: 'ChatBuddy Official',
+                description: 'Grupo oficial do ChatBuddy 🚀',
+                avatar: 'https://cdn-icons-png.flaticon.com/512/906/906343.png',
+                isMainGroup: true,
+                onlyAdminsCanSend: true,
+                ownerUid: currentUser.uid,
+                createdAt: firebase.database.ServerValue.TIMESTAMP,
+                members: { [currentUser.uid]: true },
+                admins: isMainGroupAdmin(myUsername) ? { [currentUser.uid]: true } : {}
+            };
+            ref.set(payload);
+        }
+    });
+}
+
+// ─── LISTAR GRUPOS ──────────────────────────────────────────────────────────
+function loadGroupsList() {
+    if (!currentUser || currentUser.uid === 'offline_user') return;
+    const container = document.getElementById('groups-list');
+    container.innerHTML = '';
+
+    database.ref('groups').on('value', snap => {
+        container.innerHTML = '';
+        if (!snap.exists()) {
+            container.innerHTML = '<div class="empty-state">Nenhum grupo ainda.</div>';
+            return;
+        }
+        let count = 0;
+        snap.forEach(child => {
+            const g = child.val();
+            if (!g || !g.members || !g.members[currentUser.uid]) return;
+            count++;
+            const row = document.createElement('div');
+            row.className = 'chat-item-row';
+            const msgKeys = g.messages ? Object.keys(g.messages) : [];
+            let lastText = 'Nenhuma mensagem';
+            if (msgKeys.length > 0) {
+                const last = g.messages[msgKeys[msgKeys.length - 1]];
+                lastText = last.text || (last.audio ? '🎵 Áudio' : '📷 Mídia');
+            }
+            const badge = g.isMainGroup ? `<span style="font-size:10px;background:#0a84ff;color:#fff;border-radius:8px;padding:1px 6px;margin-left:4px;">Official</span>` : '';
+            row.innerHTML = `
+                <img src="${g.avatar || 'https://cdn-icons-png.flaticon.com/512/906/906343.png'}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">
+                <div class="chat-item-info">
+                    <div class="chat-item-header"><h4>${g.name}${badge}</h4></div>
+                    <p>${lastText}</p>
+                </div>
+            `;
+            row.addEventListener('click', () => openGroupRoom(child.key, g));
+            container.appendChild(row);
+        });
+        if (count === 0) container.innerHTML = '<div class="empty-state">Você não está em nenhum grupo.</div>';
+    });
+}
+
+// ─── ABRIR SALA DE GRUPO ────────────────────────────────────────────────────
+function openGroupRoom(groupId, groupData) {
+    activeGroupId   = groupId;
+    activeGroupData = groupData;
+    groupReplyingTo = null;
+
+    document.getElementById('group-reply-bar').classList.add('hidden');
+    document.getElementById('active-group-name').innerText = groupData.name || 'Grupo';
+    document.getElementById('active-group-avatar').src = groupData.avatar || 'https://cdn-icons-png.flaticon.com/512/906/906343.png';
+
+    const membersCount = groupData.members ? Object.keys(groupData.members).length : 0;
+    document.getElementById('active-group-members-count').innerText = `${membersCount} membros`;
+
+    // Mostra/esconde footer baseado em permissão
+    const footer     = document.getElementById('group-footer-area');
+    const banner     = document.getElementById('group-readonly-banner');
+    const canSend    = !groupData.onlyAdminsCanSend || isGroupAdmin(groupData) || isGroupOwner(groupData);
+    footer.style.display = canSend ? '' : 'none';
+    banner.classList.toggle('hidden', canSend);
+
+    document.getElementById('group-room-screen').classList.remove('hidden');
+    document.getElementById('chat-room-screen').classList.add('hidden');
+
+    // Listener de mensagens
+    database.ref(`groups/${groupId}/messages`).off();
+    database.ref(`groups/${groupId}/messages`).on('value', snap => {
+        renderGroupMessages(snap, groupData);
+    });
+}
+
+// ─── RENDERIZAR MENSAGENS DO GRUPO ──────────────────────────────────────────
+function renderGroupMessages(snap, groupData) {
+    const box = document.getElementById('group-messages-container');
+    const prevScrollBottom = box.scrollHeight - box.scrollTop - box.clientHeight;
+    box.innerHTML = '';
+
+    const allMessages = [];
+    snap.forEach(child => { const d = child.val(); if (d) allMessages.push(d); });
+
+    allMessages.forEach((data, idx) => {
+        const isSent  = data.senderId === currentUser.uid;
+        const prevMsg = idx > 0 ? allMessages[idx - 1] : null;
+        const nextMsg = idx < allMessages.length - 1 ? allMessages[idx + 1] : null;
+        const sameAsPrev = prevMsg && prevMsg.senderId === data.senderId;
+        const sameAsNext = nextMsg && nextMsg.senderId === data.senderId;
+
+        if (data.deletedForAll) {
+            const w = document.createElement('div');
+            w.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+            const c = document.createElement('div');
+            c.className = `message ${isSent ? 'sent' : 'received'} deleted-msg`;
+            c.innerHTML = '<p>🚫 Mensagem apagada</p>';
+            w.appendChild(c); box.appendChild(w); return;
+        }
+
+        const wrapper = document.createElement('div');
+        wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+        if (sameAsPrev) wrapper.classList.add('grouped-msg');
+
+        const card = document.createElement('div');
+        card.className = `message ${isSent ? 'sent' : 'received'}`;
+        if (isSent) {
+            if (sameAsPrev && sameAsNext) card.classList.add('bubble-mid-sent');
+            else if (sameAsPrev) card.classList.add('bubble-last-sent');
+            else if (sameAsNext) card.classList.add('bubble-first-sent');
+        } else {
+            if (sameAsPrev && sameAsNext) card.classList.add('bubble-mid-received');
+            else if (sameAsPrev) card.classList.add('bubble-last-received');
+            else if (sameAsNext) card.classList.add('bubble-first-received');
+        }
+
+        let content = '';
+
+        // Mostra nome do remetente nos grupos (exceto para mensagens próprias ou agrupadas)
+        if (!isSent && !sameAsPrev) {
+            content += `<span class="group-sender-name">${data.senderNickname || 'Usuário'}</span>`;
+        }
+
+        if (data.replyTo) {
+            const who = data.replyTo.senderId === currentUser.uid ? 'Você' : data.replyTo.senderNickname || 'Usuário';
+            content += `<div class="quoted-msg"><span>${who}</span>${data.replyTo.text || '📷 Mídia'}</div>`;
+        }
+
+        if (data.image) content += `<img src="${data.image}" class="message-img media-target">`;
+        else if (data.video) content += `<video src="${data.video}" class="message-video media-target" controls></video>`;
+        else if (data.audio) {
+            const dur = data.audioDuration ? formatAudioTime(data.audioDuration) : '0:00';
+            content += `<div class="audio-message-container">
+                <button class="audio-play-btn" onclick="playAudioMessage('${data.audio}', this)">
+                    <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                <div class="audio-progress-bar-wrapper"><div class="audio-progress-bar-fill"></div></div>
+                <span class="audio-duration-tag">${dur}</span>
+            </div>`;
+        }
+
+        content += data.text ? `<p>${data.text}</p>` : '';
+        if (data.edited) content += `<span class="edited-tag">Editada</span>`;
+        const ticks = isSent ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
+        card.innerHTML = content + ticks;
+
+        wrapper.appendChild(card);
+        box.appendChild(wrapper);
+    });
+
+    if (prevScrollBottom < 80) box.scrollTop = box.scrollHeight;
+    bindMediaViewerEvents();
+}
+
+// ─── ENVIAR MENSAGEM NO GRUPO ───────────────────────────────────────────────
+const groupMsgInput = document.getElementById('group-message-input');
+const btnGroupSend  = document.getElementById('btn-group-send');
+const btnGroupMic   = document.getElementById('btn-group-mic');
+
+groupMsgInput.addEventListener('input', () => {
+    if (groupMsgInput.value.trim().length > 0) {
+        btnGroupSend.classList.remove('hidden');
+        btnGroupMic.classList.add('hidden');
+    } else {
+        btnGroupSend.classList.add('hidden');
+        btnGroupMic.classList.remove('hidden');
+    }
+});
+
+btnGroupSend.addEventListener('click', () => {
+    const txt = groupMsgInput.value.trim();
+    if (!txt || !activeGroupId) return;
+
+    const cachedProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
+    const ref = database.ref(`groups/${activeGroupId}/messages`).push();
+    const payload = {
+        id: ref.key, senderId: currentUser.uid,
+        senderNickname: cachedProfile.nickname || 'Usuário',
+        senderAvatar: cachedProfile.avatar || '',
+        text: txt, timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'sent'
+    };
+    if (groupReplyingTo) { payload.replyTo = groupReplyingTo; }
+
+    groupMsgInput.value = '';
+    btnGroupSend.classList.add('hidden');
+    btnGroupMic.classList.remove('hidden');
+    groupReplyingTo = null;
+    document.getElementById('group-reply-bar').classList.add('hidden');
+
+    ref.set(payload).then(() => {
+        database.ref(`groups/${activeGroupId}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
+    });
+});
+
+document.getElementById('btn-cancel-group-reply').addEventListener('click', () => {
+    groupReplyingTo = null;
+    document.getElementById('group-reply-bar').classList.add('hidden');
+});
+
+// Anexo no grupo
+document.getElementById('btn-group-attach').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('group-media-input').click();
+});
+
+document.getElementById('group-media-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file || !activeGroupId) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        const isVideo = file.type.startsWith('video/');
+        const cachedProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
+        const ref = database.ref(`groups/${activeGroupId}/messages`).push();
+        const payload = {
+            id: ref.key, senderId: currentUser.uid,
+            senderNickname: cachedProfile.nickname || 'Usuário',
+            [isVideo ? 'video' : 'image']: ev.target.result,
+            timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'sent'
+        };
+        ref.set(payload).then(() => {
+            database.ref(`groups/${activeGroupId}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
+        });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+});
+
+// ─── VOLTAR DO GRUPO ────────────────────────────────────────────────────────
+document.getElementById('btn-back-group').addEventListener('click', () => {
+    document.getElementById('group-room-screen').classList.add('hidden');
+    if (activeGroupId) database.ref(`groups/${activeGroupId}/messages`).off();
+    activeGroupId   = null;
+    activeGroupData = null;
+});
+
+// ─── INFO DO GRUPO ──────────────────────────────────────────────────────────
+document.getElementById('btn-open-group-info').addEventListener('click', () => openGroupInfoSheet());
+document.getElementById('btn-close-group-info').addEventListener('click', () => {
+    document.getElementById('group-info-sheet').classList.add('hidden');
+});
+
+function openGroupInfoSheet() {
+    if (!activeGroupId || !activeGroupData) return;
+    const g = activeGroupData;
+    document.getElementById('sheet-group-name').innerText = g.name || 'Grupo';
+    document.getElementById('sheet-group-desc').innerText = g.description || '';
+    document.getElementById('sheet-group-avatar').src = g.avatar || 'https://cdn-icons-png.flaticon.com/512/906/906343.png';
+
+    const adminActions = document.getElementById('group-admin-actions');
+    const canManage = isGroupAdmin(g) || isGroupOwner(g);
+    adminActions.classList.toggle('hidden', !canManage);
+    adminActions.style.display = canManage ? 'flex' : 'none';
+
+    // Renderiza lista de membros
+    const list = document.getElementById('sheet-group-members-list');
+    list.innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:12px;">Carregando membros...</div>';
+
+    if (!g.members) { list.innerHTML = ''; return; }
+
+    const memberUids = Object.keys(g.members);
+    list.innerHTML = '';
+    let loaded = 0;
+    const memberEls = new Array(memberUids.length);
+
+    memberUids.forEach((uid, idx) => {
+        database.ref(`users/${uid}`).once('value', snap => {
+            const u = snap.val() || { nickname: 'Usuário', avatar: '', username: '' };
+            const isOwner = g.ownerUid === uid;
+            const isAdmin = g.admins && g.admins[uid];
+            const tag = isOwner ? `<span class="member-role-tag owner-tag">Dono</span>`
+                      : isAdmin ? `<span class="member-role-tag admin-tag">Admin</span>`
+                      : '';
+
+            const row = document.createElement('div');
+            row.className = 'chat-item-row';
+            row.style.padding = '8px 4px';
+            row.innerHTML = `
+                <img src="${u.avatar || 'https://via.placeholder.com/150'}" alt="" style="width:38px;height:38px;border-radius:50%;object-fit:cover;">
+                <div class="chat-item-info">
+                    <div class="chat-item-header"><h4>${u.nickname || 'Usuário'}${tag}</h4></div>
+                    <p>${u.username || ''}</p>
+                </div>
+                ${canManage && !isOwner && uid !== currentUser.uid ? `
+                <div style="display:flex;flex-direction:column;gap:4px;margin-left:auto;">
+                    <button onclick="toggleGroupAdmin('${uid}','${isAdmin}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;">
+                        ${isAdmin ? 'Remover Admin' : 'Tornar Admin'}
+                    </button>
+                    <button onclick="removeGroupMember('${uid}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:none;background:rgba(255,59,48,0.2);color:#ff3b30;cursor:pointer;">Remover</button>
+                </div>` : ''}
+            `;
+            memberEls[idx] = row;
+            loaded++;
+            if (loaded === memberUids.length) {
+                memberEls.forEach(el => { if (el) list.appendChild(el); });
+            }
+        });
+    });
+
+    document.getElementById('group-info-sheet').classList.remove('hidden');
+}
+
+function toggleGroupAdmin(uid, currentlyAdmin) {
+    if (!activeGroupId) return;
+    const ref = database.ref(`groups/${activeGroupId}/admins/${uid}`);
+    if (currentlyAdmin === 'true' || currentlyAdmin === true) {
+        ref.remove();
+    } else {
+        ref.set(true);
+    }
+    // Recarrega info
+    database.ref(`groups/${activeGroupId}`).once('value', s => {
+        activeGroupData = s.val();
+        openGroupInfoSheet();
+    });
+}
+
+function removeGroupMember(uid) {
+    if (!activeGroupId) return;
+    if (!confirm('Remover este membro do grupo?')) return;
+    const updates = {};
+    updates[`groups/${activeGroupId}/members/${uid}`] = null;
+    updates[`groups/${activeGroupId}/admins/${uid}`]  = null;
+    database.ref().update(updates).then(() => {
+        database.ref(`groups/${activeGroupId}`).once('value', s => {
+            activeGroupData = s.val();
+            openGroupInfoSheet();
+        });
+    });
+}
+
+// ─── SAIR DO GRUPO ──────────────────────────────────────────────────────────
+document.getElementById('btn-leave-group').addEventListener('click', () => {
+    if (!activeGroupId) return;
+    if (activeGroupData && activeGroupData.isMainGroup) {
+        alert('Você não pode sair do grupo oficial do ChatBuddy.');
+        return;
+    }
+    if (!confirm('Sair deste grupo?')) return;
+    const updates = {};
+    updates[`groups/${activeGroupId}/members/${currentUser.uid}`] = null;
+    updates[`groups/${activeGroupId}/admins/${currentUser.uid}`]  = null;
+    database.ref().update(updates).then(() => {
+        document.getElementById('group-info-sheet').classList.add('hidden');
+        document.getElementById('group-room-screen').classList.add('hidden');
+        activeGroupId = null; activeGroupData = null;
+        loadGroupsList();
+    });
+});
+
+// ─── ADICIONAR MEMBRO AO GRUPO ──────────────────────────────────────────────
+document.getElementById('btn-add-group-member').addEventListener('click', () => {
+    document.getElementById('add-member-modal').classList.remove('hidden');
+    document.getElementById('add-member-search').value = '';
+    document.getElementById('add-member-results').innerHTML = '';
+});
+
+document.getElementById('btn-close-add-member').addEventListener('click', () => {
+    document.getElementById('add-member-modal').classList.add('hidden');
+});
+
+let _addMemberDebounce = null;
+document.getElementById('add-member-search').addEventListener('input', () => {
+    clearTimeout(_addMemberDebounce);
+    _addMemberDebounce = setTimeout(() => {
+        const term = document.getElementById('add-member-search').value.trim().toLowerCase();
+        const results = document.getElementById('add-member-results');
+        results.innerHTML = '';
+        if (!term.includes('@') || term.length < 3) {
+            results.innerHTML = '<div class="empty-state" style="font-size:12px;padding:10px;">Digite @usuario para buscar</div>';
+            return;
+        }
+        database.ref('users').once('value', snap => {
+            let count = 0;
+            snap.forEach(child => {
+                const u = child.val();
+                if (!u || u.uid === currentUser.uid) return;
+                if (activeGroupData && activeGroupData.members && activeGroupData.members[u.uid]) return;
+                if ((u.username || '').toLowerCase().includes(term)) {
+                    count++;
+                    const row = document.createElement('div');
+                    row.className = 'chat-item-row';
+                    row.innerHTML = `
+                        <img src="${u.avatar || ''}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+                        <div class="chat-item-info"><h4>${u.nickname}</h4><p>${u.username}</p></div>
+                        <button style="margin-left:auto;font-size:12px;padding:5px 10px;border-radius:10px;border:none;background:#0a84ff;color:#fff;cursor:pointer;">Adicionar</button>
+                    `;
+                    row.querySelector('button').addEventListener('click', () => {
+                        database.ref(`groups/${activeGroupId}/members/${u.uid}`).set(true).then(() => {
+                            document.getElementById('add-member-modal').classList.add('hidden');
+                            database.ref(`groups/${activeGroupId}`).once('value', s => {
+                                activeGroupData = s.val();
+                                const mc = activeGroupData.members ? Object.keys(activeGroupData.members).length : 0;
+                                document.getElementById('active-group-members-count').innerText = `${mc} membros`;
+                                openGroupInfoSheet();
+                            });
+                        });
+                    });
+                    results.appendChild(row);
+                }
+            });
+            if (count === 0) results.innerHTML = '<div class="empty-state" style="font-size:12px;padding:10px;">Nenhum usuário encontrado.</div>';
+        });
+    }, 300);
+});
+
+// ─── CRIAR GRUPO ────────────────────────────────────────────────────────────
+const selectedGroupMembers = new Map(); // uid -> userData
+let groupAvatarBase64 = '';
+
+document.getElementById('btn-new-group').addEventListener('click', () => {
+    selectedGroupMembers.clear();
+    groupAvatarBase64 = '';
+    document.getElementById('group-name-input').value = '';
+    document.getElementById('group-desc-input').value = '';
+    document.getElementById('group-member-search').value = '';
+    document.getElementById('group-member-results').innerHTML = '';
+    document.getElementById('group-selected-members').innerHTML = '';
+    document.getElementById('group-avatar-preview').classList.add('hidden');
+    document.getElementById('group-avatar-placeholder').style.display = 'flex';
+    document.getElementById('create-group-modal').classList.remove('hidden');
+});
+
+document.getElementById('btn-close-create-group').addEventListener('click', () => {
+    document.getElementById('create-group-modal').classList.add('hidden');
+});
+
+document.getElementById('group-avatar-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        groupAvatarBase64 = ev.target.result;
+        const img = document.getElementById('group-avatar-preview');
+        img.src = groupAvatarBase64;
+        img.classList.remove('hidden');
+        document.getElementById('group-avatar-placeholder').style.display = 'none';
+    };
+    reader.readAsDataURL(file);
+});
+
+let _groupMemberSearchDebounce = null;
+document.getElementById('group-member-search').addEventListener('input', () => {
+    clearTimeout(_groupMemberSearchDebounce);
+    _groupMemberSearchDebounce = setTimeout(() => {
+        const term = document.getElementById('group-member-search').value.trim().toLowerCase();
+        const results = document.getElementById('group-member-results');
+        results.innerHTML = '';
+        if (!term.includes('@') || term.length < 3) return;
+
+        database.ref('users').once('value', snap => {
+            const seen = new Set();
+            snap.forEach(child => {
+                const u = child.val();
+                if (!u || u.uid === currentUser.uid || seen.has(u.uid)) return;
+                if (selectedGroupMembers.has(u.uid)) return;
+                seen.add(u.uid);
+                if ((u.username || '').toLowerCase().includes(term)) {
+                    const row = document.createElement('div');
+                    row.className = 'chat-item-row';
+                    row.innerHTML = `
+                        <img src="${u.avatar || ''}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+                        <div class="chat-item-info"><h4>${u.nickname}</h4><p>${u.username}</p></div>
+                        <button style="margin-left:auto;font-size:12px;padding:5px 10px;border-radius:10px;border:none;background:#0a84ff;color:#fff;cursor:pointer;">+</button>
+                    `;
+                    row.querySelector('button').addEventListener('click', () => {
+                        selectedGroupMembers.set(u.uid, u);
+                        updateSelectedMembersDisplay();
+                        results.innerHTML = '';
+                        document.getElementById('group-member-search').value = '';
+                    });
+                    results.appendChild(row);
+                }
+            });
+        });
+    }, 300);
+});
+
+function updateSelectedMembersDisplay() {
+    const container = document.getElementById('group-selected-members');
+    container.innerHTML = '';
+    selectedGroupMembers.forEach((u, uid) => {
+        const chip = document.createElement('div');
+        chip.style.cssText = 'display:flex;align-items:center;gap:4px;background:rgba(10,132,255,0.2);border:1px solid rgba(10,132,255,0.4);border-radius:16px;padding:3px 8px 3px 4px;font-size:12px;';
+        chip.innerHTML = `
+            <img src="${u.avatar || ''}" style="width:20px;height:20px;border-radius:50%;object-fit:cover;">
+            <span>${u.nickname}</span>
+            <span data-uid="${uid}" style="cursor:pointer;opacity:0.6;margin-left:2px;">✕</span>
+        `;
+        chip.querySelector('span[data-uid]').addEventListener('click', () => {
+            selectedGroupMembers.delete(uid);
+            updateSelectedMembersDisplay();
+        });
+        container.appendChild(chip);
+    });
+}
+
+document.getElementById('btn-confirm-create-group').addEventListener('click', () => {
+    const name = document.getElementById('group-name-input').value.trim();
+    if (!name) return alert('Digite o nome do grupo.');
+
+    const cachedProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
+    const members = { [currentUser.uid]: true };
+    selectedGroupMembers.forEach((u, uid) => { members[uid] = true; });
+
+    const ref = database.ref('groups').push();
+    const payload = {
+        id: ref.key,
+        name: name,
+        description: document.getElementById('group-desc-input').value.trim(),
+        avatar: groupAvatarBase64 || 'https://cdn-icons-png.flaticon.com/512/906/906343.png',
+        isMainGroup: false,
+        onlyAdminsCanSend: false,
+        ownerUid: currentUser.uid,
+        createdAt: firebase.database.ServerValue.TIMESTAMP,
+        members: members,
+        admins: { [currentUser.uid]: true }
+    };
+
+    ref.set(payload).then(() => {
+        document.getElementById('create-group-modal').classList.add('hidden');
+        switchMainTab('groups');
+        loadGroupsList();
+        triggerSystemPopup('Grupo criado!', `"${name}" f
