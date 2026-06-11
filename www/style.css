@@ -516,16 +516,41 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .owner-tag  { background: rgba(255,159,10,0.25); color: #ff9f0a; }
 .admin-tag  { background: rgba(10,132,255,0.25); color: #0a84ff; }
 
-/* ── GROUP ROOM (reutiliza estilos do chat-room-screen) ────────────── */
+/* ── GROUP ROOM (dentro do frame, mesmo posicionamento do chat-room-screen) ── */
 #group-room-screen {
-    position: absolute;
-    inset: 0;
-    z-index: 50;
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: var(--app-max-width);
+    height: 100dvh;
+    background: #000;
     display: flex;
     flex-direction: column;
-    background: var(--bg-primary);
+    z-index: 150;
+    animation: slideInRight 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
 }
 #group-room-screen.hidden { display: none !important; }
+
+@media (min-width: 768px) {
+    #group-room-screen {
+        position: absolute !important;
+        left: auto !important;
+        right: 10px !important;
+        top: 10px !important;
+        bottom: 10px !important;
+        width: calc(100% - 350px) !important;
+        max-width: none !important;
+        height: auto !important;
+        transform: none !important;
+        animation: none !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 14px !important;
+        overflow: hidden;
+    }
+    #group-room-screen #btn-back-group { display: none !important; }
+}
 
 /* ── CHIP DE MEMBRO SELECIONADO ───────────────────────────────────── */
 #group-selected-members { min-height: 28px; }
