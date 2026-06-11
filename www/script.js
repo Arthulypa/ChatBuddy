@@ -178,6 +178,10 @@ document.getElementById('btn-verify-and-register').addEventListener('click', () 
         });
 });
 
+// ─── NAVEGAÇÃO LOGIN ↔ REGISTRO ─────────────────────────────────────────────
+document.getElementById('btn-to-register').addEventListener('click', () => changeView('register'));
+document.getElementById('btn-to-login').addEventListener('click', () => changeView('login'));
+
 document.getElementById('btn-google-login').addEventListener('click', () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     auth.signInWithPopup(provider).catch(err => alert(err.message));
@@ -524,20 +528,31 @@ function renderMessages(snap, recipientData, isRawArray = false) {
 
     const cachePayload = {};
 
+    // Coleta todas as mensagens válidas primeiro
+    const allMessages = [];
     snap.forEach(child => {
         const data = isRawArray ? child.val() : child.val();
         if (!data) return;
-
         cachePayload[data.id] = data;
-
         const dmKey = `${activeChatId}_${data.id}`;
         if (deletedForMe[dmKey]) return;
+        allMessages.push(data);
+    });
+
+    // Renderiza com agrupamento estilo Instagram
+    allMessages.forEach((data, idx) => {
+        const isSent  = data.senderId === currentUser.uid;
+        const prevMsg = idx > 0 ? allMessages[idx - 1] : null;
+        const nextMsg = idx < allMessages.length - 1 ? allMessages[idx + 1] : null;
+
+        const sameAsPrev = prevMsg && prevMsg.senderId === data.senderId && !prevMsg.deletedForAll && !data.deletedForAll;
+        const sameAsNext = nextMsg && nextMsg.senderId === data.senderId && !nextMsg.deletedForAll && !data.deletedForAll;
 
         if (data.deletedForAll) {
             const wrapper = document.createElement('div');
-            wrapper.className = `message-wrapper ${data.senderId === currentUser.uid ? 'sent' : 'received'}`;
+            wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
             const card = document.createElement('div');
-            card.className = `message ${data.senderId === currentUser.uid ? 'sent' : 'received'} deleted-msg`;
+            card.className = `message ${isSent ? 'sent' : 'received'} deleted-msg`;
             card.innerHTML = `<p>🚫 Mensagem apagada</p>`;
             wrapper.appendChild(card);
             box.appendChild(wrapper);
@@ -545,8 +560,9 @@ function renderMessages(snap, recipientData, isRawArray = false) {
         }
 
         const wrapper = document.createElement('div');
-        const isSent  = data.senderId === currentUser.uid;
         wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+        // Agrupamento: reduz espaçamento entre mensagens do mesmo remetente
+        if (sameAsPrev) wrapper.classList.add('grouped-msg');
         wrapper.dataset.msgId = data.id;
 
         const arrow = document.createElement('div');
@@ -555,9 +571,19 @@ function renderMessages(snap, recipientData, isRawArray = false) {
 
         const card = document.createElement('div');
         card.className = `message ${isSent ? 'sent' : 'received'}`;
-        if(data.status === 'offline_pending') {
-            card.classList.add('is-offline-pending');
+
+        // Bordas arredondadas estilo Instagram
+        if (isSent) {
+            if (sameAsPrev && sameAsNext) card.classList.add('bubble-mid-sent');
+            else if (sameAsPrev && !sameAsNext) card.classList.add('bubble-last-sent');
+            else if (!sameAsPrev && sameAsNext) card.classList.add('bubble-first-sent');
+        } else {
+            if (sameAsPrev && sameAsNext) card.classList.add('bubble-mid-received');
+            else if (sameAsPrev && !sameAsNext) card.classList.add('bubble-last-received');
+            else if (!sameAsPrev && sameAsNext) card.classList.add('bubble-first-received');
         }
+
+        if(data.status === 'offline_pending') card.classList.add('is-offline-pending');
 
         let quotedHtml = '';
         if (data.replyTo) {
@@ -571,7 +597,6 @@ function renderMessages(snap, recipientData, isRawArray = false) {
         } else if (data.video) {
             content += `<video src="${data.video}" class="message-video media-target" controls></video>`;
         } else if (data.audio) {
-            // RENDERIZADOR INSTAGRAM STYLE COM TIMEOUT / CONTROLES MONOCROMÁTICOS E INDICADOR
             const durationFormatted = data.audioDuration ? formatAudioTime(data.audioDuration) : "0:00";
             content += `
                 <div class="audio-message-container">
@@ -588,6 +613,7 @@ function renderMessages(snap, recipientData, isRawArray = false) {
         
         content += data.text  ? `<p>${data.text}</p>` : '';
         if (data.edited) content += `<span class="edited-tag">Editada</span>`;
+        // Ticks só na última mensagem do grupo (ou se for única)
         const ticks = isSent ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
         card.innerHTML = content + ticks;
 
@@ -911,8 +937,6 @@ function loadChatList() {
     }
 
     database.ref('chats').on('value', snap => {
-        const listContainer = document.getElementById('chats-list');
-        listContainer.innerHTML = '';
         const rawChats = [];
 
         snap.forEach(child => {
@@ -927,6 +951,8 @@ function loadChatList() {
         });
 
         rawChats.sort((a,b) => b.lastTimestamp - a.lastTimestamp);
+
+        const listContainer = document.getElementById('chats-list');
 
         if(rawChats.length === 0) {
             listContainer.innerHTML = `<div class="empty-state">Nenhuma conversa ativa.</div>`;
@@ -944,6 +970,7 @@ function loadChatList() {
                 resolved++;
                 if (uData) results[idx] = { chatId: item.chatId, uData, chatData: item.chatData };
                 if (resolved === rawChats.length) {
+                    // Atualiza sem piscar: só limpa e re-renderiza no final
                     listContainer.innerHTML = '';
                     results.forEach(r => {
                         if (!r) return;
@@ -1162,9 +1189,12 @@ document.getElementById('btn-new-chat').addEventListener('click', () => {
 document.getElementById('btn-close-modal').addEventListener('click', () => document.getElementById('contacts-modal').classList.add('hidden'));
 
 const searchUsernameInput = document.getElementById('search-by-username-input');
+let _searchDebounceTimer = null;
+
 searchUsernameInput.addEventListener('input', () => {
     const term = searchUsernameInput.value.trim().toLowerCase();
-    renderContactsModalList(term);
+    clearTimeout(_searchDebounceTimer);
+    _searchDebounceTimer = setTimeout(() => renderContactsModalList(term), 300);
 });
 
 function renderContactsModalList(filterTerm) {
@@ -1176,21 +1206,30 @@ function renderContactsModalList(filterTerm) {
         return;
     }
 
-    // REGRA DE PRIVACIDADE: Só busca se contiver o caractere "@" e tiver pelo menos 4 caracteres de comprimento (ex: "@art")
     if (!filterTerm.includes('@') || filterTerm.length < 4) {
         listContainer.innerHTML = `<div class="empty-state" style="font-size:12px; padding:20px 10px;">Digite pelo menos o arroba e 3 letras da pessoa<br>(Ex: <b>@art</b>) para localizá-la de forma privada.</div>`;
         return;
     }
 
-    database.ref('users').once('value', snap => {
+    // Marca a busca atual para ignorar respostas de buscas antigas
+    const searchId = Date.now();
+    listContainer._currentSearchId = searchId;
+
+    database.ref('users').orderByChild('username').once('value', snap => {
+        // Se chegou uma busca mais nova, ignora esta
+        if (listContainer._currentSearchId !== searchId) return;
+
+        listContainer.innerHTML = '';
+        const seenUids = new Set();
         let count = 0;
+
         snap.forEach(child => {
             const u = child.val();
             if (!u || u.uid === currentUser.uid) return;
+            if (seenUids.has(u.uid)) return; // evita duplicatas
+            seenUids.add(u.uid);
 
             const uName = (u.username || '').toLowerCase();
-            
-            // Só exibe se o termo bater exatamente com o começo do @ digitado
             if (uName.includes(filterTerm)) {
                 count++;
                 const row = document.createElement('div');
