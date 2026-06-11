@@ -2203,4 +2203,6 @@ document.getElementById('btn-confirm-create-group').addEventListener('click', ()
         document.getElementById('create-group-modal').classList.add('hidden');
         switchMainTab('groups');
         loadGroupsList();
-        triggerSystemPopup('Grupo criado!', `"${name}" f
+        triggerSystemPopup('Grupo criado!', `"${name}" foi criado com sucesso.`, payload.avatar);
+    });
+});
