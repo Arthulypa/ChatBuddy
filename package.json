@@ -1,6 +1,6 @@
 {
   "name": "ChatBuddy",
-  "version": "b2.0.0",
+  "version": "b2.0.2",
   "description": "Meu Aplicativo ChatBuddy",
   "main": "index.js",
   "dependencies": {
