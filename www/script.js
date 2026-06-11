@@ -56,6 +56,19 @@ function changeView(target) {
     viewPages[target].classList.remove('hidden');
 }
 
+// ─── PREVENIR SELEÇÃO DE TEXTO NAS MENSAGENS ────────────────────────────────
+document.addEventListener('selectstart', (e) => {
+    const target = e.target;
+    if (target.closest('.messages-container') || 
+        target.closest('.chats-list') || 
+        target.closest('.chat-item-row') ||
+        target.closest('.message') ||
+        target.closest('.group-messages-container')) {
+        e.preventDefault();
+        return false;
+    }
+});
+
 // Monitoramento de Conexão com Popups dinâmicos
 window.addEventListener('online', () => {
     triggerSystemPopup("Conexão estabelecida", "Reconexão bem-sucedida!", "https://cdn-icons-png.flaticon.com/512/190/190411.png");
@@ -495,13 +508,13 @@ function openChatRoom(chatId, recipientData) {
             if (!rUser) return;
             const statusEl = document.getElementById('active-chat-status');
             const badgeEl  = document.getElementById('active-chat-online-badge');
-            const headerInfo = document.getElementById('btn-open-recipient-info');
+            const headerInfo = document.getElementById('chat-header-user-area');
             if (rUser.status === 'online') {
-                headerInfo.classList.add('is-online');
+                headerInfo && headerInfo.classList.add('is-online');
                 statusEl.innerText = "online";
                 badgeEl.classList.remove('hidden');
             } else {
-                headerInfo.classList.remove('is-online');
+                headerInfo && headerInfo.classList.remove('is-online');
                 statusEl.innerText = formatLastSeen(rUser.lastSeen);
                 badgeEl.classList.add('hidden');
             }
@@ -705,10 +718,16 @@ function playAudioMessage(src, btn) {
 // ─── VISUALIZADOR DE MÍDIA COM CONTROLES E ZOOM PREMIUM ────────────────────
 function bindMediaViewerEvents() {
     document.querySelectorAll('.media-target').forEach(media => {
-        media.addEventListener('click', (e) => {
+        // Remove listeners antigos para evitar duplicatas
+        const newMedia = media.cloneNode(true);
+        media.parentNode.replaceChild(newMedia, media);
+        
+        newMedia.addEventListener('click', (e) => {
             e.stopPropagation();
-            const src = media.getAttribute('src');
-            const isVideo = media.classList.contains('message-video');
+            e.preventDefault();
+            const src = newMedia.getAttribute('src') || newMedia.src;
+            if (!src) return;
+            const isVideo = newMedia.tagName === 'VIDEO' || newMedia.classList.contains('message-video');
             const viewer = document.getElementById('media-viewer');
             const container = document.getElementById('media-viewer-container');
             container.innerHTML = '';
@@ -718,6 +737,7 @@ function bindMediaViewerEvents() {
                 element = document.createElement('video');
                 element.controls = true;
                 element.autoplay = true;
+                element.playsInline = true;
             } else {
                 element = document.createElement('img');
             }
@@ -727,11 +747,12 @@ function bindMediaViewerEvents() {
             viewer.classList.remove('hidden');
 
             let currentZoom = 1;
-            element.addEventListener('click', () => {
+            element.addEventListener('click', (ev) => {
+                ev.stopPropagation();
                 currentZoom = currentZoom === 1 ? 2 : 1;
                 element.style.transform = `scale(${currentZoom})`;
             });
-        });
+        }, true); // usa capture para pegar antes do blur-overlay
     });
 }
 document.getElementById('media-viewer-close').addEventListener('click', () => {
@@ -820,6 +841,9 @@ function openContextMenu(data, card, wrapper, event) {
 
 // ─── AÇÕES DO MENU DE CONTEXTO ───────────────────────────────────────────────
 document.getElementById('ctx-reply-msg').addEventListener('click', () => {
+    // Este handler é para chats diretos; grupos substituem temporariamente via onclick
+    // Se o onclick foi setado pelo grupo, ele já foi chamado. Verificamos aqui se é chat direto.
+    if (activeGroupId) return; // grupo usa onclick dinâmico
     if (!selectedMessageData) return;
     replyingTo = { id: selectedMessageData.id, text: selectedMessageData.text || '', senderId: selectedMessageData.senderId };
     document.getElementById('reply-bar-text').innerText = selectedMessageData.text || 'Mídia';
@@ -1399,7 +1423,7 @@ function startNewChatRoomWithUser(targetUser) {
 }
 
 // ─── ACESSO AO PERFIL DO CONTATO DIRECT ──────────────────────────────────────
-document.getElementById('btn-open-recipient-info').addEventListener('click', () => {
+function openRecipientInfoSheet() {
     if (!activeRecipientId) return;
     database.ref(`users/${activeRecipientId}`).once('value', snap => {
         const data = snap.val(); if (!data) return;
@@ -1410,6 +1434,16 @@ document.getElementById('btn-open-recipient-info').addEventListener('click', () 
         document.getElementById('sheet-contact-avatar').src = data.avatar;
         document.getElementById('contact-info-sheet').classList.remove('hidden');
     });
+}
+
+// Apenas o nome (h2) abre o perfil — não o header inteiro
+document.getElementById('active-chat-name').addEventListener('click', () => {
+    openRecipientInfoSheet();
+});
+
+// Os 3 pontinhos também abrem
+document.getElementById('btn-contact-menu').addEventListener('click', () => {
+    openRecipientInfoSheet();
 });
 document.getElementById('btn-close-info-sheet').addEventListener('click', () => document.getElementById('contact-info-sheet').classList.add('hidden'));
 
@@ -1705,7 +1739,7 @@ function loadGroupsList() {
             count++;
             const row = document.createElement('div');
             row.className = 'chat-item-row';
-            const msgKeys = g.messages ? Object.keys(g.messages) : [];
+            row.dataset.groupId = child.key;
             let lastText = 'Nenhuma mensagem';
             if (msgKeys.length > 0) {
                 const last = g.messages[msgKeys[msgKeys.length - 1]];
@@ -1746,8 +1780,18 @@ function openGroupRoom(groupId, groupData) {
     footer.style.display = canSend ? '' : 'none';
     banner.classList.toggle('hidden', canSend);
 
-    document.getElementById('group-room-screen').classList.remove('hidden');
+    // Esconde o chat direto e o painel vazio, mostra o grupo
     document.getElementById('chat-room-screen').classList.add('hidden');
+    document.getElementById('group-room-screen').classList.remove('hidden');
+    const emptyPanel = document.getElementById('empty-chat-panel');
+    if (emptyPanel) emptyPanel.classList.add('hidden');
+
+    // Marca o item ativo na lista de grupos
+    document.querySelectorAll('.chat-item-row').forEach(el => el.classList.remove('active-desktop-chat'));
+    const rows = document.querySelectorAll(`#groups-list .chat-item-row`);
+    rows.forEach(r => {
+        if (r.dataset && r.dataset.groupId === groupId) r.classList.add('active-desktop-chat');
+    });
 
     // Listener de mensagens
     database.ref(`groups/${groupId}/messages`).off();
@@ -1827,12 +1871,147 @@ function renderGroupMessages(snap, groupData) {
         const ticks = isSent ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
         card.innerHTML = content + ticks;
 
-        wrapper.appendChild(card);
+        // Long press abre menu de contexto simplificado para grupos
+        applyLongPress(card, (e) => {
+            card.classList.remove('pressing');
+            openGroupContextMenu(data, card, wrapper, e);
+        }, () => card.classList.add('pressing'), () => card.classList.remove('pressing'));
+
+        // Swipe para responder no grupo
+        const arrow2 = document.createElement('div');
+        arrow2.className = 'reply-arrow';
+        arrow2.innerHTML = `<svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>`;
+        applyGroupSwipeToReply(wrapper, card, arrow2, data);
+
+        if (isSent) { wrapper.appendChild(card); wrapper.appendChild(arrow2); }
+        else        { wrapper.appendChild(arrow2); wrapper.appendChild(card); }
         box.appendChild(wrapper);
     });
 
     if (prevScrollBottom < 80) box.scrollTop = box.scrollHeight;
     bindMediaViewerEvents();
+}
+
+// ─── MENU DE CONTEXTO DO GRUPO ───────────────────────────────────────────────
+function openGroupContextMenu(data, card, wrapper, event) {
+    selectedMessageId   = data.id;
+    selectedMessageData = data;
+    const isSent = data.senderId === currentUser.uid;
+
+    document.getElementById('ctx-edit-msg').style.display  = isSent && data.text ? 'flex' : 'none';
+    document.getElementById('ctx-copy-direct').style.display = data.text ? 'flex' : 'none';
+
+    const clone = card.cloneNode(true);
+    const wrapClone = document.createElement('div');
+    wrapClone.className = wrapper.className;
+    wrapClone.appendChild(clone);
+
+    const focusWrapper = document.getElementById('focused-message-wrapper');
+    focusWrapper.innerHTML = '';
+    focusWrapper.appendChild(wrapClone);
+
+    const overlay   = document.getElementById('blur-overlay');
+    const container = document.getElementById('focused-container');
+    overlay.classList.remove('hidden');
+
+    container.classList.toggle('align-right', isSent);
+    container.classList.toggle('align-left',  !isSent);
+
+    // Configura o reply do contexto para usar o grupo
+    document.getElementById('ctx-reply-msg').onclick = () => {
+        if (!data) return;
+        groupReplyingTo = { id: data.id, text: data.text || '', senderId: data.senderId, senderNickname: data.senderNickname || 'Usuário' };
+        document.getElementById('group-reply-bar-text').innerText = data.text || '📷 Mídia';
+        document.getElementById('group-reply-bar').classList.remove('hidden');
+        document.getElementById('group-message-input').focus();
+        overlay.classList.add('hidden');
+    };
+
+    container.style.visibility = 'hidden';
+    container.style.top  = '-9999px';
+    container.style.left = '-9999px';
+
+    requestAnimationFrame(() => {
+        const rect  = card.getBoundingClientRect();
+        const vpW   = window.innerWidth;
+        const vpH   = window.innerHeight;
+        const menuW = 240;
+        const menuH = container.offsetHeight || 320;
+
+        let leftX = isSent ? (rect.right - menuW) : rect.left;
+        if (leftX < 10) leftX = 10;
+        if (leftX + menuW > vpW - 10) leftX = vpW - menuW - 10;
+
+        let topY;
+        if (vpH - rect.bottom >= menuH + 16) topY = rect.bottom + 6;
+        else if (rect.top >= menuH + 16) topY = rect.top - menuH - 6;
+        else topY = rect.top + (rect.height / 2) - (menuH / 2);
+
+        if (topY < 10) topY = 10;
+        if (topY + menuH > vpH - 10) topY = vpH - menuH - 10;
+
+        container.style.left = leftX + 'px';
+        container.style.top  = topY + 'px';
+        container.style.visibility = 'visible';
+    });
+}
+
+// ─── SWIPE TO REPLY NO GRUPO ─────────────────────────────────────────────────
+function applyGroupSwipeToReply(wrapper, card, arrow, msgData) {
+    let startX = 0; let currentX = 0; let isSwiping = false;
+    const threshold = 50;
+
+    card.addEventListener('touchstart', (e) => {
+        startX = e.touches[0].clientX; isSwiping = true;
+        arrow.classList.remove('bounce', 'visible');
+    }, { passive: true });
+
+    card.addEventListener('touchmove', (e) => {
+        if (!isSwiping) return;
+        currentX = e.touches[0].clientX;
+        let diff = currentX - startX;
+
+        if (msgData.senderId === currentUser.uid) {
+            if (diff < 0) {
+                let trans = Math.max(-70, diff);
+                card.style.transform = `translateX(${trans}px)`;
+                arrow.style.transform = `translateX(${trans + 10}px)`;
+                if (trans <= -threshold) arrow.classList.add('visible');
+                else arrow.classList.remove('visible');
+            }
+        } else {
+            if (diff > 0) {
+                let trans = Math.min(70, diff);
+                card.style.transform = `translateX(${trans}px)`;
+                arrow.style.transform = `translateX(${trans - 10}px)`;
+                if (trans >= threshold) arrow.classList.add('visible');
+                else arrow.classList.remove('visible');
+            }
+        }
+    }, { passive: true });
+
+    card.addEventListener('touchend', () => {
+        if (!isSwiping) return; isSwiping = false;
+        let diff = currentX - startX;
+        card.style.transform = '';
+        arrow.style.transform = '';
+
+        if (msgData.senderId === currentUser.uid && diff <= -threshold) {
+            arrow.classList.add('bounce');
+            triggerGroupReplyAction(msgData);
+        } else if (msgData.senderId !== currentUser.uid && diff >= threshold) {
+            arrow.classList.add('bounce');
+            triggerGroupReplyAction(msgData);
+        }
+        setTimeout(() => arrow.classList.remove('bounce', 'visible'), 300);
+    });
+}
+
+function triggerGroupReplyAction(msgData) {
+    groupReplyingTo = { id: msgData.id, text: msgData.text || '', senderId: msgData.senderId, senderNickname: msgData.senderNickname || 'Usuário' };
+    document.getElementById('group-reply-bar-text').innerText = msgData.text || '📷 Mídia';
+    document.getElementById('group-reply-bar').classList.remove('hidden');
+    document.getElementById('group-message-input').focus();
 }
 
 // ─── ENVIAR MENSAGEM NO GRUPO ───────────────────────────────────────────────
@@ -1914,6 +2093,9 @@ document.getElementById('btn-back-group').addEventListener('click', () => {
     if (activeGroupId) database.ref(`groups/${activeGroupId}/messages`).off();
     activeGroupId   = null;
     activeGroupData = null;
+    document.querySelectorAll('.chat-item-row').forEach(el => el.classList.remove('active-desktop-chat'));
+    const emptyPanel = document.getElementById('empty-chat-panel');
+    if (emptyPanel) emptyPanel.classList.remove('hidden');
 });
 
 // ─── INFO DO GRUPO ──────────────────────────────────────────────────────────
@@ -1957,6 +2139,7 @@ function openGroupInfoSheet() {
             const row = document.createElement('div');
             row.className = 'chat-item-row';
             row.style.padding = '8px 4px';
+            row.style.cursor = 'pointer';
             row.innerHTML = `
                 <img src="${u.avatar || 'https://via.placeholder.com/150'}" alt="" style="width:38px;height:38px;border-radius:50%;object-fit:cover;">
                 <div class="chat-item-info">
@@ -1965,12 +2148,14 @@ function openGroupInfoSheet() {
                 </div>
                 ${canManage && !isOwner && uid !== currentUser.uid ? `
                 <div style="display:flex;flex-direction:column;gap:4px;margin-left:auto;">
-                    <button onclick="toggleGroupAdmin('${uid}','${isAdmin}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;">
+                    <button onclick="event.stopPropagation();toggleGroupAdmin('${uid}','${isAdmin}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;">
                         ${isAdmin ? 'Remover Admin' : 'Tornar Admin'}
                     </button>
-                    <button onclick="removeGroupMember('${uid}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:none;background:rgba(255,59,48,0.2);color:#ff3b30;cursor:pointer;">Remover</button>
+                    <button onclick="event.stopPropagation();removeGroupMember('${uid}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:none;background:rgba(255,59,48,0.2);color:#ff3b30;cursor:pointer;">Remover</button>
                 </div>` : ''}
             `;
+            // Clicar no membro abre o perfil dele
+            row.addEventListener('click', () => showGroupMemberProfile(uid, u));
             memberEls[idx] = row;
             loaded++;
             if (loaded === memberUids.length) {
@@ -1980,6 +2165,54 @@ function openGroupInfoSheet() {
     });
 
     document.getElementById('group-info-sheet').classList.remove('hidden');
+}
+
+// ─── VER PERFIL DE MEMBRO DO GRUPO ──────────────────────────────────────────
+function showGroupMemberProfile(uid, cachedData) {
+    // Reutiliza o sheet de contato, mas fecha o grupo-info primeiro
+    document.getElementById('group-info-sheet').classList.add('hidden');
+    
+    const showProfile = (data) => {
+        document.getElementById('sheet-contact-nick').innerText = data.nickname || 'Usuário';
+        document.getElementById('sheet-contact-user').innerText = data.username || '@user';
+        document.getElementById('sheet-contact-bio').innerText  = data.bio || 'Sem bio disponível.';
+        document.getElementById('sheet-contact-wlstwrus').innerText = data.wlstwrus || 'Disponível';
+        document.getElementById('sheet-contact-avatar').src = data.avatar || 'https://via.placeholder.com/150';
+        
+        const sheetBadge = document.getElementById('sheet-blocked-badge');
+        const btnBlock   = document.getElementById('btn-sheet-block');
+        const btnUnblock = document.getElementById('btn-sheet-unblock');
+        
+        if (uid === currentUser.uid) {
+            // próprio usuário — esconde bloquear/desbloquear
+            sheetBadge && sheetBadge.classList.add('hidden');
+            btnBlock   && btnBlock.classList.add('hidden');
+            btnUnblock && btnUnblock.classList.add('hidden');
+        } else {
+            if (isBlocked(uid)) {
+                sheetBadge && sheetBadge.classList.remove('hidden');
+                btnBlock   && btnBlock.classList.add('hidden');
+                btnUnblock && btnUnblock.classList.remove('hidden');
+            } else {
+                sheetBadge && sheetBadge.classList.add('hidden');
+                btnBlock   && btnBlock.classList.remove('hidden');
+                btnUnblock && btnUnblock.classList.add('hidden');
+            }
+        }
+        
+        // Salva o uid como "activeRecipientId temporário" para bloquear/desbloquear funcionar
+        activeRecipientId = uid;
+        document.getElementById('contact-info-sheet').classList.remove('hidden');
+    };
+    
+    if (cachedData && cachedData.nickname) {
+        showProfile(cachedData);
+    } else {
+        database.ref(`users/${uid}`).once('value', snap => {
+            const data = snap.val();
+            if (data) showProfile(data);
+        });
+    }
 }
 
 function toggleGroupAdmin(uid, currentlyAdmin) {
