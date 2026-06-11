@@ -387,3 +387,30 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .request-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
 .btn-req-accept { background: var(--ios-green); border: none; border-radius: 20px; color: #fff; font-size: 13px; font-weight: 600; padding: 6px 14px; cursor: pointer; }
 .btn-req-decline { background: rgba(255,69,58,0.15); border: none; border-radius: 20px; color: var(--ios-red); font-size: 13px; font-weight: 600; padding: 6px 14px; cursor: pointer; }
+
+/* ── AGRUPAMENTO DE MENSAGENS ESTILO INSTAGRAM ─────────────────── */
+.message-wrapper.grouped-msg {
+    margin-top: 2px !important;
+}
+
+/* Enviadas - bordas arredondadas por posição no grupo */
+.message.sent.bubble-first-sent {
+    border-radius: 18px 18px 6px 18px;
+}
+.message.sent.bubble-mid-sent {
+    border-radius: 18px 6px 6px 18px;
+}
+.message.sent.bubble-last-sent {
+    border-radius: 18px 6px 18px 18px;
+}
+
+/* Recebidas - bordas arredondadas por posição no grupo */
+.message.received.bubble-first-received {
+    border-radius: 18px 18px 18px 6px;
+}
+.message.received.bubble-mid-received {
+    border-radius: 6px 18px 18px 6px;
+}
+.message.received.bubble-last-received {
+    border-radius: 6px 18px 18px 18px;
+}
