@@ -1,4 +1,221 @@
-sername: '@' + userAt, bio: bio,
+// ─── FIREBASE CONFIG ────────────────────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfykh4",
+  authDomain: "chatbuddy-96a61.firebaseapp.com",
+  databaseURL: "https://chatbuddy-96a61-default-rtdb.firebaseio.com",
+  projectId: "chatbuddy-96a61",
+  storageBucket: "chatbuddy-96a61.firebasestorage.app",
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth     = firebase.auth();
+const database = firebase.database();
+
+// ─── ESTADO GLOBAL ──────────────────────────────────────────────────────────
+let currentUser        = null;
+let activeChatId       = null;
+let activeRecipientId  = null;
+let base64AvatarString = "";
+let selectedMessageId  = "";
+let selectedMessageData = null;   
+let silencedUsers      = {};
+let blockedUsers       = JSON.parse(localStorage.getItem('blockedUsers') || '{}');
+let deletedForMe       = JSON.parse(localStorage.getItem('deletedForMe') || '{}');
+let customNicknames    = JSON.parse(localStorage.getItem('customNicknames') || '{}');
+let offlineMessageQueue = JSON.parse(localStorage.getItem('offlineMessageQueue') || '[]');
+let replyingTo         = null;    
+let longPressTimer     = null;
+let activeGroupId      = null;
+let activeGroupData    = null;
+let groupReplyingTo    = null;
+let groupAvatarString  = "";
+
+// Admins do grupo principal
+const MAIN_GROUP_ADMINS = ['@arthurscs', '@arthur', '@julioeeu'];
+const MAIN_GROUP_ID_KEY = 'chatbuddy_main_group_id';
+
+// Variáveis para Gravação de Áudio
+let mediaRecorder = null;
+let audioChunks = [];
+let isRecording = false;
+let recordStartTime = 0;
+let recordTimerInterval = null;
+let recordingLocked = false;
+let startXMic = 0, startYMic = 0;
+
+// ─── VIEWS ──────────────────────────────────────────────────────────────────
+const viewPages = {
+    login:    document.getElementById('login-page'),
+    register: document.getElementById('register-page'),
+    profile:  document.getElementById('profile-page'),
+    chat:     document.getElementById('chat-page')
+};
+
+function changeView(target) {
+    Object.keys(viewPages).forEach(k => viewPages[k].classList.add('hidden'));
+    viewPages[target].classList.remove('hidden');
+}
+
+// ─── PREVENIR SELEÇÃO DE TEXTO NAS MENSAGENS ────────────────────────────────
+document.addEventListener('selectstart', (e) => {
+    const target = e.target;
+    if (target.closest('.messages-container') || 
+        target.closest('.chats-list') || 
+        target.closest('.chat-item-row') ||
+        target.closest('.message') ||
+        target.closest('.group-messages-container')) {
+        e.preventDefault();
+        return false;
+    }
+});
+
+// Monitoramento de Conexão com Popups dinâmicos
+window.addEventListener('online', () => {
+    triggerSystemPopup("Conexão estabelecida", "Reconexão bem-sucedida!", "https://cdn-icons-png.flaticon.com/512/190/190411.png");
+    processOfflineQueue();
+});
+window.addEventListener('offline', () => {
+    triggerSystemPopup("Modo Offline", "Você está desconectado da internet.", "https://cdn-icons-png.flaticon.com/512/565/565340.png");
+});
+
+function triggerSystemPopup(title, text, customIconUrl) {
+    const popup = document.getElementById('popup-notification');
+    if (!popup) return;
+    document.getElementById('popup-avatar').src = customIconUrl || "https://via.placeholder.com/150";
+    document.getElementById('popup-title').innerText = title;
+    document.getElementById('popup-text').innerText  = text;
+    popup.classList.remove('hidden');
+    setTimeout(() => popup.classList.add('expanded'), 150);
+    setTimeout(() => { popup.classList.remove('expanded'); setTimeout(() => popup.classList.add('hidden'), 400); }, 4000);
+}
+
+// ─── AVATAR LOADER ──────────────────────────────────────────────────────────
+function bindImageLoader(inputId, previewId, placeholderId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    input.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (ev) => {
+            base64AvatarString = ev.target.result;
+            const imgEl = document.getElementById(previewId);
+            imgEl.src = base64AvatarString;
+            imgEl.classList.remove('hidden');
+            if (placeholderId) document.getElementById(placeholderId).classList.add('hidden');
+        };
+        reader.readAsDataURL(file);
+    });
+}
+bindImageLoader('initial-avatar-file', 'initial-avatar-preview', 'initial-avatar-placeholder');
+bindImageLoader('settings-avatar-input', 'settings-avatar-preview', null);
+
+// ─── AUTENTICAÇÃO ───────────────────────────────────────────────────────────
+document.getElementById('btn-login').addEventListener('click', () => {
+    const email = document.getElementById('email-login').value.trim();
+    const pass  = document.getElementById('password-login').value;
+    if (!email || !pass) return alert("Preencha todos os campos!");
+    const btn = document.getElementById('btn-login');
+    btn.disabled = true; btn.innerText = 'Entrando...';
+    
+    auth.signInWithEmailAndPassword(email, pass).then((userCredential) => {
+        localStorage.setItem('localLoggedUser', JSON.stringify({email, pass: btoa(unescape(encodeURIComponent(pass)))}));
+    }).catch(err => {
+        btn.disabled = false; btn.innerText = 'Entrar';
+        const msgs = {
+            'auth/user-not-found': 'Usuário não encontrado.',
+            'auth/wrong-password': 'Senha incorreta.',
+            'auth/invalid-email': 'E-mail inválido.',
+            'auth/too-many-requests': 'Muitas tentativas. Tente mais tarde.',
+            'auth/network-request-failed': 'Sem conexão com a internet.',
+            'auth/invalid-credential': 'E-mail ou senha inválidos.'
+        };
+        alert(msgs[err.code] || 'Erro: ' + err.message);
+    });
+});
+
+document.getElementById('btn-send-code').addEventListener('click', () => {
+    const email = document.getElementById('email-reg').value.trim();
+    const pass  = document.getElementById('password-reg').value;
+    if (!email || !pass) return alert("Insira credenciais válidas.");
+    if (pass.length < 6) return alert("A senha deve ter pelo menos 6 caracteres.");
+
+    const btn = document.getElementById('btn-send-code');
+    btn.disabled = true; btn.innerText = 'Enviando...';
+
+    // Cria a conta temporariamente para enviar o email de verificação
+    auth.createUserWithEmailAndPassword(email, pass)
+        .then(cred => {
+            return cred.user.sendEmailVerification().then(() => {
+                // Salva as credenciais para usar após verificação
+                localStorage.setItem('pendingReg', JSON.stringify({ email, pass: btoa(unescape(encodeURIComponent(pass))) }));
+                // Faz logout temporário — usuário só entra após verificar
+                return auth.signOut();
+            });
+        })
+        .then(() => {
+            btn.disabled = false; btn.innerText = 'Enviar Código';
+            document.getElementById('reg-step-1').classList.add('hidden');
+            document.getElementById('reg-step-2').classList.remove('hidden');
+            document.getElementById('reg-step-2-info').innerText = `Enviamos um link de verificação para ${email}. Após clicar no link, volte aqui e pressione "Já verifiquei".`;
+        })
+        .catch(err => {
+            btn.disabled = false; btn.innerText = 'Enviar Código';
+            const msgs = {
+                'auth/email-already-in-use': 'Este e-mail já está cadastrado.',
+                'auth/invalid-email': 'E-mail inválido.',
+                'auth/weak-password': 'Senha muito fraca (mínimo 6 caracteres).',
+                'auth/network-request-failed': 'Sem conexão com a internet.'
+            };
+            alert(msgs[err.code] || 'Erro: ' + err.message);
+        });
+});
+
+document.getElementById('btn-verify-and-register').addEventListener('click', () => {
+    const pending = localStorage.getItem('pendingReg');
+    if (!pending) return alert("Sessão expirada. Tente novamente.");
+    const { email, pass } = JSON.parse(pending);
+    const decodedPass = decodeURIComponent(escape(atob(pass)));
+
+    const btn = document.getElementById('btn-verify-and-register');
+    btn.disabled = true; btn.innerText = 'Verificando...';
+
+    auth.signInWithEmailAndPassword(email, decodedPass)
+        .then(cred => {
+            if (!cred.user.emailVerified) {
+                auth.signOut();
+                btn.disabled = false; btn.innerText = 'Já verifiquei';
+                alert("E-mail ainda não verificado. Clique no link que enviamos e tente novamente.");
+                return;
+            }
+            localStorage.removeItem('pendingReg');
+            localStorage.setItem('localLoggedUser', JSON.stringify({ email, pass }));
+            btn.disabled = false; btn.innerText = 'Já verifiquei';
+            changeView('profile');
+        })
+        .catch(err => {
+            btn.disabled = false; btn.innerText = 'Já verifiquei';
+            alert("Erro ao verificar: " + err.message);
+        });
+});
+
+// ─── NAVEGAÇÃO LOGIN ↔ REGISTRO ─────────────────────────────────────────────
+document.getElementById('btn-to-register').addEventListener('click', () => changeView('register'));
+document.getElementById('btn-to-login').addEventListener('click', () => changeView('login'));
+
+document.getElementById('btn-google-login').addEventListener('click', () => {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    auth.signInWithPopup(provider).catch(err => alert(err.message));
+});
+
+document.getElementById('btn-save-profile').addEventListener('click', () => {
+    const nick   = document.getElementById('display-name').value.trim();
+    const userAt = document.getElementById('username').value.trim().replace('@', '');
+    const bio    = document.getElementById('user-bio').value.trim() || "Disponível no ChatBuddy";
+    if (!nick || !userAt) return alert("Campos obrigatórios vazios!");
+    
+    const profileData = {
+        uid: currentUser.uid, nickname: nick, username: '@' + userAt, bio: bio,
         wlstwrus: "Disponível no ChatBuddy 🚀",
         avatar: base64AvatarString || "https://via.placeholder.com/150",
         status: "online", lastSeen: firebase.database.ServerValue.TIMESTAMP
