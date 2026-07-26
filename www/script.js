@@ -1027,22 +1027,35 @@ function loadChatList() {
         let resolved = 0;
         const results = new Array(rawChats.length).fill(null);
 
-        rawChats.forEach((item, idx) => {
-            database.ref(`users/${item.recipientId}`).once('value', uSnap => {
-                const uData = uSnap.val();
-                resolved++;
-                if (uData) results[idx] = { chatId: item.chatId, uData, chatData: item.chatData };
-                if (resolved === rawChats.length) {
-                    // Atualiza sem piscar: só limpa e re-renderiza no final
-                    listContainer.innerHTML = '';
-                    results.forEach(r => {
-                        if (!r) return;
-                        cacheListRows[r.chatId] = { chatId: r.chatId, recipient: r.uData, chatData: r.chatData };
-                        createChatRowElement(r.chatId, r.uData, r.chatData);
-                    });
-                    localStorage.setItem('offline_chat_list', JSON.stringify(cacheListRows));
-                }
+        function checkDone() {
+            if (resolved !== rawChats.length) return;
+            // Atualiza sem piscar: só limpa e re-renderiza no final
+            listContainer.innerHTML = '';
+            results.forEach(r => {
+                if (!r) return;
+                cacheListRows[r.chatId] = { chatId: r.chatId, recipient: r.uData, chatData: r.chatData };
+                createChatRowElement(r.chatId, r.uData, r.chatData);
             });
+            localStorage.setItem('offline_chat_list', JSON.stringify(cacheListRows));
+            if (Object.keys(cacheListRows).length === 0) {
+                listContainer.innerHTML = `<div class="empty-state">Nenhuma conversa ativa.</div>`;
+            }
+        }
+
+        rawChats.forEach((item, idx) => {
+            database.ref(`users/${item.recipientId}`).once('value')
+                .then(uSnap => {
+                    const uData = uSnap.val();
+                    if (uData) results[idx] = { chatId: item.chatId, uData, chatData: item.chatData };
+                })
+                .catch(err => {
+                    // Não deixa uma única falha (ex: permissão negada) travar a lista inteira para sempre
+                    console.warn('Falha ao carregar usuário do chat:', item.recipientId, err);
+                })
+                .finally(() => {
+                    resolved++;
+                    checkDone();
+                });
         });
     });
 }
@@ -1742,28 +1755,32 @@ function loadGroupsList() {
         }
         let count = 0;
         snap.forEach(child => {
-            const g = child.val();
-            if (!g || !g.members || !g.members[currentUser.uid]) return;
-            count++;
-            const row = document.createElement('div');
-            row.className = 'chat-item-row';
-            row.dataset.groupId = child.key;
-            let lastText = 'Nenhuma mensagem';
-            const msgKeys = g.messages ? Object.keys(g.messages) : [];
-            if (msgKeys.length > 0) {
-                const last = g.messages[msgKeys[msgKeys.length - 1]];
-                lastText = last.text || (last.audio ? '🎵 Áudio' : '📷 Mídia');
+            try {
+                const g = child.val();
+                if (!g || !g.members || !g.members[currentUser.uid]) return;
+                count++;
+                const row = document.createElement('div');
+                row.className = 'chat-item-row';
+                row.dataset.groupId = child.key;
+                let lastText = 'Nenhuma mensagem';
+                const msgKeys = g.messages ? Object.keys(g.messages) : [];
+                if (msgKeys.length > 0) {
+                    const last = g.messages[msgKeys[msgKeys.length - 1]];
+                    lastText = last.text || (last.audio ? '🎵 Áudio' : '📷 Mídia');
+                }
+                const badge = g.isMainGroup ? `<span style="font-size:10px;background:#0a84ff;color:#fff;border-radius:8px;padding:1px 6px;margin-left:4px;">Official</span>` : '';
+                row.innerHTML = `
+                    <img src="${g.avatar || 'https://cdn-icons-png.flaticon.com/512/906/906343.png'}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">
+                    <div class="chat-item-info">
+                        <div class="chat-item-header"><h4>${g.name}${badge}</h4></div>
+                        <p>${lastText}</p>
+                    </div>
+                `;
+                row.addEventListener('click', () => openGroupRoom(child.key, g));
+                container.appendChild(row);
+            } catch (e) {
+                console.warn('Falha ao renderizar grupo, pulando este item:', child.key, e);
             }
-            const badge = g.isMainGroup ? `<span style="font-size:10px;background:#0a84ff;color:#fff;border-radius:8px;padding:1px 6px;margin-left:4px;">Official</span>` : '';
-            row.innerHTML = `
-                <img src="${g.avatar || 'https://cdn-icons-png.flaticon.com/512/906/906343.png'}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">
-                <div class="chat-item-info">
-                    <div class="chat-item-header"><h4>${g.name}${badge}</h4></div>
-                    <p>${lastText}</p>
-                </div>
-            `;
-            row.addEventListener('click', () => openGroupRoom(child.key, g));
-            container.appendChild(row);
         });
         if (count === 0) container.innerHTML = '<div class="empty-state">Você não está em nenhum grupo.</div>';
     });
