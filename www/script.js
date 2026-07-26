@@ -29,6 +29,7 @@ let activeGroupId      = null;
 let activeGroupData    = null;
 let groupReplyingTo    = null;
 let groupAvatarString  = "";
+let suppressAuthListener = false; // evita que o listener global reaja durante o cadastro (criação temporária de conta + signOut)
 
 // Admins do grupo principal
 const MAIN_GROUP_ADMINS = ['@arthurscs', '@arthur', '@julioeeu'];
@@ -144,6 +145,7 @@ document.getElementById('btn-send-code').addEventListener('click', () => {
     btn.disabled = true; btn.innerText = 'Enviando...';
 
     // Cria a conta temporariamente para enviar o email de verificação
+    suppressAuthListener = true; // impede que o onAuthStateChanged global reaja ao login automático + signOut abaixo
     auth.createUserWithEmailAndPassword(email, pass)
         .then(cred => {
             return cred.user.sendEmailVerification().then(() => {
@@ -154,12 +156,17 @@ document.getElementById('btn-send-code').addEventListener('click', () => {
             });
         })
         .then(() => {
+            suppressAuthListener = false;
             btn.disabled = false; btn.innerText = 'Enviar Código';
             document.getElementById('reg-step-1').classList.add('hidden');
             document.getElementById('reg-step-2').classList.remove('hidden');
             document.getElementById('reg-step-2-info').innerText = `Enviamos um link de verificação para ${email}. Após clicar no link, volte aqui e pressione "Já verifiquei".`;
         })
         .catch(err => {
+            // Se a conta chegou a ser criada mas algo falhou depois (ex: envio do e-mail),
+            // garante que ninguém fica autenticado "escondido" com uma conta não verificada.
+            if (auth.currentUser) auth.signOut();
+            suppressAuthListener = false;
             btn.disabled = false; btn.innerText = 'Enviar Código';
             const msgs = {
                 'auth/email-already-in-use': 'Este e-mail já está cadastrado.',
@@ -359,6 +366,7 @@ function triggerPremiumPopup(sender, text) {
 }
 
 auth.onAuthStateChanged(user => {
+    if (suppressAuthListener) return; // cadastro em andamento — a tela é controlada manualmente pelo fluxo de registro
     if (user) {
         currentUser = user;
         database.ref('users/' + user.uid).once('value').then(snap => {
@@ -1176,7 +1184,7 @@ function toggleFooterButtonsState() {
 // ─── ENVIO DE MENSAGENS COM RETORNO COMPLETO DO BOTÃO DE ÁUDIO ───
 btnSend.addEventListener('click', () => {
     const txt = msgInput.value.trim();
-    if (!txt || !activeChatId) return;
+    if (!txt || !activeChatId || isBlocked(activeRecipientId)) return;
 
     const newMsgRef = database.ref(`chats/${activeChatId}/messages`).push();
     const msgId = newMsgRef.key;
@@ -1430,7 +1438,7 @@ function openRecipientInfoSheet() {
         document.getElementById('sheet-contact-nick').innerText = getDisplayName(data);
         document.getElementById('sheet-contact-user').innerText = data.username || '@user';
         document.getElementById('sheet-contact-bio').innerText  = data.bio || 'Sem bio disponível.';
-        document.getElementById('sheet-contact-wlstwrus').innerText = data.wlstwrus || 'Disponível';
+        document.getElementById('sheet-contact-status').innerText = data.wlstwrus || 'Disponível';
         document.getElementById('sheet-contact-avatar').src = data.avatar;
         document.getElementById('contact-info-sheet').classList.remove('hidden');
     });
@@ -1741,6 +1749,7 @@ function loadGroupsList() {
             row.className = 'chat-item-row';
             row.dataset.groupId = child.key;
             let lastText = 'Nenhuma mensagem';
+            const msgKeys = g.messages ? Object.keys(g.messages) : [];
             if (msgKeys.length > 0) {
                 const last = g.messages[msgKeys[msgKeys.length - 1]];
                 lastText = last.text || (last.audio ? '🎵 Áudio' : '📷 Mídia');
@@ -2059,10 +2068,37 @@ document.getElementById('btn-cancel-group-reply').addEventListener('click', () =
     document.getElementById('group-reply-bar').classList.add('hidden');
 });
 
-// Anexo no grupo
+// Anexo no grupo — menu completo (Foto / Vídeo / Arquivo), igual ao chat individual
 document.getElementById('btn-group-attach').addEventListener('click', (e) => {
     e.stopPropagation();
-    document.getElementById('group-media-input').click();
+    const menu = document.getElementById('group-attach-menu');
+    menu.classList.toggle('hidden');
+});
+
+document.addEventListener('click', (e) => {
+    const menu = document.getElementById('group-attach-menu');
+    if (!menu.classList.contains('hidden') && !e.target.closest('#group-attach-menu') && !e.target.closest('#btn-group-attach')) {
+        menu.classList.add('hidden');
+    }
+});
+
+document.getElementById('group-attach-image').addEventListener('click', () => {
+    document.getElementById('group-attach-menu').classList.add('hidden');
+    const input = document.getElementById('group-media-input');
+    input.accept = 'image/*';
+    input.click();
+});
+
+document.getElementById('group-attach-video').addEventListener('click', () => {
+    document.getElementById('group-attach-menu').classList.add('hidden');
+    const input = document.getElementById('group-media-input');
+    input.accept = 'video/*';
+    input.click();
+});
+
+document.getElementById('group-attach-doc').addEventListener('click', () => {
+    document.getElementById('group-attach-menu').classList.add('hidden');
+    document.getElementById('group-doc-input').click();
 });
 
 document.getElementById('group-media-input').addEventListener('change', (e) => {
@@ -2077,6 +2113,29 @@ document.getElementById('group-media-input').addEventListener('change', (e) => {
             id: ref.key, senderId: currentUser.uid,
             senderNickname: cachedProfile.nickname || 'Usuário',
             [isVideo ? 'video' : 'image']: ev.target.result,
+            timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'sent'
+        };
+        ref.set(payload).then(() => {
+            database.ref(`groups/${activeGroupId}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
+        });
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+});
+
+document.getElementById('group-doc-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file || !activeGroupId) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        const cachedProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
+        const ref = database.ref(`groups/${activeGroupId}/messages`).push();
+        const payload = {
+            id: ref.key, senderId: currentUser.uid,
+            senderNickname: cachedProfile.nickname || 'Usuário',
+            document: ev.target.result,
+            documentName: file.name,
+            documentSize: file.size,
             timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'sent'
         };
         ref.set(payload).then(() => {
@@ -2176,7 +2235,7 @@ function showGroupMemberProfile(uid, cachedData) {
         document.getElementById('sheet-contact-nick').innerText = data.nickname || 'Usuário';
         document.getElementById('sheet-contact-user').innerText = data.username || '@user';
         document.getElementById('sheet-contact-bio').innerText  = data.bio || 'Sem bio disponível.';
-        document.getElementById('sheet-contact-wlstwrus').innerText = data.wlstwrus || 'Disponível';
+        document.getElementById('sheet-contact-status').innerText = data.wlstwrus || 'Disponível';
         document.getElementById('sheet-contact-avatar').src = data.avatar || 'https://via.placeholder.com/150';
         
         const sheetBadge = document.getElementById('sheet-blocked-badge');
