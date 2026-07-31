@@ -170,14 +170,15 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 
 /* ── PREFIXO FIXO "@" — impede digitar antes/depois do arroba ───────── */
 .input-group-premium.with-at-prefix input { padding-left: 30px; }
-.input-group-premium.with-at-prefix .at-prefix { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #fff; font-size: 15px; pointer-events: none; z-index: 1; }
+.input-group-premium.with-at-prefix .at-prefix { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.65); font-weight: 600; font-size: 15px; pointer-events: none; z-index: 1; }
 .input-group-premium.with-at-prefix label { left: 34px; }
 .input-group-premium.with-at-prefix input:focus ~ label,
 .input-group-premium.with-at-prefix input:not(:placeholder-shown) ~ label { left: 16px; }
 
-.search-bar-wrapper.with-at-prefix { position: relative; display: flex; align-items: center; }
-.search-bar-wrapper.with-at-prefix .at-prefix { position: absolute; left: 30px; color: #fff; font-size: 15px; pointer-events: none; }
-.search-bar-wrapper.with-at-prefix input { padding-left: 30px; }
+.search-bar-wrapper.with-at-prefix { position: static; }
+.at-input-wrap { position: relative; display: flex; align-items: center; }
+.at-input-wrap .at-prefix { position: absolute; left: 14px; color: rgba(255,255,255,0.65); font-size: 14px; font-weight: 600; pointer-events: none; z-index: 1; }
+.at-input-wrap input { padding-left: 27px !important; }
 
 .ios-btn-primary { width: 100%; background: var(--ios-blue); border: none; padding: 14px; border-radius: 14px; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.15s, opacity 0.15s; }
 .ios-btn-primary:active { transform: scale(0.97); opacity: 0.85; }
@@ -555,3 +556,41 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 
 /* ── CHIP DE MEMBRO SELECIONADO ───────────────────────────────────── */
 #group-selected-members { min-height: 28px; }
+
+/* ══════════════════════════════════════════════════════════════════
+   REFINAMENTOS DE UI E NOVAS ANIMAÇÕES
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Entrada suave e escalonada para linhas de listas (conversas, grupos,
+   resultados de busca, membros) — dá vida ao carregar sem interferir
+   nas mensagens (que são redesenhadas com frequência demais pra isso). */
+@keyframes rowFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.chat-item-row, .request-row { animation: rowFadeIn 0.28s ease both; }
+.chats-list .chat-item-row:nth-child(1)  { animation-delay: 0.02s; }
+.chats-list .chat-item-row:nth-child(2)  { animation-delay: 0.05s; }
+.chats-list .chat-item-row:nth-child(3)  { animation-delay: 0.08s; }
+.chats-list .chat-item-row:nth-child(4)  { animation-delay: 0.11s; }
+.chats-list .chat-item-row:nth-child(5)  { animation-delay: 0.14s; }
+.chats-list .chat-item-row:nth-child(n+6) { animation-delay: 0.16s; }
+
+/* Avatares surgem com um leve fade em vez de "estalar" na tela ao carregar */
+.chat-item-row img, .profile-detail-header img, .avatar-detail-large { animation: fadeIn 0.25s ease; }
+
+/* Pop sutil nos badges de contagem (não lidas / solicitações) */
+@keyframes badgePop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
+#requests-badge, .unread-badge { animation: badgePop 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* Feedback de toque consistente em botões secundários que ainda não tinham */
+.back-btn, .settings-tab, .tab-item { transition: transform 0.12s ease, opacity 0.12s ease; }
+.back-btn:active { transform: scale(0.9); opacity: 0.7; }
+
+/* Troca de aba nas Configurações com leve deslize, em vez de aparecer seco */
+@keyframes tabPaneIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.settings-tab-pane:not(.hidden) { animation: tabPaneIn 0.22s ease; }
+
+/* Botão "Editar Grupo" e outras ações de admin entram junto com o card */
+#group-admin-actions:not(.hidden) { animation: fadeIn 0.25s ease; }
+
+/* Estado vazio (sem conversas/grupos) com uma leve respiração no ícone */
+@keyframes emptyBreathe { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.04); } }
+.empty-state { animation: fadeIn 0.3s ease; }
