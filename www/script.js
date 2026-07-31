@@ -511,6 +511,8 @@ document.getElementById('btn-unblock-banner').addEventListener('click', () => {
     unblockUser(activeRecipientId);
 });
 
+let _statusListenerUid = null; // rastreia o listener de status ativo pra não acumular ao trocar de chat
+
 // ─── CHAT: ABRIR SALA ───────────────────────────────────────────────────────
 function openChatRoom(chatId, recipientData) {
     activeChatId      = chatId;
@@ -531,6 +533,9 @@ function openChatRoom(chatId, recipientData) {
     applyBlockedStateToChat(recipientData.uid, isBlocked(recipientData.uid));
 
     if (currentUser.uid !== "offline_user") {
+        // Desliga o listener de status do destinatário anterior antes de criar um novo
+        if (_statusListenerUid) database.ref(`users/${_statusListenerUid}`).off('value');
+        _statusListenerUid = recipientData.uid;
         database.ref(`users/${recipientData.uid}`).on('value', rSnap => {
             const rUser = rSnap.val();
             if (!rUser) return;
@@ -1583,6 +1588,7 @@ function switchMainTab(target) {
 document.getElementById('btn-back-to-list').addEventListener('click', () => {
     document.getElementById('chat-room-screen').classList.add('hidden');
     activeChatId = null;
+    if (_statusListenerUid) { database.ref(`users/${_statusListenerUid}`).off('value'); _statusListenerUid = null; }
     document.querySelectorAll('.chat-item-row').forEach(el => el.classList.remove('active-desktop-chat'));
     const emptyPanel = document.getElementById('empty-chat-panel');
     if (emptyPanel) emptyPanel.classList.remove('hidden');
@@ -2373,6 +2379,57 @@ document.getElementById('btn-leave-group').addEventListener('click', () => {
     });
 });
 
+// ─── EDITAR GRUPO (nome, descrição, foto) — apenas admin/dono ──────────────
+let editGroupAvatarBase64 = '';
+document.getElementById('btn-edit-group').addEventListener('click', () => {
+    if (!activeGroupData || !(isGroupAdmin(activeGroupData) || isGroupOwner(activeGroupData))) return;
+    editGroupAvatarBase64 = '';
+    document.getElementById('edit-group-name-input').value = activeGroupData.name || '';
+    document.getElementById('edit-group-desc-input').value = activeGroupData.description || '';
+    document.getElementById('edit-group-avatar-preview').src = activeGroupData.avatar || 'https://cdn-icons-png.flaticon.com/512/906/906343.png';
+    document.getElementById('edit-group-modal').classList.remove('hidden');
+});
+
+document.getElementById('btn-close-edit-group').addEventListener('click', () => {
+    document.getElementById('edit-group-modal').classList.add('hidden');
+});
+
+document.getElementById('edit-group-avatar-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+        editGroupAvatarBase64 = ev.target.result;
+        document.getElementById('edit-group-avatar-preview').src = editGroupAvatarBase64;
+    };
+    reader.readAsDataURL(file);
+});
+
+document.getElementById('btn-save-edit-group').addEventListener('click', () => {
+    const name = document.getElementById('edit-group-name-input').value.trim();
+    const desc = document.getElementById('edit-group-desc-input').value.trim();
+    if (!name) return alert('O grupo precisa de um nome.');
+    if (!activeGroupId) return;
+
+    const btn = document.getElementById('btn-save-edit-group');
+    btn.disabled = true; btn.innerText = 'Salvando...';
+
+    const updates = { name, description: desc };
+    if (editGroupAvatarBase64) updates.avatar = editGroupAvatarBase64;
+
+    database.ref(`groups/${activeGroupId}`).update(updates)
+        .then(() => {
+            activeGroupData = { ...activeGroupData, ...updates };
+            document.getElementById('edit-group-modal').classList.add('hidden');
+            btn.disabled = false; btn.innerText = 'Salvar Alterações';
+            openGroupInfoSheet();
+        })
+        .catch(err => {
+            btn.disabled = false; btn.innerText = 'Salvar Alterações';
+            alert('Erro ao salvar: ' + err.message);
+        });
+});
+
 // ─── ADICIONAR MEMBRO AO GRUPO ──────────────────────────────────────────────
 document.getElementById('btn-add-group-member').addEventListener('click', () => {
     document.getElementById('add-member-modal').classList.remove('hidden');
@@ -2388,11 +2445,12 @@ let _addMemberDebounce = null;
 document.getElementById('add-member-search').addEventListener('input', () => {
     clearTimeout(_addMemberDebounce);
     _addMemberDebounce = setTimeout(() => {
-        const term = document.getElementById('add-member-search').value.trim().toLowerCase();
+        const raw = document.getElementById('add-member-search').value.trim().toLowerCase().replace(/^@/, '');
+        const term = raw ? '@' + raw : '';
         const results = document.getElementById('add-member-results');
         results.innerHTML = '';
-        if (!term.includes('@') || term.length < 3) {
-            results.innerHTML = '<div class="empty-state" style="font-size:12px;padding:10px;">Digite @usuario para buscar</div>';
+        if (term.length < 4) {
+            results.innerHTML = '<div class="empty-state" style="font-size:12px;padding:10px;">Digite pelo menos 3 letras</div>';
             return;
         }
         database.ref('users').once('value', snap => {
@@ -2468,10 +2526,11 @@ let _groupMemberSearchDebounce = null;
 document.getElementById('group-member-search').addEventListener('input', () => {
     clearTimeout(_groupMemberSearchDebounce);
     _groupMemberSearchDebounce = setTimeout(() => {
-        const term = document.getElementById('group-member-search').value.trim().toLowerCase();
+        const raw = document.getElementById('group-member-search').value.trim().toLowerCase().replace(/^@/, '');
+        const term = raw ? '@' + raw : '';
         const results = document.getElementById('group-member-results');
         results.innerHTML = '';
-        if (!term.includes('@') || term.length < 3) return;
+        if (term.length < 4) return;
 
         database.ref('users').once('value', snap => {
             const seen = new Set();
