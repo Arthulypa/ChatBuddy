@@ -168,6 +168,17 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .input-group-premium label { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; transition: 0.2s ease; font-size: 15px; }
 .input-group-premium input:focus ~ label, .input-group-premium input:not(:placeholder-shown) ~ label { top: 0; font-size: 11px; background: #16161a; padding: 2px 6px; border-radius: 4px; color: var(--ios-blue); transform: translateY(-50%); }
 
+/* ── PREFIXO FIXO "@" — impede digitar antes/depois do arroba ───────── */
+.input-group-premium.with-at-prefix input { padding-left: 30px; }
+.input-group-premium.with-at-prefix .at-prefix { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: #fff; font-size: 15px; pointer-events: none; z-index: 1; }
+.input-group-premium.with-at-prefix label { left: 34px; }
+.input-group-premium.with-at-prefix input:focus ~ label,
+.input-group-premium.with-at-prefix input:not(:placeholder-shown) ~ label { left: 16px; }
+
+.search-bar-wrapper.with-at-prefix { position: relative; display: flex; align-items: center; }
+.search-bar-wrapper.with-at-prefix .at-prefix { position: absolute; left: 30px; color: #fff; font-size: 15px; pointer-events: none; }
+.search-bar-wrapper.with-at-prefix input { padding-left: 30px; }
+
 .ios-btn-primary { width: 100%; background: var(--ios-blue); border: none; padding: 14px; border-radius: 14px; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.15s, opacity 0.15s; }
 .ios-btn-primary:active { transform: scale(0.97); opacity: 0.85; }
 .ios-btn-google { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); padding: 12px; border-radius: 14px; color: #fff; font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; margin-top: 5px; transition: background 0.2s; }
