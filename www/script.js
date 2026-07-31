@@ -217,7 +217,7 @@ document.getElementById('btn-google-login').addEventListener('click', () => {
 
 document.getElementById('btn-save-profile').addEventListener('click', () => {
     const nick   = document.getElementById('display-name').value.trim();
-    const userAt = document.getElementById('username').value.trim().replace('@', '');
+    const userAt = document.getElementById('username').value.trim().replace(/^@/, '');
     const bio    = document.getElementById('user-bio').value.trim() || "Disponível no ChatBuddy";
     if (!nick || !userAt) return alert("Campos obrigatórios vazios!");
     
@@ -229,7 +229,19 @@ document.getElementById('btn-save-profile').addEventListener('click', () => {
     };
     
     localStorage.setItem(`profile_${currentUser.uid}`, JSON.stringify(profileData));
-    database.ref('users/' + currentUser.uid).set(profileData).then(() => changeView('chat'));
+    const btnSave = document.getElementById('btn-save-profile');
+    const originalLabel = btnSave.innerText;
+    btnSave.disabled = true; btnSave.innerText = 'Salvando...';
+    database.ref('users/' + currentUser.uid).set(profileData)
+        .then(() => changeView('chat'))
+        .catch(err => {
+            btnSave.disabled = false; btnSave.innerText = originalLabel;
+            if (err.code === 'PERMISSION_DENIED') {
+                alert('Não foi possível salvar o perfil: acesso negado pelo banco de dados. Verifique as Regras (Rules) do Realtime Database no Firebase.');
+            } else {
+                alert('Erro ao salvar perfil: ' + err.message);
+            }
+        });
 });
 
 function checkLocalSessionAndLogin() {
@@ -368,6 +380,14 @@ function triggerPremiumPopup(sender, text) {
 auth.onAuthStateChanged(user => {
     if (suppressAuthListener) return; // cadastro em andamento — a tela é controlada manualmente pelo fluxo de registro
     if (user) {
+        // Bloqueia qualquer acesso ao app com e-mail não verificado (cobre login direto, não só o cadastro)
+        if (!user.emailVerified) {
+            auth.signOut();
+            localStorage.removeItem('localLoggedUser');
+            changeView('login');
+            alert('Seu e-mail ainda não foi verificado. Verifique sua caixa de entrada e clique no link antes de entrar.');
+            return;
+        }
         currentUser = user;
         database.ref('users/' + user.uid).once('value').then(snap => {
             if (snap.exists() && snap.val().username) {
@@ -1344,7 +1364,8 @@ const searchUsernameInput = document.getElementById('search-by-username-input');
 let _searchDebounceTimer = null;
 
 searchUsernameInput.addEventListener('input', () => {
-    const term = searchUsernameInput.value.trim().toLowerCase();
+    const raw = searchUsernameInput.value.trim().toLowerCase().replace(/^@/, '');
+    const term = raw ? '@' + raw : '';
     clearTimeout(_searchDebounceTimer);
     _searchDebounceTimer = setTimeout(() => renderContactsModalList(term), 300);
 });
@@ -1358,8 +1379,8 @@ function renderContactsModalList(filterTerm) {
         return;
     }
 
-    if (!filterTerm.includes('@') || filterTerm.length < 4) {
-        listContainer.innerHTML = `<div class="empty-state" style="font-size:12px; padding:20px 10px;">Digite pelo menos o arroba e 3 letras da pessoa<br>(Ex: <b>@art</b>) para localizá-la de forma privada.</div>`;
+    if (filterTerm.length < 4) {
+        listContainer.innerHTML = `<div class="empty-state" style="font-size:12px; padding:20px 10px;">Digite pelo menos 3 letras do nome de usuário<br>(Ex: <b>art</b>) para localizá-la de forma privada.</div>`;
         return;
     }
 
@@ -1426,6 +1447,9 @@ function startNewChatRoomWithUser(targetUser) {
                     alert("Você já enviou uma solicitação para este usuário. Aguarde a resposta.");
                     return;
                 }
+                // Pede a primeira (e única) mensagem que acompanha o pedido de conversa
+                const firstMsg = prompt(`Envie uma mensagem para ${targetUser.nickname || 'este usuário'} junto com seu pedido de conversa (ela só poderá responder depois de aceitar):`);
+                if (firstMsg === null || !firstMsg.trim()) return; // cancelou ou deixou vazio
                 // Envia solicitação
                 const myProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
                 database.ref(`chatRequests/${targetUser.uid}/${currentUser.uid}`).set({
@@ -1433,6 +1457,7 @@ function startNewChatRoomWithUser(targetUser) {
                     fromNickname: myProfile.nickname || currentUser.email,
                     fromUsername: myProfile.username || '',
                     fromAvatar: myProfile.avatar || '',
+                    message: firstMsg.trim(),
                     timestamp: firebase.database.ServerValue.TIMESTAMP,
                     status: 'pending'
                 }).then(() => {
@@ -1491,7 +1516,7 @@ document.getElementById('btn-main-settings').addEventListener('click', () => {
     if(cachedProfile) {
         const p = JSON.parse(cachedProfile);
         document.getElementById('settings-nickname').value = p.nickname || '';
-        document.getElementById('settings-username').value = p.username || '';
+        document.getElementById('settings-username').value = (p.username || '').replace(/^@/, '');
         document.getElementById('settings-bio').value      = p.bio || '';
         document.getElementById('settings-avatar-preview').src = p.avatar || "https://via.placeholder.com/150";
     }
@@ -1612,6 +1637,7 @@ function renderRequestsList() {
                 <div class="request-row-info">
                     <h4>${req.fromNickname || 'Usuário'}</h4>
                     <p>${req.fromUsername || ''}</p>
+                    ${req.message ? `<p style="color:#fff;font-style:italic;margin-top:2px;">"${req.message}"</p>` : ''}
                 </div>
                 <div class="request-row-actions">
                     <button class="btn-req-accept">Aceitar</button>
@@ -1638,6 +1664,14 @@ function acceptChatRequest(req, fromUid, rowEl) {
     };
     newChatRef.set(chatPayload).then(() => {
         database.ref(`chatRequests/${currentUser.uid}/${fromUid}`).update({ status: 'accepted' });
+        // A mensagem enviada junto com o pedido vira a primeira mensagem da conversa
+        if (req.message) {
+            const firstMsgRef = database.ref(`chats/${newChatId}/messages`).push();
+            firstMsgRef.set({
+                id: firstMsgRef.key, senderId: fromUid, text: req.message,
+                timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'sent'
+            });
+        }
         rowEl.remove();
         const list = document.getElementById('requests-list');
         if (!list.querySelector('.request-row')) {
