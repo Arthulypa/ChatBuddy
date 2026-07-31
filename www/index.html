@@ -91,9 +91,10 @@
                 <input type="text" id="display-name" required placeholder=" ">
                 <label>Apelido (Nickname)</label>
             </div>
-            <div class="input-group-premium">
+            <div class="input-group-premium with-at-prefix">
+                <span class="at-prefix">@</span>
                 <input type="text" id="username" required placeholder=" ">
-                <label>Nome de usuário (@)</label>
+                <label>Nome de usuário</label>
             </div>
             <div class="input-group-premium">
                 <input type="text" id="user-bio" placeholder=" " value="Disponível no ChatBuddy">
@@ -265,9 +266,10 @@
                             <input type="text" id="settings-nickname" placeholder=" ">
                             <label>Apelido (Nickname)</label>
                         </div>
-                        <div class="input-group-premium" style="margin-bottom:4px;">
+                        <div class="input-group-premium with-at-prefix" style="margin-bottom:4px;">
+                            <span class="at-prefix">@</span>
                             <input type="text" id="settings-username" placeholder=" ">
-                            <label>Nome de usuário (@)</label>
+                            <label>Nome de usuário</label>
                         </div>
                         <div class="input-group-premium" style="margin-bottom:12px;">
                             <input type="text" id="settings-bio" placeholder=" ">
@@ -450,8 +452,9 @@
                     <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                 </button>
             </div>
-            <div class="search-bar-wrapper" style="padding: 0 0 10px 0;">
-                <input type="text" id="search-by-username-input" placeholder="Digite o @ completo ou parcial (ex: @art)">
+            <div class="search-bar-wrapper with-at-prefix" style="padding: 0 0 10px 0;">
+                <span class="at-prefix">@</span>
+                <input type="text" id="search-by-username-input" placeholder="Digite o nome (ex: art)">
             </div>
             <div id="contacts-list-modal" class="chats-list"></div>
         </div>
