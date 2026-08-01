@@ -2,9 +2,24 @@
 (function applyStoredTheme() {
     const savedTheme  = localStorage.getItem('chatbuddy_theme')  || 'dark';
     const savedAccent = localStorage.getItem('chatbuddy_accent') || 'blue';
+    const savedFont   = localStorage.getItem('chatbuddy_font')   || 'padrao';
+    const savedBubble = localStorage.getItem('chatbuddy_bubble') || 'blue';
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.documentElement.setAttribute('data-accent', savedAccent);
+    document.documentElement.setAttribute('data-font', savedFont);
+    document.documentElement.setAttribute('data-bubble', savedBubble);
 })();
+
+// ─── AVATAR PADRÃO (estilo WhatsApp) — sempre funciona, mesmo offline ──────
+const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,' + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+    '<defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs>' +
+    '<circle cx="50" cy="50" r="50" fill="#8e8e93"/>' +
+    '<g clip-path="url(#c)" fill="#e5e5ea">' +
+    '<circle cx="50" cy="40" r="18"/>' +
+    '<ellipse cx="50" cy="96" rx="34" ry="30"/>' +
+    '</g></svg>'
+);
 
 // ─── FIREBASE CONFIG ────────────────────────────────────────────────────────
 const firebaseConfig = {
@@ -90,7 +105,7 @@ window.addEventListener('offline', () => {
 function triggerSystemPopup(title, text, customIconUrl) {
     const popup = document.getElementById('popup-notification');
     if (!popup) return;
-    document.getElementById('popup-avatar').src = customIconUrl || "https://via.placeholder.com/150";
+    document.getElementById('popup-avatar').src = customIconUrl || DEFAULT_AVATAR;
     document.getElementById('popup-title').innerText = title;
     document.getElementById('popup-text').innerText  = text;
     popup.classList.remove('hidden');
@@ -232,7 +247,7 @@ document.getElementById('btn-save-profile').addEventListener('click', () => {
     const profileData = {
         uid: currentUser.uid, nickname: nick, username: '@' + userAt, bio: bio,
         wlstwrus: "Disponível no ChatBuddy 🚀",
-        avatar: base64AvatarString || "https://via.placeholder.com/150",
+        avatar: base64AvatarString || DEFAULT_AVATAR,
         status: "online", lastSeen: firebase.database.ServerValue.TIMESTAMP
     };
     
@@ -279,13 +294,13 @@ function updateHeaderUserInfo() {
     const cachedProfile = localStorage.getItem(`profile_${currentUser.uid}`);
     if (cachedProfile) {
         const p = JSON.parse(cachedProfile);
-        document.getElementById('current-user-header-avatar').src = p.avatar || "https://via.placeholder.com/150";
+        document.getElementById('current-user-header-avatar').src = p.avatar || DEFAULT_AVATAR;
         document.getElementById('current-user-header-nick').innerText = p.nickname || "Eu";
     } else if (currentUser.uid !== "offline_user") {
         database.ref('users/' + currentUser.uid).once('value', snap => {
             if (snap.exists()) {
                 const p = snap.val();
-                document.getElementById('current-user-header-avatar').src = p.avatar || "https://via.placeholder.com/150";
+                document.getElementById('current-user-header-avatar').src = p.avatar || DEFAULT_AVATAR;
                 document.getElementById('current-user-header-nick').innerText = p.nickname || "Eu";
             }
         });
@@ -528,7 +543,7 @@ function openChatRoom(chatId, recipientData) {
     replyingTo        = null;
     document.getElementById('reply-bar').classList.add('hidden');
     document.getElementById('active-chat-name').innerText  = getDisplayName(recipientData) || recipientData.nickname || 'Usuário';
-    document.getElementById('active-chat-avatar').src      = recipientData.avatar || "https://via.placeholder.com/150";
+    document.getElementById('active-chat-avatar').src      = recipientData.avatar || DEFAULT_AVATAR;
     document.getElementById('chat-room-screen').classList.remove('hidden');
     
     document.querySelectorAll('.chat-item-row').forEach(el => el.classList.remove('active-desktop-chat'));
@@ -942,7 +957,7 @@ document.getElementById('btn-delete-for-me').addEventListener('click', () => {
     if(currentUser.uid === "offline_user") {
         const cachedList = JSON.parse(localStorage.getItem('offline_chat_list') || '{}');
         const cachedChat = cachedList[activeChatId];
-        const recipientObj = cachedChat ? cachedChat.recipient : { uid: activeRecipientId, avatar: "https://via.placeholder.com/150", nickname: "Usuário" };
+        const recipientObj = cachedChat ? cachedChat.recipient : { uid: activeRecipientId, avatar: DEFAULT_AVATAR, nickname: "Usuário" };
         openChatRoom(activeChatId, recipientObj);
     }
 });
@@ -1531,7 +1546,7 @@ document.getElementById('btn-main-settings').addEventListener('click', () => {
         document.getElementById('settings-nickname').value = p.nickname || '';
         document.getElementById('settings-username').value = (p.username || '').replace(/^@/, '');
         document.getElementById('settings-bio').value      = p.bio || '';
-        document.getElementById('settings-avatar-preview').src = p.avatar || "https://via.placeholder.com/150";
+        document.getElementById('settings-avatar-preview').src = p.avatar || DEFAULT_AVATAR;
     }
     document.getElementById('settings-screen').classList.remove('hidden');
 });
@@ -1543,11 +1558,19 @@ document.getElementById('btn-back-settings').addEventListener('click', () => doc
 function refreshPersonalizationUI() {
     const theme  = localStorage.getItem('chatbuddy_theme')  || 'dark';
     const accent = localStorage.getItem('chatbuddy_accent') || 'blue';
+    const font   = localStorage.getItem('chatbuddy_font')   || 'padrao';
+    const bubble = localStorage.getItem('chatbuddy_bubble') || 'blue';
     document.querySelectorAll('.theme-option').forEach(btn => {
         btn.classList.toggle('active-theme', btn.dataset.themeValue === theme);
     });
     document.querySelectorAll('.accent-swatch').forEach(btn => {
         btn.classList.toggle('active-accent', btn.dataset.accentValue === accent);
+    });
+    document.querySelectorAll('.font-option').forEach(btn => {
+        btn.classList.toggle('active-font', btn.dataset.fontValue === font);
+    });
+    document.querySelectorAll('.bubble-swatch').forEach(btn => {
+        btn.classList.toggle('active-bubble', btn.dataset.bubbleValue === bubble);
     });
 }
 
@@ -1565,6 +1588,24 @@ document.querySelectorAll('.accent-swatch').forEach(btn => {
         const accent = btn.dataset.accentValue;
         document.documentElement.setAttribute('data-accent', accent);
         localStorage.setItem('chatbuddy_accent', accent);
+        refreshPersonalizationUI();
+    });
+});
+
+document.querySelectorAll('.font-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const font = btn.dataset.fontValue;
+        document.documentElement.setAttribute('data-font', font);
+        localStorage.setItem('chatbuddy_font', font);
+        refreshPersonalizationUI();
+    });
+});
+
+document.querySelectorAll('.bubble-swatch').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const bubble = btn.dataset.bubbleValue;
+        document.documentElement.setAttribute('data-bubble', bubble);
+        localStorage.setItem('chatbuddy_bubble', bubble);
         refreshPersonalizationUI();
     });
 });
@@ -1679,7 +1720,7 @@ function renderRequestsList() {
             const row = document.createElement('div');
             row.className = 'request-row';
             row.innerHTML = `
-                <img src="${req.fromAvatar || 'https://via.placeholder.com/150'}" alt="">
+                <img src="${req.fromAvatar || DEFAULT_AVATAR}" alt="">
                 <div class="request-row-info">
                     <h4>${req.fromNickname || 'Usuário'}</h4>
                     <p>${req.fromUsername || ''}</p>
@@ -1729,7 +1770,7 @@ function acceptChatRequest(req, fromUid, rowEl) {
             uid: fromUid,
             nickname: req.fromNickname || 'Usuário',
             username: req.fromUsername || '',
-            avatar: req.fromAvatar || 'https://via.placeholder.com/150'
+            avatar: req.fromAvatar || DEFAULT_AVATAR
         };
         openChatRoom(newChatId, recipientObj);
     });
@@ -1808,7 +1849,7 @@ function ensureMainGroup() {
                 id: ref.key,
                 name: 'ChatBuddy Official',
                 description: 'Grupo oficial do ChatBuddy 🚀',
-                avatar: 'https://cdn-icons-png.flaticon.com/512/906/906343.png',
+                avatar: DEFAULT_AVATAR,
                 isMainGroup: true,
                 onlyAdminsCanSend: true,
                 ownerUid: currentUser.uid,
@@ -1850,7 +1891,7 @@ function loadGroupsList() {
                 }
                 const badge = g.isMainGroup ? `<span class="header-badge" style="font-size:10px;background:#0a84ff;color:#fff;border-radius:8px;padding:1px 6px;">Official</span>` : '';
                 row.innerHTML = `
-                    <img src="${g.avatar || 'https://cdn-icons-png.flaticon.com/512/906/906343.png'}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">
+                    <img src="${g.avatar || DEFAULT_AVATAR}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">
                     <div class="chat-item-info">
                         <div class="chat-item-header"><h4>${g.name}</h4>${badge}</div>
                         <p>${lastText}</p>
@@ -1874,7 +1915,7 @@ function openGroupRoom(groupId, groupData) {
 
     document.getElementById('group-reply-bar').classList.add('hidden');
     document.getElementById('active-group-name').innerText = groupData.name || 'Grupo';
-    document.getElementById('active-group-avatar').src = groupData.avatar || 'https://cdn-icons-png.flaticon.com/512/906/906343.png';
+    document.getElementById('active-group-avatar').src = groupData.avatar || DEFAULT_AVATAR;
 
     const membersCount = groupData.members ? Object.keys(groupData.members).length : 0;
     document.getElementById('active-group-members-count').innerText = `${membersCount} membros`;
@@ -2265,7 +2306,7 @@ function openGroupInfoSheet() {
     const g = activeGroupData;
     document.getElementById('sheet-group-name').innerText = g.name || 'Grupo';
     document.getElementById('sheet-group-desc').innerText = g.description || '';
-    document.getElementById('sheet-group-avatar').src = g.avatar || 'https://cdn-icons-png.flaticon.com/512/906/906343.png';
+    document.getElementById('sheet-group-avatar').src = g.avatar || DEFAULT_AVATAR;
 
     const adminActions = document.getElementById('group-admin-actions');
     const canManage = isGroupAdmin(g) || isGroupOwner(g);
@@ -2297,7 +2338,7 @@ function openGroupInfoSheet() {
             row.style.padding = '8px 4px';
             row.style.cursor = 'pointer';
             row.innerHTML = `
-                <img src="${u.avatar || 'https://via.placeholder.com/150'}" alt="" style="width:38px;height:38px;border-radius:50%;object-fit:cover;">
+                <img src="${u.avatar || DEFAULT_AVATAR}" alt="" style="width:38px;height:38px;border-radius:50%;object-fit:cover;">
                 <div class="chat-item-info">
                     <div class="chat-item-header"><h4>${u.nickname || 'Usuário'}</h4>${tag}</div>
                     <p>${u.username || ''}</p>
@@ -2333,7 +2374,7 @@ function showGroupMemberProfile(uid, cachedData) {
         document.getElementById('sheet-contact-user').innerText = data.username || '@user';
         document.getElementById('sheet-contact-bio').innerText  = data.bio || 'Sem bio disponível.';
         document.getElementById('sheet-contact-status').innerText = data.wlstwrus || 'Disponível';
-        document.getElementById('sheet-contact-avatar').src = data.avatar || 'https://via.placeholder.com/150';
+        document.getElementById('sheet-contact-avatar').src = data.avatar || DEFAULT_AVATAR;
         
         const sheetBadge = document.getElementById('sheet-blocked-badge');
         const btnBlock   = document.getElementById('btn-sheet-block');
@@ -2426,7 +2467,7 @@ document.getElementById('btn-edit-group').addEventListener('click', () => {
     editGroupAvatarBase64 = '';
     document.getElementById('edit-group-name-input').value = activeGroupData.name || '';
     document.getElementById('edit-group-desc-input').value = activeGroupData.description || '';
-    document.getElementById('edit-group-avatar-preview').src = activeGroupData.avatar || 'https://cdn-icons-png.flaticon.com/512/906/906343.png';
+    document.getElementById('edit-group-avatar-preview').src = activeGroupData.avatar || DEFAULT_AVATAR;
     document.getElementById('edit-group-modal').classList.remove('hidden');
 });
 
@@ -2632,7 +2673,7 @@ document.getElementById('btn-confirm-create-group').addEventListener('click', ()
         id: ref.key,
         name: name,
         description: document.getElementById('group-desc-input').value.trim(),
-        avatar: groupAvatarBase64 || 'https://cdn-icons-png.flaticon.com/512/906/906343.png',
+        avatar: groupAvatarBase64 || DEFAULT_AVATAR,
         isMainGroup: false,
         onlyAdminsCanSend: false,
         ownerUid: currentUser.uid,
