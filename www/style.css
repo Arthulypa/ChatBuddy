@@ -137,7 +137,7 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
         border-radius: 14px !important;
         overflow: hidden;
     }
-    #settings-screen {
+    .settings-screen {
         position: absolute !important;
         left: 340px !important;
         right: 10px !important;
@@ -791,10 +791,55 @@ html[data-animation="padrao"]   .message-wrapper { animation: msgAnimPadrao 0.22
 html[data-animation="suave"]    .message-wrapper { animation: msgAnimSuave 0.35s ease both; }
 html[data-animation="dinamica"] .message-wrapper { animation: msgAnimDinamica 0.28s cubic-bezier(0.34,1.56,0.64,1) both; }
 html[data-animation="nenhuma"]  .message-wrapper { animation: none !important; }
+/* Bolha que já apareceu antes não deve repetir a animação de entrada quando a lista é recarregada */
+.message-wrapper.no-anim { animation: none !important; }
 
 /* Botão "Editar Grupo" e outras ações de admin entram junto com o card */
 #group-admin-actions:not(.hidden) { animation: fadeIn 0.25s ease; }
 
 /* Estado vazio (sem conversas/grupos) com uma leve respiração no ícone */
 @keyframes emptyBreathe { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.04); } }
+
+/* ── SPLASH SCREEN (abertura animada) ───────────────────────────────────── */
+.app-splash-screen {
+    position: fixed; inset: 0; width: 100vw; height: 100dvh; z-index: 9999;
+    background: var(--surface-1, #0a0a0c);
+    background-image: radial-gradient(circle at 50% 30%, rgba(10,132,255,0.18), transparent 60%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px;
+    transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+.app-splash-screen.splash-hide { opacity: 0; visibility: hidden; pointer-events: none; }
+.splash-icon-wrapper {
+    position: relative; width: 88px; height: 88px;
+    display: flex; align-items: center; justify-content: center;
+    animation: splashPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.splash-icon {
+    width: 46px; height: 46px; color: #0a84ff;
+    filter: drop-shadow(0 0 14px rgba(10,132,255,0.65));
+    animation: splashPulse 1.6s ease-in-out infinite;
+}
+.splash-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 2px solid rgba(10,132,255,0.35);
+    animation: splashRing 1.8s ease-out infinite;
+}
+.splash-title {
+    font-size: 22px; font-weight: 700; letter-spacing: 0.3px; color: var(--text-main, #fff);
+    animation: splashFadeUp 0.6s ease 0.15s both;
+}
+.splash-dots { display: flex; gap: 6px; animation: splashFadeUp 0.6s ease 0.3s both; }
+.splash-dots span {
+    width: 6px; height: 6px; border-radius: 50%; background: #0a84ff; opacity: 0.35;
+    animation: splashDotBlink 1.2s ease-in-out infinite;
+}
+.splash-dots span:nth-child(2) { animation-delay: 0.15s; }
+.splash-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes splashPop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes splashPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: 0.85; } }
+@keyframes splashRing { 0% { transform: scale(0.85); opacity: 0.8; } 100% { transform: scale(1.6); opacity: 0; } }
+@keyframes splashFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes splashDotBlink { 0%, 100% { opacity: 0.3; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } }
 .empty-state { animation: fadeIn 0.3s ease; }
