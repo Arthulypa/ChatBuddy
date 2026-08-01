@@ -1,13 +1,15 @@
 // ─── PERSONALIZAÇÃO: TEMA E COR DE DESTAQUE (aplica antes de tudo pra não piscar) ──
 (function applyStoredTheme() {
-    const savedTheme  = localStorage.getItem('chatbuddy_theme')  || 'dark';
-    const savedAccent = localStorage.getItem('chatbuddy_accent') || 'blue';
-    const savedFont   = localStorage.getItem('chatbuddy_font')   || 'padrao';
-    const savedBubble = localStorage.getItem('chatbuddy_bubble') || 'blue';
+    const savedTheme     = localStorage.getItem('chatbuddy_theme')     || 'dark';
+    const savedAccent    = localStorage.getItem('chatbuddy_accent')    || 'blue';
+    const savedFont      = localStorage.getItem('chatbuddy_font')      || 'padrao';
+    const savedBubble    = localStorage.getItem('chatbuddy_bubble')    || 'blue';
+    const savedAnimation = localStorage.getItem('chatbuddy_animation') || 'padrao';
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.documentElement.setAttribute('data-accent', savedAccent);
     document.documentElement.setAttribute('data-font', savedFont);
     document.documentElement.setAttribute('data-bubble', savedBubble);
+    document.documentElement.setAttribute('data-animation', savedAnimation);
 })();
 
 // ─── AVATAR PADRÃO (estilo WhatsApp) — sempre funciona, mesmo offline ──────
@@ -33,6 +35,17 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth     = firebase.auth();
 const database = firebase.database();
+const storage  = firebase.storage();
+
+// ─── UPLOAD DE MÍDIA PARA O FIREBASE STORAGE ────────────────────────────────
+// Substitui o antigo esquema de guardar áudio/imagem/vídeo/documento em
+// base64 direto no Realtime Database (pesado, lento e caro). Agora o arquivo
+// vai para o Storage e só a URL de download fica salva na mensagem.
+function uploadBlobToStorage(blob, folder, fileName) {
+    const safeName = (fileName || 'arquivo').replace(/[^a-zA-Z0-9._-]/g, '_');
+    const path = `${folder}/${currentUser.uid}/${Date.now()}_${safeName}`;
+    return storage.ref(path).put(blob).then(snapshot => snapshot.ref.getDownloadURL());
+}
 
 // ─── ESTADO GLOBAL ──────────────────────────────────────────────────────────
 let currentUser        = null;
@@ -538,6 +551,9 @@ let _statusListenerUid = null; // rastreia o listener de status ativo pra não a
 
 // ─── CHAT: ABRIR SALA ───────────────────────────────────────────────────────
 function openChatRoom(chatId, recipientData) {
+    // Se havia um grupo aberto, fecha ele antes de abrir o chat (telas são mutuamente exclusivas)
+    if (activeGroupId) closeGroupRoom();
+
     activeChatId      = chatId;
     activeRecipientId = recipientData.uid;
     replyingTo        = null;
@@ -545,6 +561,7 @@ function openChatRoom(chatId, recipientData) {
     document.getElementById('active-chat-name').innerText  = getDisplayName(recipientData) || recipientData.nickname || 'Usuário';
     document.getElementById('active-chat-avatar').src      = recipientData.avatar || DEFAULT_AVATAR;
     document.getElementById('chat-room-screen').classList.remove('hidden');
+    document.getElementById('group-room-screen').classList.add('hidden');
     
     document.querySelectorAll('.chat-item-row').forEach(el => el.classList.remove('active-desktop-chat'));
     const targetedRow = document.querySelector(`.chat-item-row[data-chat-id="${chatId}"]`);
@@ -1143,7 +1160,15 @@ function createChatRowElement(chatId, uData, chatData) {
             <p>${lastMsgText}</p>
         </div>
     `;
-    row.addEventListener('click', () => openChatRoom(chatId, uData));
+    row.addEventListener('click', () => {
+        if (activeChatId === chatId && !document.getElementById('chat-room-screen').classList.contains('hidden')) {
+            closeChatRoom();
+            const emptyPanel = document.getElementById('empty-chat-panel');
+            if (emptyPanel) emptyPanel.classList.remove('hidden');
+        } else {
+            openChatRoom(chatId, uData);
+        }
+    });
     listContainer.appendChild(row);
 }
 
@@ -1183,43 +1208,45 @@ document.getElementById('attach-doc').addEventListener('click', () => {
 document.getElementById('media-file-input').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file || !activeChatId) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-        const isVideo = file.type.startsWith('video/');
-        const newMsgRef = database.ref(`chats/${activeChatId}/messages`).push();
+    if (currentUser.uid === "offline_user") { alert("Envio de mídia indisponível no modo offline."); e.target.value = ''; return; }
+    const isVideo   = file.type.startsWith('video/');
+    const chatIdAtSend = activeChatId;
+    const newMsgRef = database.ref(`chats/${chatIdAtSend}/messages`).push();
+    triggerSystemPopup(isVideo ? "Enviando vídeo..." : "Enviando imagem...", "Aguarde, isso pode levar alguns segundos.", DEFAULT_AVATAR);
+    uploadBlobToStorage(file, 'chat_media', file.name).then(url => {
         const payload = {
             id: newMsgRef.key, senderId: currentUser.uid,
-            [isVideo ? 'video' : 'image']: ev.target.result,
+            [isVideo ? 'video' : 'image']: url,
             timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'sending'
         };
-        newMsgRef.set(payload).then(() => {
-            database.ref(`chats/${activeChatId}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
+        return newMsgRef.set(payload).then(() => {
+            database.ref(`chats/${chatIdAtSend}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
             newMsgRef.update({ status: 'sent' });
         });
-    };
-    reader.readAsDataURL(file);
+    }).catch(err => alert('Falha ao enviar mídia: ' + err.message));
     e.target.value = '';
 });
 
 document.getElementById('doc-file-input').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file || !activeChatId) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-        const newMsgRef = database.ref(`chats/${activeChatId}/messages`).push();
+    if (currentUser.uid === "offline_user") { alert("Envio de arquivo indisponível no modo offline."); e.target.value = ''; return; }
+    const chatIdAtSend = activeChatId;
+    const newMsgRef = database.ref(`chats/${chatIdAtSend}/messages`).push();
+    triggerSystemPopup("Enviando arquivo...", "Aguarde, isso pode levar alguns segundos.", DEFAULT_AVATAR);
+    uploadBlobToStorage(file, 'chat_docs', file.name).then(url => {
         const payload = {
             id: newMsgRef.key, senderId: currentUser.uid,
-            document: ev.target.result,
+            document: url,
             documentName: file.name,
             documentSize: file.size,
             timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'sending'
         };
-        newMsgRef.set(payload).then(() => {
-            database.ref(`chats/${activeChatId}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
+        return newMsgRef.set(payload).then(() => {
+            database.ref(`chats/${chatIdAtSend}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
             newMsgRef.update({ status: 'sent' });
         });
-    };
-    reader.readAsDataURL(file);
+    }).catch(err => alert('Falha ao enviar arquivo: ' + err.message));
     e.target.value = '';
 });
 
@@ -1360,24 +1387,24 @@ function saveAndSendAudioPayload() {
     const stopTime = (mediaRecorder && mediaRecorder._recordStopTime) ? mediaRecorder._recordStopTime : Date.now();
     const durationSeconds = Math.max(1, Math.floor((stopTime - recordStartTime) / 1000));
     const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
-    const reader = new FileReader();
-    reader.onload = (e) => {
-        const base64Audio = e.target.result;
-        if (!activeChatId) return;
 
-        const newMsgRef = database.ref(`chats/${activeChatId}/messages`).push();
+    if (!activeChatId || currentUser.uid === "offline_user") {
+        if (currentUser.uid === "offline_user") alert("Envio de áudio indisponível no modo offline.");
+        return;
+    }
+
+    const chatIdAtSend = activeChatId;
+    const newMsgRef = database.ref(`chats/${chatIdAtSend}/messages`).push();
+    uploadBlobToStorage(audioBlob, 'chat_audio', `audio_${Date.now()}.mp3`).then(url => {
         const payload = {
-            id: newMsgRef.key, senderId: currentUser.uid, audio: base64Audio,
+            id: newMsgRef.key, senderId: currentUser.uid, audio: url,
             audioDuration: durationSeconds, timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'sending'
         };
-
-        if(currentUser.uid === "offline_user") return;
-        newMsgRef.set(payload).then(() => {
-            database.ref(`chats/${activeChatId}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
+        return newMsgRef.set(payload).then(() => {
+            database.ref(`chats/${chatIdAtSend}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
             newMsgRef.update({ status: 'sent' });
         });
-    };
-    reader.readAsDataURL(audioBlob);
+    }).catch(err => alert('Falha ao enviar áudio: ' + err.message));
 }
 
 // ─── NOVA CONVERSA: FILTRO DE PRIVACIDADE EXCLUSIVO POR ARROBA (@) ───
@@ -1556,10 +1583,11 @@ document.getElementById('btn-back-settings').addEventListener('click', () => doc
 // Abas de navegação interna das configurações
 // ─── PERSONALIZAÇÃO: TEMA E COR DE DESTAQUE — controles da aba ─────────────
 function refreshPersonalizationUI() {
-    const theme  = localStorage.getItem('chatbuddy_theme')  || 'dark';
-    const accent = localStorage.getItem('chatbuddy_accent') || 'blue';
-    const font   = localStorage.getItem('chatbuddy_font')   || 'padrao';
-    const bubble = localStorage.getItem('chatbuddy_bubble') || 'blue';
+    const theme     = localStorage.getItem('chatbuddy_theme')     || 'dark';
+    const accent    = localStorage.getItem('chatbuddy_accent')    || 'blue';
+    const font      = localStorage.getItem('chatbuddy_font')      || 'padrao';
+    const bubble    = localStorage.getItem('chatbuddy_bubble')    || 'blue';
+    const animation = localStorage.getItem('chatbuddy_animation') || 'padrao';
     document.querySelectorAll('.theme-option').forEach(btn => {
         btn.classList.toggle('active-theme', btn.dataset.themeValue === theme);
     });
@@ -1571,6 +1599,9 @@ function refreshPersonalizationUI() {
     });
     document.querySelectorAll('.bubble-swatch').forEach(btn => {
         btn.classList.toggle('active-bubble', btn.dataset.bubbleValue === bubble);
+    });
+    document.querySelectorAll('.anim-option').forEach(btn => {
+        btn.classList.toggle('active-anim', btn.dataset.animValue === animation);
     });
 }
 
@@ -1606,6 +1637,15 @@ document.querySelectorAll('.bubble-swatch').forEach(btn => {
         const bubble = btn.dataset.bubbleValue;
         document.documentElement.setAttribute('data-bubble', bubble);
         localStorage.setItem('chatbuddy_bubble', bubble);
+        refreshPersonalizationUI();
+    });
+});
+
+document.querySelectorAll('.anim-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const animation = btn.dataset.animValue;
+        document.documentElement.setAttribute('data-animation', animation);
+        localStorage.setItem('chatbuddy_animation', animation);
         refreshPersonalizationUI();
     });
 });
@@ -1666,11 +1706,17 @@ function switchMainTab(target) {
 }
 
 // Fechamento de telas mobile nativas
-document.getElementById('btn-back-to-list').addEventListener('click', () => {
+function closeChatRoom() {
     document.getElementById('chat-room-screen').classList.add('hidden');
+    if (activeChatId && currentUser.uid !== "offline_user") database.ref(`chats/${activeChatId}/messages`).off();
     activeChatId = null;
+    activeRecipientId = null;
     if (_statusListenerUid) { database.ref(`users/${_statusListenerUid}`).off('value'); _statusListenerUid = null; }
     document.querySelectorAll('.chat-item-row').forEach(el => el.classList.remove('active-desktop-chat'));
+}
+
+document.getElementById('btn-back-to-list').addEventListener('click', () => {
+    closeChatRoom();
     const emptyPanel = document.getElementById('empty-chat-panel');
     if (emptyPanel) emptyPanel.classList.remove('hidden');
 });
@@ -1897,7 +1943,16 @@ function loadGroupsList() {
                         <p>${lastText}</p>
                     </div>
                 `;
-                row.addEventListener('click', () => openGroupRoom(child.key, g));
+                row.addEventListener('click', () => {
+                    if (activeGroupId === child.key && !document.getElementById('group-room-screen').classList.contains('hidden')) {
+                        // Já está aberto: clicar de novo fecha e volta pra lista
+                        closeGroupRoom();
+                        const emptyPanel = document.getElementById('empty-chat-panel');
+                        if (emptyPanel) emptyPanel.classList.remove('hidden');
+                    } else {
+                        openGroupRoom(child.key, g);
+                    }
+                });
                 container.appendChild(row);
             } catch (e) {
                 console.warn('Falha ao renderizar grupo, pulando este item:', child.key, e);
@@ -1909,6 +1964,9 @@ function loadGroupsList() {
 
 // ─── ABRIR SALA DE GRUPO ────────────────────────────────────────────────────
 function openGroupRoom(groupId, groupData) {
+    // Se havia um chat direto aberto, fecha ele antes de abrir o grupo (telas são mutuamente exclusivas)
+    if (activeChatId) closeChatRoom();
+
     activeGroupId   = groupId;
     activeGroupData = groupData;
     groupReplyingTo = null;
@@ -1955,6 +2013,14 @@ function renderGroupMessages(snap, groupData) {
 
     const allMessages = [];
     snap.forEach(child => { const d = child.val(); if (d) allMessages.push(d); });
+
+    // Cacheia localmente para poder exibir o histórico do grupo mesmo sem internet
+    if (activeGroupId && allMessages.length > 0) {
+        const cachePayload = {};
+        allMessages.forEach(d => { cachePayload[d.id] = d; });
+        try { localStorage.setItem(`offline_group_hist_${activeGroupId}`, JSON.stringify(cachePayload)); }
+        catch (e) { console.warn('Não foi possível cachear o histórico do grupo (armazenamento cheio?)', e); }
+    }
 
     allMessages.forEach((data, idx) => {
         const isSent  = data.senderId === currentUser.uid;
@@ -2242,55 +2308,59 @@ document.getElementById('group-attach-doc').addEventListener('click', () => {
 document.getElementById('group-media-input').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file || !activeGroupId) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-        const isVideo = file.type.startsWith('video/');
-        const cachedProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
-        const ref = database.ref(`groups/${activeGroupId}/messages`).push();
+    const isVideo    = file.type.startsWith('video/');
+    const groupIdAtSend = activeGroupId;
+    const cachedProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
+    const ref = database.ref(`groups/${groupIdAtSend}/messages`).push();
+    triggerSystemPopup(isVideo ? "Enviando vídeo..." : "Enviando imagem...", "Aguarde, isso pode levar alguns segundos.", DEFAULT_AVATAR);
+    uploadBlobToStorage(file, 'group_media', file.name).then(url => {
         const payload = {
             id: ref.key, senderId: currentUser.uid,
             senderNickname: cachedProfile.nickname || 'Usuário',
-            [isVideo ? 'video' : 'image']: ev.target.result,
+            [isVideo ? 'video' : 'image']: url,
             timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'sent'
         };
-        ref.set(payload).then(() => {
-            database.ref(`groups/${activeGroupId}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
+        return ref.set(payload).then(() => {
+            database.ref(`groups/${groupIdAtSend}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
         });
-    };
-    reader.readAsDataURL(file);
+    }).catch(err => alert('Falha ao enviar mídia: ' + err.message));
     e.target.value = '';
 });
 
 document.getElementById('group-doc-input').addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (!file || !activeGroupId) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-        const cachedProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
-        const ref = database.ref(`groups/${activeGroupId}/messages`).push();
+    const groupIdAtSend = activeGroupId;
+    const cachedProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
+    const ref = database.ref(`groups/${groupIdAtSend}/messages`).push();
+    triggerSystemPopup("Enviando arquivo...", "Aguarde, isso pode levar alguns segundos.", DEFAULT_AVATAR);
+    uploadBlobToStorage(file, 'group_docs', file.name).then(url => {
         const payload = {
             id: ref.key, senderId: currentUser.uid,
             senderNickname: cachedProfile.nickname || 'Usuário',
-            document: ev.target.result,
+            document: url,
             documentName: file.name,
             documentSize: file.size,
             timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'sent'
         };
-        ref.set(payload).then(() => {
-            database.ref(`groups/${activeGroupId}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
+        return ref.set(payload).then(() => {
+            database.ref(`groups/${groupIdAtSend}`).update({ lastMessageTimestamp: firebase.database.ServerValue.TIMESTAMP });
         });
-    };
-    reader.readAsDataURL(file);
+    }).catch(err => alert('Falha ao enviar arquivo: ' + err.message));
     e.target.value = '';
 });
 
 // ─── VOLTAR DO GRUPO ────────────────────────────────────────────────────────
-document.getElementById('btn-back-group').addEventListener('click', () => {
+function closeGroupRoom() {
     document.getElementById('group-room-screen').classList.add('hidden');
     if (activeGroupId) database.ref(`groups/${activeGroupId}/messages`).off();
     activeGroupId   = null;
     activeGroupData = null;
     document.querySelectorAll('.chat-item-row').forEach(el => el.classList.remove('active-desktop-chat'));
+}
+
+document.getElementById('btn-back-group').addEventListener('click', () => {
+    closeGroupRoom();
     const emptyPanel = document.getElementById('empty-chat-panel');
     if (emptyPanel) emptyPanel.classList.remove('hidden');
 });
