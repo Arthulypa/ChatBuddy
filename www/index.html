@@ -366,6 +366,16 @@
                         </div>
                         <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">Cor das suas mensagens enviadas — o texto se ajusta sozinho pra nunca ficar ilegível.</p>
                     </div>
+                    <div class="settings-section-title" style="margin-top:16px;">Animações</div>
+                    <div class="settings-section-group glass-premium" style="padding:14px;">
+                        <div class="font-picker">
+                            <button class="anim-option" data-anim-value="padrao">Padrão (deslizar + fade)</button>
+                            <button class="anim-option" data-anim-value="suave">Suave (só fade)</button>
+                            <button class="anim-option" data-anim-value="dinamica">Dinâmica (bounce)</button>
+                            <button class="anim-option" data-anim-value="nenhuma">Nenhuma</button>
+                        </div>
+                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">Controla a animação de entrada das mensagens no chat e nos grupos.</p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -710,6 +720,7 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
     <script>
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(() => {});
