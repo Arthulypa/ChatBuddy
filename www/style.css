@@ -355,10 +355,60 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .btn-mic-round { background: var(--surface-3); }
 .btn-mic-round.recording { background: var(--ios-red); animation: pulseRecord 1s infinite alternate; }
 
-.audio-recorder-overlay { position: absolute; left: 12px; right: 58px; background: var(--surface-2); height: 40px; border-radius: 20px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; z-index: 10; animation: fadeIn 0.2s ease; }
-.recorder-info { display: flex; align-items: center; gap: 8px; color: var(--ios-red); font-size: 14px; font-weight: 500; }
+.audio-recorder-overlay {
+    position: absolute; left: 12px; right: 58px; height: 40px;
+    background: var(--surface-2); border-radius: 20px;
+    display: flex; align-items: center; padding: 0 14px;
+    z-index: 10; animation: fadeIn 0.2s ease;
+    overflow: hidden;
+}
+.audio-recorder-overlay.discarding { animation: recorderPoof 0.32s ease forwards; }
+@keyframes recorderPoof {
+    0%   { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.85) translateX(-40px); }
+}
+
+/* Blur/glow vermelho que cresce conforme você arrasta pra cancelar */
+.recorder-red-blur {
+    position: absolute; inset: 0; border-radius: 20px; pointer-events: none;
+    background: radial-gradient(circle at 20px 50%, rgba(255,59,48,0.55), rgba(255,59,48,0.12) 60%, transparent 75%);
+    filter: blur(6px);
+    opacity: 0; transition: opacity 0.12s linear;
+    z-index: 1;
+}
+.audio-recorder-overlay.cancel-armed .recorder-red-blur { opacity: 1; }
+.audio-recorder-overlay.cancel-armed { background: rgba(255,59,48,0.14); }
+
+/* Ícone de lixeira fixo à esquerda, que "acorda" conforme você se aproxima do cancelamento */
+.recorder-trash-icon {
+    position: relative; z-index: 2; flex-shrink: 0;
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted);
+    transform: scale(1); transition: transform 0.12s ease, color 0.12s ease;
+}
+.recorder-trash-icon.trash-armed {
+    color: #fff; background: var(--ios-red);
+    animation: trashShake 0.35s ease;
+}
+@keyframes trashShake {
+    0%, 100% { transform: scale(1.4) rotate(0deg); }
+    25%      { transform: scale(1.4) rotate(-12deg); }
+    75%      { transform: scale(1.4) rotate(12deg); }
+}
+
+/* Conteúdo (timer + dica) que acompanha o dedo ao arrastar pra esquerda */
+.recorder-content {
+    position: relative; z-index: 2; flex: 1;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-left: 10px;
+    transition: transform 0.05s linear;
+}
+.recorder-info { display: flex; align-items: center; gap: 8px; color: var(--ios-red); font-size: 14px; font-weight: 500; flex-shrink: 0; }
 .recorder-blink { width: 8px; height: 8px; background: var(--ios-red); border-radius: 50%; animation: pulseDot 0.5s infinite alternate; }
-.recorder-slide-tip { color: var(--text-muted); font-size: 13px; font-weight: 400; pointer-events: none; }
+.recorder-slide-tip { color: var(--text-muted); font-size: 13px; font-weight: 400; pointer-events: none; white-space: nowrap; }
+.audio-recorder-overlay.cancel-armed .recorder-slide-tip { color: #fff; font-weight: 600; }
+.audio-recorder-overlay.cancel-armed .recorder-info { color: #fff; }
 
 .ios-dropdown-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; z-index: 400; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; animation: fadeIn 0.2s ease; }
 .profile-detail-card { width: 90%; max-width: 340px; border-radius: 24px; padding: 24px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.8); animation: scaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1); }
