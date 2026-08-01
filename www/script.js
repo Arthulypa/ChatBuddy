@@ -35,16 +35,17 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth     = firebase.auth();
 const database = firebase.database();
-const storage  = firebase.storage();
 
-// ─── UPLOAD DE MÍDIA PARA O FIREBASE STORAGE ────────────────────────────────
-// Substitui o antigo esquema de guardar áudio/imagem/vídeo/documento em
-// base64 direto no Realtime Database (pesado, lento e caro). Agora o arquivo
-// vai para o Storage e só a URL de download fica salva na mensagem.
-function uploadBlobToStorage(blob, folder, fileName) {
-    const safeName = (fileName || 'arquivo').replace(/[^a-zA-Z0-9._-]/g, '_');
-    const path = `${folder}/${currentUser.uid}/${Date.now()}_${safeName}`;
-    return storage.ref(path).put(blob).then(snapshot => snapshot.ref.getDownloadURL());
+// ─── CONVERSÃO DE MÍDIA PARA BASE64 (Realtime Database, sem custo do Storage) ──
+// O Firebase Storage é pago, então áudio/imagem/vídeo/documento voltam a ser
+// salvos direto como base64 no Realtime Database, como era antes.
+function blobToBase64(blob) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(blob);
+    });
 }
 
 // ─── ESTADO GLOBAL ──────────────────────────────────────────────────────────
@@ -81,6 +82,7 @@ let recordStartTime = 0;
 let recordTimerInterval = null;
 let recordingLocked = false;
 let startXMic = 0, startYMic = 0;
+let pendingCancelRecording = false; // true quando o arrasto passou do ponto de cancelar
 
 // ─── VIEWS ──────────────────────────────────────────────────────────────────
 const viewPages = {
@@ -1094,20 +1096,36 @@ document.getElementById('blur-overlay').addEventListener('click', (e) => {
 });
 
 // ─── SWIPE TO REPLY ─────────────────────────────────────────────────────────
+// Só dispara a resposta se houve um arrasto horizontal de verdade (hasMoved),
+// nunca em um simples toque/clique parado — corrige mensagens respondendo sozinhas.
 function applySwipeToReply(wrapper, card, arrow, msgData) {
-    let startX = 0; let currentX = 0; let isSwiping = false;
+    let startX = 0, startY = 0, currentX = 0, isSwiping = false, hasMoved = false;
     const threshold = 50;
+    const moveTolerance = 6; // px mínimos de arrasto horizontal real antes de contar como swipe
+
+    const resetSwipe = () => {
+        isSwiping = false; hasMoved = false;
+        card.style.transform = '';
+        arrow.style.transform = '';
+    };
 
     card.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX; isSwiping = true;
+        startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+        currentX = startX; isSwiping = true; hasMoved = false;
         arrow.classList.remove('bounce', 'visible');
     }, { passive: true });
 
     card.addEventListener('touchmove', (e) => {
         if (!isSwiping) return;
         currentX = e.touches[0].clientX;
-        let diff = currentX - startX;
-        
+        const currentY = e.touches[0].clientY;
+        let diff  = currentX - startX;
+        let diffY = currentY - startY;
+
+        // Ignora até haver arrasto horizontal real e maior que o vertical (evita conflito com rolagem)
+        if (Math.abs(diff) < moveTolerance || Math.abs(diffY) > Math.abs(diff)) return;
+        hasMoved = true;
+
         if (msgData.senderId === currentUser.uid) {
             if (diff < 0) {
                 let trans = Math.max(-70, diff);
@@ -1128,10 +1146,12 @@ function applySwipeToReply(wrapper, card, arrow, msgData) {
     }, { passive: true });
 
     card.addEventListener('touchend', () => {
-        if (!isSwiping) return; isSwiping = false;
-        let diff = currentX - startX;
-        card.style.transform = '';
-        arrow.style.transform = '';
+        if (!isSwiping) return;
+        const diff  = currentX - startX;
+        const moved = hasMoved;
+        resetSwipe();
+
+        if (!moved) return; // toque parado nunca dispara resposta
 
         if (msgData.senderId === currentUser.uid && diff <= -threshold) {
             arrow.classList.add('bounce');
@@ -1142,6 +1162,8 @@ function applySwipeToReply(wrapper, card, arrow, msgData) {
         }
         setTimeout(() => arrow.classList.remove('bounce', 'visible'), 300);
     });
+
+    card.addEventListener('touchcancel', resetSwipe, { passive: true });
 }
 
 function triggerReplyAction(msgData) {
@@ -1313,7 +1335,7 @@ document.getElementById('media-file-input').addEventListener('change', (e) => {
     const chatIdAtSend = activeChatId;
     const newMsgRef = database.ref(`chats/${chatIdAtSend}/messages`).push();
     triggerSystemPopup(isVideo ? "Enviando vídeo..." : "Enviando imagem...", "Aguarde, isso pode levar alguns segundos.", DEFAULT_AVATAR);
-    uploadBlobToStorage(file, 'chat_media', file.name).then(url => {
+    blobToBase64(file).then(url => {
         const payload = {
             id: newMsgRef.key, senderId: currentUser.uid,
             [isVideo ? 'video' : 'image']: url,
@@ -1334,7 +1356,7 @@ document.getElementById('doc-file-input').addEventListener('change', (e) => {
     const chatIdAtSend = activeChatId;
     const newMsgRef = database.ref(`chats/${chatIdAtSend}/messages`).push();
     triggerSystemPopup("Enviando arquivo...", "Aguarde, isso pode levar alguns segundos.", DEFAULT_AVATAR);
-    uploadBlobToStorage(file, 'chat_docs', file.name).then(url => {
+    blobToBase64(file).then(url => {
         const payload = {
             id: newMsgRef.key, senderId: currentUser.uid,
             document: url,
@@ -1428,12 +1450,18 @@ function processOfflineQueue() {
 btnMic.addEventListener('mousedown', startAudioRecording);
 btnMic.addEventListener('touchstart', (e) => { startAudioRecording(e); }, {passive:true});
 
+const CANCEL_DRAG_THRESHOLD = 110; // px arrastados pra esquerda até "armar" o cancelamento
+
 function startAudioRecording(e) {
     if(isRecording || isBlocked(activeRecipientId)) return;
+    startXMic = e.touches ? e.touches[0].clientX : e.clientX;
+    startYMic = e.touches ? e.touches[0].clientY : e.clientY;
+    pendingCancelRecording = false;
     navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
         isRecording = true;
         audioChunks = [];
         mediaRecorder = new MediaRecorder(stream);
+        mediaRecorder._cancelled = false;
         recordStartTime = Date.now();
         
         mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
@@ -1445,7 +1473,37 @@ function startAudioRecording(e) {
     }).catch(() => alert("Permissão de áudio negada!"));
 }
 
-function triggerAudioOverlayUI(show) {
+// ─── ARRASTAR PRA ESQUERDA PRA CANCELAR A GRAVAÇÃO ──────────────────────────
+function handleRecordingDrag(e) {
+    if (!isRecording) return;
+    const overlay = document.getElementById('native-recorder-overlay');
+    if (!overlay) return;
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const diff = clientX - startXMic;
+    const dragLeft = Math.min(0, diff); // só nos importa o arrasto pra esquerda
+    const absDrag  = Math.abs(dragLeft);
+
+    const content = overlay.querySelector('.recorder-content');
+    const trash   = overlay.querySelector('.recorder-trash-icon');
+    if (content) content.style.transform = `translateX(${Math.max(-90, dragLeft)}px)`;
+
+    const progress = Math.min(1, absDrag / CANCEL_DRAG_THRESHOLD);
+    overlay.style.setProperty('--cancel-progress', progress);
+    if (trash) trash.style.transform = `scale(${1 + progress * 0.4})`;
+
+    const armed = progress >= 1;
+    if (armed !== pendingCancelRecording) {
+        pendingCancelRecording = armed;
+        overlay.classList.toggle('cancel-armed', armed);
+        if (trash) trash.classList.toggle('trash-armed', armed);
+        if (armed && navigator.vibrate) navigator.vibrate(15);
+    }
+}
+window.addEventListener('touchmove', handleRecordingDrag, { passive: true });
+window.addEventListener('mousemove', handleRecordingDrag);
+
+function triggerAudioOverlayUI(show, cancelled) {
     let overlay = document.getElementById('native-recorder-overlay');
     if(show) {
         if(!overlay) {
@@ -1453,18 +1511,32 @@ function triggerAudioOverlayUI(show) {
             overlay.id = 'native-recorder-overlay';
             overlay.className = 'audio-recorder-overlay';
             overlay.innerHTML = `
-                <div class="recorder-info"><div class="recorder-blink"></div><span id="audio-timer-lbl">0:00</span></div>
-                <span class="recorder-slide-tip">Gravando áudio...</span>
+                <div class="recorder-red-blur"></div>
+                <div class="recorder-trash-icon">
+                    <svg viewBox="0 0 24 24" width="16" height="16"><path fill="currentColor" d="M6 7h12v13a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V7zm3-3h6l1 2h4v2H4V6h4l1-2z"/></svg>
+                </div>
+                <div class="recorder-content">
+                    <div class="recorder-info"><div class="recorder-blink"></div><span id="audio-timer-lbl">0:00</span></div>
+                    <span class="recorder-slide-tip">⟵ Deslize para cancelar</span>
+                </div>
             `;
             document.getElementById('chat-footer-area').appendChild(overlay);
         }
         recordTimerInterval = setInterval(() => {
             const elapsed = Math.floor((Date.now() - recordStartTime) / 1000);
-            document.getElementById('audio-timer-lbl').innerText = formatAudioTime(elapsed);
+            const lbl = document.getElementById('audio-timer-lbl');
+            if (lbl) lbl.innerText = formatAudioTime(elapsed);
         }, 1000);
     } else {
-        if(overlay) overlay.remove();
         clearInterval(recordTimerInterval);
+        if (overlay) {
+            if (cancelled) {
+                overlay.classList.add('discarding');
+                setTimeout(() => overlay.remove(), 320);
+            } else {
+                overlay.remove();
+            }
+        }
     }
 }
 
@@ -1474,16 +1546,23 @@ window.addEventListener('touchend', stopAudioRecording);
 function stopAudioRecording() {
     if(!isRecording) return;
     isRecording = false;
+    const wasCancelled = pendingCancelRecording;
+    pendingCancelRecording = false;
     const recordStopTime = Date.now();
     btnMic.classList.remove('recording');
-    triggerAudioOverlayUI(false);
+    triggerAudioOverlayUI(false, wasCancelled);
     if(mediaRecorder) {
         mediaRecorder._recordStopTime = recordStopTime;
+        mediaRecorder._cancelled = wasCancelled;
         mediaRecorder.stop();
     }
 }
 
 function saveAndSendAudioPayload() {
+    if (mediaRecorder && mediaRecorder._cancelled) {
+        mediaRecorder._cancelled = false;
+        return; // gravação cancelada pelo arrasto — não envia nada
+    }
     const stopTime = (mediaRecorder && mediaRecorder._recordStopTime) ? mediaRecorder._recordStopTime : Date.now();
     const durationSeconds = Math.max(1, Math.floor((stopTime - recordStartTime) / 1000));
     const audioBlob = new Blob(audioChunks, { type: 'audio/mp3' });
@@ -1495,7 +1574,7 @@ function saveAndSendAudioPayload() {
 
     const chatIdAtSend = activeChatId;
     const newMsgRef = database.ref(`chats/${chatIdAtSend}/messages`).push();
-    uploadBlobToStorage(audioBlob, 'chat_audio', `audio_${Date.now()}.mp3`).then(url => {
+    blobToBase64(audioBlob).then(url => {
         const payload = {
             id: newMsgRef.key, senderId: currentUser.uid, audio: url,
             audioDuration: durationSeconds, timestamp: firebase.database.ServerValue.TIMESTAMP, status: 'sending'
@@ -2283,19 +2362,33 @@ function openGroupContextMenu(data, card, wrapper, event) {
 }
 
 // ─── SWIPE TO REPLY NO GRUPO ─────────────────────────────────────────────────
+// Mesma correção do chat individual: só dispara com arrasto horizontal real.
 function applyGroupSwipeToReply(wrapper, card, arrow, msgData) {
-    let startX = 0; let currentX = 0; let isSwiping = false;
+    let startX = 0, startY = 0, currentX = 0, isSwiping = false, hasMoved = false;
     const threshold = 50;
+    const moveTolerance = 6;
+
+    const resetSwipe = () => {
+        isSwiping = false; hasMoved = false;
+        card.style.transform = '';
+        arrow.style.transform = '';
+    };
 
     card.addEventListener('touchstart', (e) => {
-        startX = e.touches[0].clientX; isSwiping = true;
+        startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+        currentX = startX; isSwiping = true; hasMoved = false;
         arrow.classList.remove('bounce', 'visible');
     }, { passive: true });
 
     card.addEventListener('touchmove', (e) => {
         if (!isSwiping) return;
         currentX = e.touches[0].clientX;
-        let diff = currentX - startX;
+        const currentY = e.touches[0].clientY;
+        let diff  = currentX - startX;
+        let diffY = currentY - startY;
+
+        if (Math.abs(diff) < moveTolerance || Math.abs(diffY) > Math.abs(diff)) return;
+        hasMoved = true;
 
         if (msgData.senderId === currentUser.uid) {
             if (diff < 0) {
@@ -2317,10 +2410,12 @@ function applyGroupSwipeToReply(wrapper, card, arrow, msgData) {
     }, { passive: true });
 
     card.addEventListener('touchend', () => {
-        if (!isSwiping) return; isSwiping = false;
-        let diff = currentX - startX;
-        card.style.transform = '';
-        arrow.style.transform = '';
+        if (!isSwiping) return;
+        const diff  = currentX - startX;
+        const moved = hasMoved;
+        resetSwipe();
+
+        if (!moved) return;
 
         if (msgData.senderId === currentUser.uid && diff <= -threshold) {
             arrow.classList.add('bounce');
@@ -2331,6 +2426,8 @@ function applyGroupSwipeToReply(wrapper, card, arrow, msgData) {
         }
         setTimeout(() => arrow.classList.remove('bounce', 'visible'), 300);
     });
+
+    card.addEventListener('touchcancel', resetSwipe, { passive: true });
 }
 
 function triggerGroupReplyAction(msgData) {
@@ -2426,7 +2523,7 @@ document.getElementById('group-media-input').addEventListener('change', (e) => {
     const cachedProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
     const ref = database.ref(`groups/${groupIdAtSend}/messages`).push();
     triggerSystemPopup(isVideo ? "Enviando vídeo..." : "Enviando imagem...", "Aguarde, isso pode levar alguns segundos.", DEFAULT_AVATAR);
-    uploadBlobToStorage(file, 'group_media', file.name).then(url => {
+    blobToBase64(file).then(url => {
         const payload = {
             id: ref.key, senderId: currentUser.uid,
             senderNickname: cachedProfile.nickname || 'Usuário',
@@ -2447,7 +2544,7 @@ document.getElementById('group-doc-input').addEventListener('change', (e) => {
     const cachedProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
     const ref = database.ref(`groups/${groupIdAtSend}/messages`).push();
     triggerSystemPopup("Enviando arquivo...", "Aguarde, isso pode levar alguns segundos.", DEFAULT_AVATAR);
-    uploadBlobToStorage(file, 'group_docs', file.name).then(url => {
+    blobToBase64(file).then(url => {
         const payload = {
             id: ref.key, senderId: currentUser.uid,
             senderNickname: cachedProfile.nickname || 'Usuário',
