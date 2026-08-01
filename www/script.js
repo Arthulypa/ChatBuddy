@@ -64,6 +64,8 @@ let longPressTimer     = null;
 let activeGroupId      = null;
 let activeGroupData    = null;
 let groupReplyingTo    = null;
+let activeGroupMembersProfiles = {}; // cache { uid: {nickname, avatar, username} } do grupo aberto, usado nas bolinhas de "visto por"
+let lastGroupMessagesSnap = null;    // guarda o último snapshot renderizado para re-render quando os perfis chegarem
 let groupAvatarString  = "";
 let suppressAuthListener = false; // evita que o listener global reaja durante o cadastro (criação temporária de conta + signOut)
 
@@ -100,7 +102,9 @@ document.addEventListener('selectstart', (e) => {
         target.closest('.chats-list') || 
         target.closest('.chat-item-row') ||
         target.closest('.message') ||
-        target.closest('.group-messages-container')) {
+        target.closest('.group-messages-container') ||
+        target.closest('.blur-overlay') ||
+        target.closest('.iphone-context-menu')) {
         e.preventDefault();
         return false;
     }
@@ -480,6 +484,65 @@ function buildTicks(status) {
         case 'read':      return `<div class="status-dot-wrapper"><span class="status-dot dot-read"></span><span class="status-dot dot-read"></span></div>`;
     }
     return '';
+}
+
+// ─── VISUALIZAÇÕES DE MENSAGEM EM GRUPO ─────────────────────────────────────
+// Monta a fileira de bolinhas com a foto de quem visualizou a mensagem (até 3,
+// as mais recentes primeiro, com um "+N" para o restante). Os dois pontinhos
+// de status só ficam verdes quando TODOS os membros (menos o remetente) viram.
+function buildGroupSeenIndicator(data, groupData) {
+    const totalRecipients = groupData && groupData.members
+        ? Object.keys(groupData.members).filter(uid => uid !== data.senderId).length
+        : 0;
+
+    const seenByObj = data.seenBy || {};
+    const entries = Object.keys(seenByObj)
+        .filter(uid => uid !== data.senderId)
+        .map(uid => ({ uid, ts: seenByObj[uid] || 0 }))
+        .sort((a, b) => b.ts - a.ts); // visto mais recente primeiro
+
+    const allSeen  = totalRecipients > 0 && entries.length >= totalRecipients;
+    const dotClass = allSeen ? 'dot-read' : (data.status === 'sending' || data.status === 'offline_pending' ? 'dot-sending' : 'dot-sent');
+
+    let avatarsHtml = '';
+    if (entries.length > 0) {
+        const visible = entries.slice(0, 3);
+        const extra   = entries.length - visible.length;
+        avatarsHtml += '<div class="seen-avatars-stack">';
+        visible.forEach(({ uid }, i) => {
+            const prof = activeGroupMembersProfiles[uid];
+            const src  = (prof && prof.avatar) ? prof.avatar : DEFAULT_AVATAR;
+            avatarsHtml += `<img class="seen-avatar" style="z-index:${10 - i};" src="${src}" alt="">`;
+        });
+        if (extra > 0) {
+            avatarsHtml += `<div class="seen-avatar seen-avatar-more" style="z-index:${10 - visible.length};">+${extra}</div>`;
+        }
+        avatarsHtml += '</div>';
+    }
+
+    return `<div class="group-seen-row">${avatarsHtml}<div class="status-dot-wrapper"><span class="status-dot ${dotClass}"></span><span class="status-dot ${dotClass}"></span></div></div>`;
+}
+
+// Busca (e cacheia) os perfis de todos os membros do grupo aberto — usado
+// tanto nas bolinhas de "visto por" quanto na tela de Info da Mensagem.
+function loadActiveGroupMembersProfiles(groupData) {
+    activeGroupMembersProfiles = {};
+    if (!groupData || !groupData.members) return;
+    const uids = Object.keys(groupData.members);
+    let loaded = 0;
+    uids.forEach(uid => {
+        database.ref(`users/${uid}`).once('value').then(snap => {
+            activeGroupMembersProfiles[uid] = snap.val() || { nickname: 'Usuário', avatar: '', username: '' };
+        }).catch(() => {
+            activeGroupMembersProfiles[uid] = { nickname: 'Usuário', avatar: '', username: '' };
+        }).finally(() => {
+            loaded++;
+            if (loaded === uids.length && lastGroupMessagesSnap) {
+                // Re-renderiza para exibir as fotos reais assim que os perfis chegarem
+                renderGroupMessages(lastGroupMessagesSnap, groupData);
+            }
+        });
+    });
 }
 
 // ─── BLOQUEAR / DESBLOQUEAR ─────────────────────────────────────────────────
@@ -927,13 +990,50 @@ document.getElementById('ctx-reply-msg').addEventListener('click', () => {
 
 document.getElementById('ctx-info-msg').addEventListener('click', () => {
     if(currentUser.uid === "offline_user") return alert("Indisponível no modo offline.");
-    database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).once('value').then(snap => {
-        const data = snap.val(); if (!data) return;
-        document.getElementById('info-sent-time').innerText = new Date(data.timestamp).toLocaleTimeString();
-        document.getElementById('info-read-time').innerText = data.status === 'read' ? (data.readAt ? new Date(data.readAt).toLocaleTimeString() : 'Sim') : 'Não lido';
-        document.getElementById('blur-overlay').classList.add('hidden');
-        document.getElementById('msg-info-modal').classList.remove('hidden');
-    });
+    document.getElementById('blur-overlay').classList.add('hidden');
+
+    if (activeGroupId) {
+        // ── GRUPO: mostra quem viu e a que horas cada um viu ──
+        database.ref(`groups/${activeGroupId}/messages/${selectedMessageId}`).once('value').then(snap => {
+            const data = snap.val(); if (!data) return;
+            document.getElementById('info-sent-time').innerText = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : '--:--';
+
+            document.getElementById('info-read-time-row').classList.add('hidden');
+            const listEl = document.getElementById('info-group-seen-list');
+            listEl.classList.remove('hidden');
+
+            const seenBy = data.seenBy || {};
+            const uids = Object.keys(seenBy).filter(uid => uid !== data.senderId);
+            uids.sort((a, b) => (seenBy[b] || 0) - (seenBy[a] || 0)); // mais recente primeiro
+
+            if (uids.length === 0) {
+                listEl.innerHTML = `<p style="font-size:13px;color:var(--text-muted);text-align:center;padding:8px 0;">Ninguém viu ainda</p>`;
+            } else {
+                listEl.innerHTML = uids.map(uid => {
+                    const prof   = activeGroupMembersProfiles[uid] || {};
+                    const name   = prof.nickname || 'Usuário';
+                    const avatar = prof.avatar || DEFAULT_AVATAR;
+                    const time   = seenBy[uid] ? new Date(seenBy[uid]).toLocaleTimeString() : '--:--';
+                    return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--glass-border);">
+                        <img src="${avatar}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0;">
+                        <span style="flex:1;font-size:13px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
+                        <span style="font-size:12px;color:var(--ios-green);font-weight:600;flex-shrink:0;">${time}</span>
+                    </div>`;
+                }).join('');
+            }
+            document.getElementById('msg-info-modal').classList.remove('hidden');
+        });
+    } else {
+        // ── CHAT DIRETO: comportamento original ──
+        database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).once('value').then(snap => {
+            const data = snap.val(); if (!data) return;
+            document.getElementById('info-read-time-row').classList.remove('hidden');
+            document.getElementById('info-group-seen-list').classList.add('hidden');
+            document.getElementById('info-sent-time').innerText = new Date(data.timestamp).toLocaleTimeString();
+            document.getElementById('info-read-time').innerText = data.status === 'read' ? (data.readAt ? new Date(data.readAt).toLocaleTimeString() : 'Sim') : 'Não lido';
+            document.getElementById('msg-info-modal').classList.remove('hidden');
+        });
+    }
 });
 
 document.getElementById('btn-close-msg-info').addEventListener('click', () => document.getElementById('msg-info-modal').classList.add('hidden'));
@@ -1998,10 +2098,23 @@ function openGroupRoom(groupId, groupData) {
         if (r.dataset && r.dataset.groupId === groupId) r.classList.add('active-desktop-chat');
     });
 
+    // Carrega os perfis (nome/foto) de todos os membros — usado nas bolinhas de "visto por"
+    loadActiveGroupMembersProfiles(groupData);
+
     // Listener de mensagens
     database.ref(`groups/${groupId}/messages`).off();
     database.ref(`groups/${groupId}/messages`).on('value', snap => {
+        lastGroupMessagesSnap = snap;
         renderGroupMessages(snap, groupData);
+        // Marca como visto (por mim) cada mensagem de outra pessoa que eu ainda não tinha visto
+        if (currentUser.uid !== 'offline_user') {
+            snap.forEach(child => {
+                const d = child.val();
+                if (d && d.senderId !== currentUser.uid && (!d.seenBy || !d.seenBy[currentUser.uid])) {
+                    database.ref(`groups/${groupId}/messages/${d.id}/seenBy/${currentUser.uid}`).set(firebase.database.ServerValue.TIMESTAMP);
+                }
+            });
+        }
     });
 }
 
@@ -2081,7 +2194,7 @@ function renderGroupMessages(snap, groupData) {
 
         content += data.text ? `<p>${data.text}</p>` : '';
         if (data.edited) content += `<span class="edited-tag">Editada</span>`;
-        const ticks = isSent ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
+        const ticks = isSent ? buildGroupSeenIndicator(data, groupData) : '';
         card.innerHTML = content + ticks;
 
         // Long press abre menu de contexto simplificado para grupos
@@ -2356,6 +2469,8 @@ function closeGroupRoom() {
     if (activeGroupId) database.ref(`groups/${activeGroupId}/messages`).off();
     activeGroupId   = null;
     activeGroupData = null;
+    activeGroupMembersProfiles = {};
+    lastGroupMessagesSnap = null;
     document.querySelectorAll('.chat-item-row').forEach(el => el.classList.remove('active-desktop-chat'));
 }
 
