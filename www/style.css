@@ -9,6 +9,7 @@
     --text-main: #ffffff;
     --text-muted: #8e8e93;
     --msg-sent: rgba(10, 132, 255, 0.9);
+    --msg-sent-text: #ffffff;
     --msg-received: rgba(36, 36, 38, 0.85);
     --app-max-width: 600px;
     /* Superfícies (permitem o tema claro trocar tudo de uma vez) */
@@ -16,7 +17,14 @@
     --surface-2: #1c1c1e;      /* caixa de texto, cartões internos */
     --surface-3: #2c2c2e;      /* placeholder de avatar, elementos menores */
     --icon-color: #ffffff;     /* cor dos ícones mono */
+    --app-font: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
 }
+
+/* Estilos de texto (Personalização) */
+[data-font="padrao"]     { --app-font: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; }
+[data-font="arredondado"]{ --app-font: 'Trebuchet MS', 'Verdana', -apple-system, sans-serif; }
+[data-font="classico"]   { --app-font: Georgia, 'Times New Roman', serif; }
+[data-font="sistema"]    { --app-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
 [data-theme="light"] {
     --ios-bg: #f2f2f7;
@@ -39,7 +47,20 @@
 [data-accent="orange"] { --ios-blue: #ff9f0a; }
 [data-accent="red"]    { --ios-blue: #ff453a; }
 
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+/* Cor do balão de mensagem enviada — com contraste de texto automático:
+   balões escuros → texto branco; balões claros → texto preto (nunca invisível) */
+[data-bubble="blue"]   { --msg-sent: rgba(10, 132, 255, 0.9);  --msg-sent-text: #ffffff; }
+[data-bubble="green"]  { --msg-sent: rgba(48, 209, 88, 0.9);   --msg-sent-text: #ffffff; }
+[data-bubble="purple"] { --msg-sent: rgba(191, 90, 242, 0.9);  --msg-sent-text: #ffffff; }
+[data-bubble="pink"]   { --msg-sent: rgba(255, 55, 95, 0.9);   --msg-sent-text: #ffffff; }
+[data-bubble="orange"] { --msg-sent: rgba(255, 159, 10, 0.92); --msg-sent-text: #1c1c1e; }
+[data-bubble="red"]    { --msg-sent: rgba(255, 69, 58, 0.9);   --msg-sent-text: #ffffff; }
+[data-bubble="yellow"] { --msg-sent: rgba(255, 214, 10, 0.95); --msg-sent-text: #1c1c1e; }
+[data-bubble="gray"]   { --msg-sent: rgba(142, 142, 147, 0.9); --msg-sent-text: #ffffff; }
+[data-bubble="white"]  { --msg-sent: rgba(242, 242, 247, 0.97); --msg-sent-text: #1c1c1e; }
+[data-bubble="black"]  { --msg-sent: rgba(28, 28, 30, 0.95);   --msg-sent-text: #ffffff; }
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--app-font); -webkit-tap-highlight-color: transparent; }
 body { background: var(--ios-bg); color: var(--text-main); height: 100dvh; width: 100vw; overflow: hidden; position: relative; display: flex; justify-content: center; }
 .hidden { display: none !important; }
 
@@ -282,7 +303,7 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .message {
     max-width: 72%; padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.45; display: flex; flex-direction: column; position: relative; word-break: break-word; transition: transform 0.15s ease, box-shadow 0.15s ease; user-select: none; -webkit-user-select: none;
 }
-.message.sent     { background: var(--msg-sent);     align-self: flex-end;   border-bottom-right-radius: 4px; color: #fff; }
+.message.sent     { background: var(--msg-sent);     align-self: flex-end;   border-bottom-right-radius: 4px; color: var(--msg-sent-text); }
 .message.received { background: var(--msg-received); align-self: flex-start; border-bottom-left-radius: 4px;  color: var(--text-main); }
 .message.deleted-msg { opacity: 0.45; font-style: italic; color: var(--text-muted); }
 .message.pressing { transform: scale(0.97); box-shadow: 0 6px 24px rgba(0,0,0,0.4); }
@@ -595,10 +616,16 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .theme-swatch-light { background: linear-gradient(135deg, #ffffff, #e5e5ea); }
 
 .accent-picker { display: flex; gap: 12px; flex-wrap: wrap; }
-.accent-swatch { width: 40px; height: 40px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease; position: relative; }
-.accent-swatch:active { transform: scale(0.88); }
-.accent-swatch.active-accent { border-color: var(--text-main); transform: scale(1.08); }
-.accent-swatch.active-accent::after { content: "✓"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.accent-swatch, .bubble-swatch { width: 40px; height: 40px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease; position: relative; }
+.accent-swatch:active, .bubble-swatch:active { transform: scale(0.88); }
+.accent-swatch.active-accent, .bubble-swatch.active-bubble { border-color: var(--text-main); transform: scale(1.08); }
+.accent-swatch.active-accent::after, .bubble-swatch.active-bubble::after { content: "✓"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.bubble-swatch[data-bubble-value="white"]::after, .bubble-swatch[data-bubble-value="yellow"]::after { color: #1c1c1e; text-shadow: none; }
+
+.font-picker { display: flex; flex-direction: column; gap: 8px; }
+.font-option { background: none; border: 2px solid var(--glass-border); border-radius: 12px; padding: 12px 14px; text-align: left; color: var(--text-main); font-size: 15px; cursor: pointer; transition: border-color 0.2s, transform 0.15s; }
+.font-option:active { transform: scale(0.98); }
+.font-option.active-font { border-color: var(--ios-blue); background: rgba(10,132,255,0.08); }
 
 /* ══════════════════════════════════════════════════════════════════
    REFINAMENTOS DE UI E NOVAS ANIMAÇÕES
