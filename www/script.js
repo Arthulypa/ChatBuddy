@@ -1,3 +1,11 @@
+// ─── PERSONALIZAÇÃO: TEMA E COR DE DESTAQUE (aplica antes de tudo pra não piscar) ──
+(function applyStoredTheme() {
+    const savedTheme  = localStorage.getItem('chatbuddy_theme')  || 'dark';
+    const savedAccent = localStorage.getItem('chatbuddy_accent') || 'blue';
+    document.documentElement.setAttribute('data-theme', savedTheme);
+    document.documentElement.setAttribute('data-accent', savedAccent);
+})();
+
 // ─── FIREBASE CONFIG ────────────────────────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyDwW6LoRrGTJqXdYkbhv-0srz7VKKfykh4",
@@ -1109,13 +1117,13 @@ function createChatRowElement(chatId, uData, chatData) {
         else lastMsgText = lastMsg.text || (lastMsg.audio ? "🎵 Áudio" : "📷 Mídia");
     }
 
-    const blockBadge = isBlocked(uData.uid) ? `<span class="blocked-list-badge">BLOQUEADO</span>` : '';
+    const blockBadge = isBlocked(uData.uid) ? `<span class="header-badge blocked-list-badge">BLOQUEADO</span>` : '';
 
     row.innerHTML = `
         <img src="${uData.avatar}" alt="">
         <div class="chat-item-info">
             <div class="chat-item-header">
-                <h4>${getDisplayName(uData)} ${blockBadge}</h4>
+                <h4>${getDisplayName(uData)}</h4>${blockBadge}
             </div>
             <p>${lastMsgText}</p>
         </div>
@@ -1531,6 +1539,38 @@ document.getElementById('btn-main-settings').addEventListener('click', () => {
 document.getElementById('btn-back-settings').addEventListener('click', () => document.getElementById('settings-screen').classList.add('hidden'));
 
 // Abas de navegação interna das configurações
+// ─── PERSONALIZAÇÃO: TEMA E COR DE DESTAQUE — controles da aba ─────────────
+function refreshPersonalizationUI() {
+    const theme  = localStorage.getItem('chatbuddy_theme')  || 'dark';
+    const accent = localStorage.getItem('chatbuddy_accent') || 'blue';
+    document.querySelectorAll('.theme-option').forEach(btn => {
+        btn.classList.toggle('active-theme', btn.dataset.themeValue === theme);
+    });
+    document.querySelectorAll('.accent-swatch').forEach(btn => {
+        btn.classList.toggle('active-accent', btn.dataset.accentValue === accent);
+    });
+}
+
+document.querySelectorAll('.theme-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const theme = btn.dataset.themeValue;
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('chatbuddy_theme', theme);
+        refreshPersonalizationUI();
+    });
+});
+
+document.querySelectorAll('.accent-swatch').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const accent = btn.dataset.accentValue;
+        document.documentElement.setAttribute('data-accent', accent);
+        localStorage.setItem('chatbuddy_accent', accent);
+        refreshPersonalizationUI();
+    });
+});
+
+refreshPersonalizationUI();
+
 document.querySelectorAll('.settings-tab').forEach(tab => {
     tab.addEventListener('click', () => {
         document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
@@ -1808,11 +1848,11 @@ function loadGroupsList() {
                     const last = g.messages[msgKeys[msgKeys.length - 1]];
                     lastText = last.text || (last.audio ? '🎵 Áudio' : '📷 Mídia');
                 }
-                const badge = g.isMainGroup ? `<span style="font-size:10px;background:#0a84ff;color:#fff;border-radius:8px;padding:1px 6px;margin-left:4px;">Official</span>` : '';
+                const badge = g.isMainGroup ? `<span class="header-badge" style="font-size:10px;background:#0a84ff;color:#fff;border-radius:8px;padding:1px 6px;">Official</span>` : '';
                 row.innerHTML = `
                     <img src="${g.avatar || 'https://cdn-icons-png.flaticon.com/512/906/906343.png'}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">
                     <div class="chat-item-info">
-                        <div class="chat-item-header"><h4>${g.name}${badge}</h4></div>
+                        <div class="chat-item-header"><h4>${g.name}</h4>${badge}</div>
                         <p>${lastText}</p>
                     </div>
                 `;
@@ -2248,8 +2288,8 @@ function openGroupInfoSheet() {
             const u = snap.val() || { nickname: 'Usuário', avatar: '', username: '' };
             const isOwner = g.ownerUid === uid;
             const isAdmin = g.admins && g.admins[uid];
-            const tag = isOwner ? `<span class="member-role-tag owner-tag">Dono</span>`
-                      : isAdmin ? `<span class="member-role-tag admin-tag">Admin</span>`
+            const tag = isOwner ? `<span class="member-role-tag owner-tag header-badge">Dono</span>`
+                      : isAdmin ? `<span class="member-role-tag admin-tag header-badge">Admin</span>`
                       : '';
 
             const row = document.createElement('div');
@@ -2259,7 +2299,7 @@ function openGroupInfoSheet() {
             row.innerHTML = `
                 <img src="${u.avatar || 'https://via.placeholder.com/150'}" alt="" style="width:38px;height:38px;border-radius:50%;object-fit:cover;">
                 <div class="chat-item-info">
-                    <div class="chat-item-header"><h4>${u.nickname || 'Usuário'}${tag}</h4></div>
+                    <div class="chat-item-header"><h4>${u.nickname || 'Usuário'}</h4>${tag}</div>
                     <p>${u.username || ''}</p>
                 </div>
                 ${canManage && !isOwner && uid !== currentUser.uid ? `
