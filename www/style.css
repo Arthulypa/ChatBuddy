@@ -334,6 +334,19 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .dot-delivered { background-color: #8e8e93; }
 .dot-read     { background-color: var(--ios-green); animation: dotPop 0.35s cubic-bezier(0.36,0.07,0.19,0.97); }
 
+/* ── VISUALIZAÇÕES DE MENSAGEM EM GRUPO (bolinhas com foto de quem viu) ── */
+.group-seen-row { display: flex; align-items: center; justify-content: flex-end; gap: 5px; margin-top: 4px; min-height: 14px; }
+.seen-avatars-stack { display: flex; flex-direction: row; align-items: center; }
+.seen-avatar {
+    width: 14px; height: 14px; border-radius: 50%; object-fit: cover;
+    border: 1.5px solid var(--surface-1); background: #555; margin-left: -5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 6.5px; font-weight: 700; color: #fff; flex-shrink: 0;
+    animation: dotPop 0.3s cubic-bezier(0.36,0.07,0.19,0.97);
+}
+.seen-avatars-stack .seen-avatar:first-child { margin-left: 0; }
+.seen-avatar-more { background: #3a3a3c; letter-spacing: -0.3px; }
+
 .chat-footer { padding: 8px 12px; display: flex; align-items: center; gap: 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); flex-shrink: 0; position: relative; }
 .footer-input-row { flex: 1; background: var(--surface-2); border-radius: 20px; display: flex; align-items: center; padding: 0 12px; border: 1px solid var(--glass-border); transition: border-color 0.2s; height: 40px; }
 .footer-input-row:focus-within { border-color: rgba(10,132,255,0.3); }
@@ -494,6 +507,20 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .chat-item-row,
 .chat-item-info,
 .chats-list {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+/* ── DESABILITAR SELEÇÃO DE TEXTO NO MENU DE CONTEXTO (long-press) ────── */
+.blur-overlay,
+.focused-container,
+.focused-message-wrapper,
+.iphone-context-menu,
+.context-item {
     -webkit-user-select: none !important;
     -moz-user-select: none !important;
     -ms-user-select: none !important;
