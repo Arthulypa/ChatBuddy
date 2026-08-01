@@ -10,6 +10,16 @@
 </head>
 <body>
 
+    <!-- SPLASH SCREEN (abertura animada, tipo WhatsApp) -->
+    <div id="app-splash-screen" class="app-splash-screen">
+        <div class="splash-icon-wrapper">
+            <svg viewBox="0 0 24 24" class="splash-icon"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.99 4.26L2 22l5.92-1.21C9.13 21.42 10.51 21.8 12 21.8c5.52 0 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+            <div class="splash-ring"></div>
+        </div>
+        <h1 class="splash-title">ChatBuddy</h1>
+        <div class="splash-dots"><span></span><span></span><span></span></div>
+    </div>
+
     <div id="popup-notification" class="popup-notification hidden">
         <div class="popup-avatar-wrapper">
             <img id="popup-avatar" src="" alt="">
@@ -452,11 +462,15 @@
         </footer>
     </div>
 
-    </div><!-- /chat-page -->
-
-    <!-- SHEET INFO CONTATO -->
-    <div id="contact-info-sheet" class="ios-dropdown-overlay hidden">
-        <div class="profile-detail-card glass-premium">
+    <!-- SHEET INFO CONTATO (tela cheia, mesmo padrão das Configurações) -->
+    <div id="contact-info-sheet" class="settings-screen hidden">
+        <header class="settings-screen-header glass-premium">
+            <button id="btn-close-info-sheet" class="back-btn">
+                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+            <h2>Perfil</h2>
+        </header>
+        <div class="settings-screen-body">
             <div class="profile-detail-header">
                 <div class="avatar-detail-wrapper">
                     <img id="sheet-contact-avatar" src="" alt="" class="avatar-detail-large">
@@ -489,10 +503,35 @@
                 </div>
                 <button id="btn-sheet-block" class="action-danger-btn">Bloquear Usuário</button>
                 <button id="btn-sheet-unblock" class="action-unblock-btn hidden">Desbloquear Usuário</button>
+                <button id="btn-delete-contact" class="action-danger-btn">🗑️ Excluir Contato</button>
             </div>
-            <button id="btn-close-info-sheet" class="btn-profile-close">Voltar ao Chat</button>
         </div>
     </div>
+
+    <!-- SHEET INFO DO GRUPO (tela cheia, mesmo padrão das Configurações) -->
+    <div id="group-info-sheet" class="settings-screen hidden">
+        <header class="settings-screen-header glass-premium">
+            <button id="btn-close-group-info" class="back-btn">
+                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+            <h2>Grupo</h2>
+        </header>
+        <div class="settings-screen-body">
+            <div class="profile-detail-header">
+                <img id="sheet-group-avatar" src="" alt="" class="avatar-detail-large">
+                <h3 id="sheet-group-name">Grupo</h3>
+                <p id="sheet-group-desc" style="font-size:13px;color:var(--text-muted);text-align:center;margin-top:4px;"></p>
+            </div>
+            <div id="sheet-group-members-list" class="chats-list" style="max-height:45dvh;overflow-y:auto;margin:10px 0;"></div>
+            <div id="group-admin-actions" class="hidden" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+                <button id="btn-edit-group" class="ios-btn-primary" style="font-size:13px;padding:10px;background:rgba(255,255,255,0.08);">✏️ Editar Grupo</button>
+                <button id="btn-add-group-member" class="ios-btn-primary" style="font-size:13px;padding:10px;">+ Adicionar Membro</button>
+            </div>
+            <button id="btn-leave-group" class="action-danger-btn" style="margin-bottom:8px;">Sair do Grupo</button>
+        </div>
+    </div>
+
+    </div><!-- /chat-page -->
 
     <!-- MODAL APELIDO -->
     <div id="nickname-modal" class="modal hidden">
@@ -658,24 +697,6 @@
     </div>
 
 
-
-    <!-- SHEET INFO DO GRUPO -->
-    <div id="group-info-sheet" class="ios-dropdown-overlay hidden">
-        <div class="profile-detail-card glass-premium">
-            <div class="profile-detail-header">
-                <img id="sheet-group-avatar" src="" alt="" class="avatar-detail-large">
-                <h3 id="sheet-group-name">Grupo</h3>
-                <p id="sheet-group-desc" style="font-size:13px;color:var(--text-muted);text-align:center;margin-top:4px;"></p>
-            </div>
-            <div id="sheet-group-members-list" class="chats-list" style="max-height:45dvh;overflow-y:auto;margin:10px 0;"></div>
-            <div id="group-admin-actions" class="hidden" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
-                <button id="btn-edit-group" class="ios-btn-primary" style="font-size:13px;padding:10px;background:rgba(255,255,255,0.08);">✏️ Editar Grupo</button>
-                <button id="btn-add-group-member" class="ios-btn-primary" style="font-size:13px;padding:10px;">+ Adicionar Membro</button>
-            </div>
-            <button id="btn-leave-group" class="action-danger-btn" style="margin-bottom:8px;">Sair do Grupo</button>
-            <button id="btn-close-group-info" class="btn-profile-close">Fechar</button>
-        </div>
-    </div>
 
     <!-- MODAL EDITAR GRUPO (nome, descrição, foto — só admin/dono) -->
     <div id="edit-group-modal" class="modal hidden">
