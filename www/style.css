@@ -263,7 +263,7 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 
 .blocked-list-badge { font-size: 10px; font-weight: 700; color: var(--ios-red); background: rgba(255,69,58,0.15); border: 1px solid rgba(255,69,58,0.3); border-radius: 6px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; letter-spacing: 0.5px; }
 
-.header-avatar-container { position: relative; display: inline-block; }
+.header-avatar-container { position: relative; display: inline-block; flex-shrink: 0; }
 .online-indicator-dot { position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; background-color: var(--ios-green); border-radius: 50%; border: 2px solid #000; }
 .blocked-header-badge { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 700; background: var(--ios-red); color: #fff; border-radius: 4px; padding: 1px 4px; white-space: nowrap; letter-spacing: 0.3px; }
 
@@ -278,9 +278,10 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 @keyframes slideInRight { from { transform: translateX(calc(-50% + 40px)); opacity: 0.6; } to { transform: translateX(-50%); opacity: 1; } }
 
 .chat-header { height: 64px; display: flex; align-items: center; padding: 0 12px; gap: 8px; flex-shrink: 0; }
-.active-user-info { display: flex; align-items: center; gap: 10px; flex: 1; overflow: hidden; cursor: pointer; }
+.active-user-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; overflow: hidden; cursor: pointer; }
+.active-user-info > div { min-width: 0; overflow: hidden; }
 .active-user-info h2 { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.active-user-info p { font-size: 12px; color: var(--text-muted); transition: color 0.3s; }
+.active-user-info p { font-size: 12px; color: var(--text-muted); transition: color 0.3s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .active-user-info.is-online p { color: var(--ios-green); }
 .header-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--surface-3); }
 .icon-btn-dots { background: none; border: none; cursor: pointer; padding: 8px; display: flex; align-items: center; }
@@ -352,8 +353,8 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .avatar-detail-wrapper { position: relative; display: inline-block; margin-bottom: 10px; }
 .avatar-detail-large { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid var(--glass-border); background: var(--surface-2); display: block; }
 .sheet-blocked-badge { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 700; background: var(--ios-red); color: #fff; border-radius: 6px; padding: 2px 7px; white-space: nowrap; letter-spacing: 0.5px; }
-.profile-detail-header h3 { font-size: 20px; font-weight: 700; color: var(--text-main); }
-.profile-detail-header p  { font-size: 14px; color: var(--text-muted); margin-top: 2px; }
+.profile-detail-header h3 { font-size: 20px; font-weight: 700; color: var(--text-main); max-width: 100%; overflow-wrap: break-word; word-break: break-word; }
+.profile-detail-header p  { font-size: 14px; color: var(--text-muted); margin-top: 2px; max-width: 100%; overflow-wrap: break-word; word-break: break-word; }
 
 .profile-info-sections { width: 100%; display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
 .info-block { background: rgba(255,255,255,0.04); padding: 12px 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.03); }
@@ -482,10 +483,14 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 
 /* ── DESABILITAR SELEÇÃO DE TEXTO NAS MENSAGENS ────────────────── */
 .message,
+.message *,
 .message p,
 .message-wrapper,
+.messages-container,
+.group-messages-container,
 .quoted-msg,
 .audio-message-container,
+.doc-message-link,
 .chat-item-row,
 .chat-item-info,
 .chats-list {
@@ -494,6 +499,17 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
     -ms-user-select: none !important;
     user-select: none !important;
     -webkit-touch-callout: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Imagens/vídeos dentro das mensagens: sem "salvar imagem" nativo do iOS nem arrastar */
+.message img,
+.message video,
+.message-img,
+.message-video {
+    -webkit-user-drag: none !important;
+    -webkit-touch-callout: none !important;
+    pointer-events: auto;
 }
 
 /* ── MENU DE ANEXO ────────────────────────────────────────────────── */
@@ -627,6 +643,10 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .font-option:active { transform: scale(0.98); }
 .font-option.active-font { border-color: var(--ios-blue); background: rgba(10,132,255,0.08); }
 
+.anim-option { background: none; border: 2px solid var(--glass-border); border-radius: 12px; padding: 12px 14px; text-align: left; color: var(--text-main); font-size: 15px; cursor: pointer; transition: border-color 0.2s, transform 0.15s; }
+.anim-option:active { transform: scale(0.98); }
+.anim-option.active-anim { border-color: var(--ios-blue); background: rgba(10,132,255,0.08); }
+
 /* ══════════════════════════════════════════════════════════════════
    REFINAMENTOS DE UI E NOVAS ANIMAÇÕES
    ══════════════════════════════════════════════════════════════════ */
@@ -657,6 +677,18 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 /* Troca de aba nas Configurações com leve deslize, em vez de aparecer seco */
 @keyframes tabPaneIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
 .settings-tab-pane:not(.hidden) { animation: tabPaneIn 0.22s ease; }
+
+/* ── ANIMAÇÃO DE MENSAGENS CONFIGURÁVEL (aba Personalização) ─────────
+   Controlada via atributo data-animation no <html>, trocado em tempo
+   real pelo seletor "Animações" nas Configurações. */
+@keyframes msgAnimPadrao  { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes msgAnimSuave   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes msgAnimDinamica{ 0% { opacity: 0; transform: scale(0.8) translateY(6px); } 70% { opacity: 1; transform: scale(1.03); } 100% { transform: scale(1); } }
+
+html[data-animation="padrao"]   .message-wrapper { animation: msgAnimPadrao 0.22s ease both; }
+html[data-animation="suave"]    .message-wrapper { animation: msgAnimSuave 0.35s ease both; }
+html[data-animation="dinamica"] .message-wrapper { animation: msgAnimDinamica 0.28s cubic-bezier(0.34,1.56,0.64,1) both; }
+html[data-animation="nenhuma"]  .message-wrapper { animation: none !important; }
 
 /* Botão "Editar Grupo" e outras ações de admin entram junto com o card */
 #group-admin-actions:not(.hidden) { animation: fadeIn 0.25s ease; }
