@@ -36,6 +36,10 @@ firebase.initializeApp(firebaseConfig);
 const auth     = firebase.auth();
 const database = firebase.database();
 
+// Garante que a sessão do Firebase fique salva no dispositivo (IndexedDB/localStorage),
+// permitindo reabrir o app e continuar logado mesmo depois de fechar o navegador.
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {});
+
 // ─── CONVERSÃO DE MÍDIA PARA BASE64 (Realtime Database, sem custo do Storage) ──
 // O Firebase Storage é pago, então áudio/imagem/vídeo/documento voltam a ser
 // salvos direto como base64 no Realtime Database, como era antes.
@@ -70,6 +74,12 @@ let lastGroupMessagesSnap = null;    // guarda o último snapshot renderizado pa
 let groupAvatarString  = "";
 let suppressAuthListener = false; // evita que o listener global reaja durante o cadastro (criação temporária de conta + signOut)
 
+// Controla quais mensagens já foram exibidas/animadas, pra que um novo snapshot do Firebase
+// (que recarrega TODAS as bolhas) não repita a animação de entrada em mensagens antigas —
+// só a mensagem realmente nova deve animar.
+let renderedMsgIds      = new Set();
+let renderedGroupMsgIds = new Set();
+
 // Admins do grupo principal
 const MAIN_GROUP_ADMINS = ['@arthurscs', '@arthur', '@julioeeu'];
 const MAIN_GROUP_ID_KEY = 'chatbuddy_main_group_id';
@@ -95,7 +105,24 @@ const viewPages = {
 function changeView(target) {
     Object.keys(viewPages).forEach(k => viewPages[k].classList.add('hidden'));
     viewPages[target].classList.remove('hidden');
+    hideSplashScreen();
 }
+
+// ─── SPLASH SCREEN: some assim que a primeira tela real aparece ─────────────
+const _splashStartTime = Date.now();
+const SPLASH_MIN_MS = 900; // tempo mínimo visível, pra não "piscar" em conexões rápidas
+let _splashHidden = false;
+function hideSplashScreen() {
+    if (_splashHidden) return;
+    _splashHidden = true;
+    const el = document.getElementById('app-splash-screen');
+    if (!el) return;
+    const elapsed = Date.now() - _splashStartTime;
+    const wait = Math.max(0, SPLASH_MIN_MS - elapsed);
+    setTimeout(() => el.classList.add('splash-hide'), wait);
+}
+// Segurança: se por algum motivo nenhuma view for trocada (erro inesperado), some sozinha em 4s
+setTimeout(hideSplashScreen, 4000);
 
 // ─── PREVENIR SELEÇÃO DE TEXTO NAS MENSAGENS ────────────────────────────────
 document.addEventListener('selectstart', (e) => {
@@ -286,11 +313,57 @@ document.getElementById('btn-save-profile').addEventListener('click', () => {
         });
 });
 
+// ─── STATUS DA CONTA (suspensa / ativa) — cache local + verificação online ──
+// Guarda o último status conhecido da conta no dispositivo, pra que o login
+// offline também respeite uma suspensão aplicada enquanto o app estava fechado.
+function getCachedAccountStatus(uidOrEmail) {
+    try { return JSON.parse(localStorage.getItem(`accountStatus_${uidOrEmail}`) || 'null'); }
+    catch { return null; }
+}
+function setCachedAccountStatus(uidOrEmail, suspended, reason) {
+    localStorage.setItem(`accountStatus_${uidOrEmail}`, JSON.stringify({
+        suspended: !!suspended, reason: reason || '', checkedAt: Date.now()
+    }));
+}
+
+function forceLogoutSuspended(reason) {
+    localStorage.removeItem('localLoggedUser');
+    if (_accountStatusListenerUid) { database.ref(`users/${_accountStatusListenerUid}/suspended`).off('value'); _accountStatusListenerUid = null; }
+    auth.signOut().finally(() => {
+        changeView('login');
+        alert('Sua conta foi suspensa.' + (reason ? ('\nMotivo: ' + reason) : '') + '\nEntre em contato com o suporte se acredita que isso é um engano.');
+    });
+}
+
+let _accountStatusListenerUid = null;
+// Escuta em tempo real se a conta foi suspensa enquanto o app está aberto/online,
+// e mantém o cache local sempre atualizado com o status mais recente.
+function watchAccountStatus(uid) {
+    if (uid === "offline_user") return;
+    if (_accountStatusListenerUid === uid) return;
+    if (_accountStatusListenerUid) database.ref(`users/${_accountStatusListenerUid}/suspended`).off('value');
+    _accountStatusListenerUid = uid;
+    database.ref(`users/${uid}/suspended`).on('value', snap => {
+        const suspended = snap.val() === true;
+        const emailKey = currentUser && currentUser.email;
+        setCachedAccountStatus(uid, suspended);
+        if (emailKey) setCachedAccountStatus(emailKey, suspended);
+        if (suspended) forceLogoutSuspended();
+    });
+}
+
 function checkLocalSessionAndLogin() {
     const localUser = localStorage.getItem('localLoggedUser');
     if (localUser) {
         const creds = JSON.parse(localUser);
         if (!navigator.onLine) {
+            // Respeita o último status de suspensão conhecido, salvo localmente
+            const cachedStatus = getCachedAccountStatus(creds.email);
+            if (cachedStatus && cachedStatus.suspended) {
+                changeView('login');
+                alert('Sua conta está suspensa. Conecte-se à internet para mais informações ou contate o suporte.');
+                return;
+            }
             currentUser = { uid: "offline_user", email: creds.email };
             changeView('chat');
             loadChatList();
@@ -334,6 +407,9 @@ function setupPresenceSystem(userId) {
         if (!snap.val()) return;
         userStatusRef.onDisconnect().update({ status: "offline", lastSeen: firebase.database.ServerValue.TIMESTAMP });
         userStatusRef.update({ status: "online", lastSeen: firebase.database.ServerValue.TIMESTAMP });
+        // Conexão real com o Firebase confirmada (mais confiável que o evento 'online' do navegador) —
+        // aproveita pra escoar mensagens que ficaram esperando a internet voltar.
+        processOfflineQueue();
     });
 }
 
@@ -389,6 +465,15 @@ function listenToGlobalMessages() {
         const lastMsg = chat.messages[msgKeys[msgKeys.length - 1]];
         if (!lastMsg || !lastMsg.senderId) return;
         if (lastMsg.timestamp && lastMsg.timestamp < listenStartTime) return;
+
+        // Se eu excluí esse contato (saí da conversa) e a pessoa me mandou mensagem de novo,
+        // isso vira automaticamente um novo pedido de conversa (preciso aceitar pra reabrir).
+        if (chat.participants && chat.participants[currentUser.uid] === false &&
+            lastMsg.senderId && lastMsg.senderId !== currentUser.uid) {
+            handleReappearingContact(snap.key, lastMsg);
+            return;
+        }
+
         if (lastMsg.senderId !== currentUser.uid && lastMsg.status === 'sending') {
             if (blockedUsers[lastMsg.senderId]) return;
             if (silencedUsers[lastMsg.senderId]) return;
@@ -405,6 +490,34 @@ function listenToGlobalMessages() {
                 sendNativeNotification(sender.nickname || 'Nova mensagem', msgText, sender.avatar || '');
             });
         }
+    });
+}
+
+// Transforma uma mensagem recebida numa conversa excluída em um novo pedido de conversa,
+// reaproveitando o mesmo chat (histórico antigo) em vez de criar um do zero.
+function handleReappearingContact(chatId, lastMsg) {
+    const otherUid = lastMsg.senderId;
+    if (blockedUsers[otherUid]) return;
+    database.ref(`chatRequests/${currentUser.uid}/${otherUid}`).once('value', reqSnap => {
+        if (reqSnap.exists() && reqSnap.val().status === 'pending') return; // já tem pedido aguardando
+        database.ref(`users/${otherUid}`).once('value', uSnap => {
+            const sender = uSnap.val();
+            if (!sender) return;
+            const msgText = lastMsg.text || (lastMsg.audio ? '🎵 Áudio' : '📷 Mídia');
+            database.ref(`chatRequests/${currentUser.uid}/${otherUid}`).set({
+                fromUid: otherUid,
+                fromNickname: sender.nickname || '',
+                fromUsername: sender.username || '',
+                fromAvatar: sender.avatar || '',
+                message: msgText,
+                timestamp: firebase.database.ServerValue.TIMESTAMP,
+                status: 'pending',
+                existingChatId: chatId
+            }).then(() => {
+                triggerSystemPopup('Novo pedido de conversa', `${sender.nickname || 'Alguém'} quer falar com você de novo.`, sender.avatar || DEFAULT_AVATAR);
+                sendNativeNotification(sender.nickname || 'Novo pedido de conversa', msgText, sender.avatar || '');
+            });
+        });
     });
 }
 
@@ -432,6 +545,14 @@ auth.onAuthStateChanged(user => {
         }
         currentUser = user;
         database.ref('users/' + user.uid).once('value').then(snap => {
+            const userData = snap.exists() ? snap.val() : null;
+            if (userData && userData.suspended === true) {
+                setCachedAccountStatus(user.uid, true);
+                setCachedAccountStatus(user.email, true);
+                forceLogoutSuspended();
+                return;
+            }
+            if (userData) { setCachedAccountStatus(user.uid, false); setCachedAccountStatus(user.email, false); }
             if (snap.exists() && snap.val().username) {
                 localStorage.setItem(`profile_${user.uid}`, JSON.stringify(snap.val()));
                 changeView('chat');
@@ -441,12 +562,18 @@ auth.onAuthStateChanged(user => {
                 listenToGlobalMessages();
                 listenToChatRequests();
                 setupPushNotifications();
+                watchAccountStatus(user.uid);
                 ensureMainGroup();
             } else {
                 changeView('profile');
             }
         }).catch(() => {
             const cachedProfile = localStorage.getItem(`profile_${user.uid}`);
+            const cachedStatus  = getCachedAccountStatus(user.uid) || getCachedAccountStatus(user.email);
+            if (cachedStatus && cachedStatus.suspended) {
+                forceLogoutSuspended();
+                return;
+            }
             if (cachedProfile) {
                 changeView('chat');
                 loadChatList();
@@ -619,6 +746,9 @@ function openChatRoom(chatId, recipientData) {
     // Se havia um grupo aberto, fecha ele antes de abrir o chat (telas são mutuamente exclusivas)
     if (activeGroupId) closeGroupRoom();
 
+    // Novo chat sendo aberto: reseta o controle de "já animado" (a primeira carga pode animar normalmente)
+    if (activeChatId !== chatId) renderedMsgIds = new Set();
+
     activeChatId      = chatId;
     activeRecipientId = recipientData.uid;
     replyingTo        = null;
@@ -711,6 +841,8 @@ function renderMessages(snap, recipientData, isRawArray = false) {
         if (data.deletedForAll) {
             const wrapper = document.createElement('div');
             wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+            if (renderedMsgIds.has(data.id)) wrapper.classList.add('no-anim');
+            else renderedMsgIds.add(data.id);
             const card = document.createElement('div');
             card.className = `message ${isSent ? 'sent' : 'received'} deleted-msg`;
             card.innerHTML = `<p>🚫 Mensagem apagada</p>`;
@@ -724,6 +856,9 @@ function renderMessages(snap, recipientData, isRawArray = false) {
         // Agrupamento: reduz espaçamento entre mensagens do mesmo remetente
         if (sameAsPrev) wrapper.classList.add('grouped-msg');
         wrapper.dataset.msgId = data.id;
+        // Só anima quem é realmente novo — mensagens já vistas antes não repetem a animação de entrada
+        if (renderedMsgIds.has(data.id)) wrapper.classList.add('no-anim');
+        else renderedMsgIds.add(data.id);
 
         const arrow = document.createElement('div');
         arrow.className = 'reply-arrow';
@@ -1712,9 +1847,32 @@ function openRecipientInfoSheet() {
         document.getElementById('sheet-contact-bio').innerText  = data.bio || 'Sem bio disponível.';
         document.getElementById('sheet-contact-status').innerText = data.wlstwrus || 'Disponível';
         document.getElementById('sheet-contact-avatar').src = data.avatar;
+        // Excluir contato só faz sentido dentro de uma conversa direta de verdade
+        const btnDel = document.getElementById('btn-delete-contact');
+        if (btnDel) { activeChatId ? btnDel.classList.remove('hidden') : btnDel.classList.add('hidden'); }
         document.getElementById('contact-info-sheet').classList.remove('hidden');
     });
 }
+
+// ─── EXCLUIR CONTATO ─────────────────────────────────────────────────────────
+// Remove a conversa apenas da MINHA lista (mantém o histórico intacto pro outro lado).
+// Se a pessoa te mandar mensagem de novo depois, vira um novo pedido de conversa
+// que precisa ser aceito para o chat reabrir normalmente.
+document.getElementById('btn-delete-contact').addEventListener('click', () => {
+    if (!activeChatId || !activeRecipientId) return;
+    if (currentUser.uid === "offline_user") { alert("Excluir contato requer conexão com a internet."); return; }
+    if (!confirm("Excluir este contato?\n\nA conversa some da sua lista. Se essa pessoa te mandar mensagem de novo, você vai receber um novo pedido de conversa e pode aceitar pra voltar a conversar normalmente.")) return;
+
+    const chatIdToDelete = activeChatId;
+    database.ref(`chats/${chatIdToDelete}/participants/${currentUser.uid}`).set(false).then(() => {
+        document.getElementById('contact-info-sheet').classList.add('hidden');
+        closeChatRoom();
+        const emptyPanel = document.getElementById('empty-chat-panel');
+        if (emptyPanel) emptyPanel.classList.remove('hidden');
+        loadChatList();
+        triggerSystemPopup("Contato excluído", "A conversa foi removida da sua lista.", DEFAULT_AVATAR);
+    }).catch(err => alert('Erro ao excluir contato: ' + err.message));
+});
 
 // Apenas o nome (h2) abre o perfil — não o header inteiro
 document.getElementById('active-chat-name').addEventListener('click', () => {
@@ -1967,6 +2125,30 @@ function renderRequestsList() {
 }
 
 function acceptChatRequest(req, fromUid, rowEl) {
+    // Pedido de RECONEXÃO: a pessoa já tinha sido excluída como contato e mandou mensagem
+    // de novo. Reabre a mesma conversa (com o histórico antigo) em vez de criar uma nova.
+    if (req.existingChatId) {
+        const chatId = req.existingChatId;
+        database.ref(`chats/${chatId}/participants/${currentUser.uid}`).set(true).then(() => {
+            database.ref(`chatRequests/${currentUser.uid}/${fromUid}`).update({ status: 'accepted' });
+            rowEl.remove();
+            const list = document.getElementById('requests-list');
+            if (!list.querySelector('.request-row')) {
+                list.innerHTML = '<div class="empty-state" style="padding:20px;">Nenhuma solicitação pendente.</div>';
+            }
+            document.getElementById('requests-modal').classList.add('hidden');
+            const recipientObj = {
+                uid: fromUid,
+                nickname: req.fromNickname || 'Usuário',
+                username: req.fromUsername || '',
+                avatar: req.fromAvatar || DEFAULT_AVATAR
+            };
+            loadChatList();
+            openChatRoom(chatId, recipientObj);
+        });
+        return;
+    }
+
     const newChatRef = database.ref('chats').push();
     const newChatId  = newChatRef.key;
     const chatPayload = {
@@ -2146,6 +2328,9 @@ function openGroupRoom(groupId, groupData) {
     // Se havia um chat direto aberto, fecha ele antes de abrir o grupo (telas são mutuamente exclusivas)
     if (activeChatId) closeChatRoom();
 
+    // Novo grupo sendo aberto: reseta o controle de "já animado"
+    if (activeGroupId !== groupId) renderedGroupMsgIds = new Set();
+
     activeGroupId   = groupId;
     activeGroupData = groupData;
     groupReplyingTo = null;
@@ -2224,6 +2409,8 @@ function renderGroupMessages(snap, groupData) {
         if (data.deletedForAll) {
             const w = document.createElement('div');
             w.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+            if (renderedGroupMsgIds.has(data.id)) w.classList.add('no-anim');
+            else renderedGroupMsgIds.add(data.id);
             const c = document.createElement('div');
             c.className = `message ${isSent ? 'sent' : 'received'} deleted-msg`;
             c.innerHTML = '<p>🚫 Mensagem apagada</p>';
@@ -2233,6 +2420,9 @@ function renderGroupMessages(snap, groupData) {
         const wrapper = document.createElement('div');
         wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
         if (sameAsPrev) wrapper.classList.add('grouped-msg');
+        // Só anima quem é realmente novo — evita repetir a animação em mensagens já vistas
+        if (renderedGroupMsgIds.has(data.id)) wrapper.classList.add('no-anim');
+        else renderedGroupMsgIds.add(data.id);
 
         const card = document.createElement('div');
         card.className = `message ${isSent ? 'sent' : 'received'}`;
@@ -2681,6 +2871,9 @@ function showGroupMemberProfile(uid, cachedData) {
         
         // Salva o uid como "activeRecipientId temporário" para bloquear/desbloquear funcionar
         activeRecipientId = uid;
+        // Excluir contato não se aplica aqui (é um perfil visto de dentro de um grupo, não uma conversa direta)
+        const btnDel = document.getElementById('btn-delete-contact');
+        if (btnDel) btnDel.classList.add('hidden');
         document.getElementById('contact-info-sheet').classList.remove('hidden');
     };
     
