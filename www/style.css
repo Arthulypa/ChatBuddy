@@ -40,6 +40,7 @@
 }
 
 /* Cores de destaque (o "azul" vira o que a pessoa escolher) */
+[data-accent="claude"] { --ios-blue: #D97757; }
 [data-accent="blue"]   { --ios-blue: #0a84ff; }
 [data-accent="green"]  { --ios-blue: #30d158; }
 [data-accent="purple"] { --ios-blue: #bf5af2; }
@@ -49,6 +50,7 @@
 
 /* Cor do balão de mensagem enviada — com contraste de texto automático:
    balões escuros → texto branco; balões claros → texto preto (nunca invisível) */
+[data-bubble="claude"] { --msg-sent: rgba(217, 119, 87, 0.94); --msg-sent-text: #ffffff; }
 [data-bubble="blue"]   { --msg-sent: rgba(10, 132, 255, 0.9);  --msg-sent-text: #ffffff; }
 [data-bubble="green"]  { --msg-sent: rgba(48, 209, 88, 0.9);   --msg-sent-text: #ffffff; }
 [data-bubble="purple"] { --msg-sent: rgba(191, 90, 242, 0.9);  --msg-sent-text: #ffffff; }
@@ -137,7 +139,7 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
         border-radius: 14px !important;
         overflow: hidden;
     }
-    .settings-screen {
+    .app-container .settings-screen {
         position: absolute !important;
         left: 340px !important;
         right: 10px !important;
