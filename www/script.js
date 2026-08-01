@@ -1018,7 +1018,7 @@ document.getElementById('ctx-info-msg').addEventListener('click', () => {
                     const time   = seenBy[uid] ? new Date(seenBy[uid]).toLocaleTimeString() : '--:--';
                     return `<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--glass-border);">
                         <img src="${avatar}" style="width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0;">
-                        <span style="flex:1;font-size:13px;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
+                        <span style="flex:1;font-size:13px;color:var(--text-main);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
                         <span style="font-size:12px;color:var(--ios-green);font-weight:600;flex-shrink:0;">${time}</span>
                     </div>`;
                 }).join('');
@@ -1949,7 +1949,7 @@ function renderRequestsList() {
                 <div class="request-row-info">
                     <h4>${req.fromNickname || 'Usuário'}</h4>
                     <p>${req.fromUsername || ''}</p>
-                    ${req.message ? `<p style="color:#fff;font-style:italic;margin-top:2px;">"${req.message}"</p>` : ''}
+                    ${req.message ? `<p style="color:var(--text-main);font-style:italic;margin-top:2px;">"${req.message}"</p>` : ''}
                 </div>
                 <div class="request-row-actions">
                     <button class="btn-req-accept">Aceitar</button>
@@ -2627,7 +2627,7 @@ function openGroupInfoSheet() {
                 </div>
                 ${canManage && !isOwner && uid !== currentUser.uid ? `
                 <div style="display:flex;flex-direction:column;gap:4px;margin-left:auto;">
-                    <button onclick="event.stopPropagation();toggleGroupAdmin('${uid}','${isAdmin}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.08);color:#fff;cursor:pointer;">
+                    <button onclick="event.stopPropagation();toggleGroupAdmin('${uid}','${isAdmin}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:1px solid var(--glass-border);background:var(--surface-3);color:var(--text-main);cursor:pointer;">
                         ${isAdmin ? 'Remover Admin' : 'Tornar Admin'}
                     </button>
                     <button onclick="event.stopPropagation();removeGroupMember('${uid}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:none;background:rgba(255,59,48,0.2);color:#ff3b30;cursor:pointer;">Remover</button>
