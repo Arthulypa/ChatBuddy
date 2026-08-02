@@ -3171,6 +3171,17 @@ document.getElementById('btn-confirm-create-group').addEventListener('click', ()
 // ═════════════════════════════════════════════════════════════════════════
 const AGORA_APP_ID = "b2c42331195644748e7bd90cf751d88c";
 
+// Captura qualquer erro não tratado e mostra na tela (útil pra depurar sem DevTools no celular)
+window.addEventListener('error', (e) => {
+    if (e.message && e.message.toLowerCase().includes('agora')) {
+        alert('ERRO (chamada): ' + e.message + '\nArquivo: ' + (e.filename || '?') + ' linha ' + (e.lineno || '?'));
+    }
+});
+window.addEventListener('unhandledrejection', (e) => {
+    const msg = (e.reason && e.reason.message) ? e.reason.message : String(e.reason);
+    alert('ERRO (promessa não tratada): ' + msg);
+});
+
 let agoraClient        = null;   // cliente RTC ativo durante a chamada
 let localMicTrack      = null;
 let localCamTrack      = null;
