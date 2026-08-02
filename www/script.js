@@ -1359,7 +1359,8 @@ function loadChatList() {
                 cacheListRows[r.chatId] = { chatId: r.chatId, recipient: r.uData, chatData: r.chatData };
                 createChatRowElement(r.chatId, r.uData, r.chatData);
             });
-            localStorage.setItem('offline_chat_list', JSON.stringify(cacheListRows));
+            try { localStorage.setItem('offline_chat_list', JSON.stringify(cacheListRows)); }
+            catch (e) { /* armazenamento cheio: ignora silenciosamente, não trava o app */ }
             if (Object.keys(cacheListRows).length === 0) {
                 listContainer.innerHTML = `<div class="empty-state">Nenhuma conversa ativa.</div>`;
             }
@@ -3213,7 +3214,6 @@ document.getElementById('btn-start-video-call').addEventListener('click', () => 
 
 // ── Iniciar uma chamada (eu sou o chamador) ─────────────────────────────────
 function startOutgoingCall(type) {
-    alert('DEBUG: activeChatId=' + activeChatId + ' | activeRecipientId=' + activeRecipientId + ' | uid=' + (currentUser ? currentUser.uid : 'sem currentUser'));
     if (!activeChatId || !activeRecipientId) return;
     if (currentUser.uid === "offline_user") { alert("Chamadas precisam de internet."); return; }
     if (agoraClient) { alert("Você já está em uma chamada."); return; }
