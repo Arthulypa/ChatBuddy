@@ -800,6 +800,76 @@ html[data-animation="nenhuma"]  .message-wrapper { animation: none !important; }
 #group-admin-actions:not(.hidden) { animation: fadeIn 0.25s ease; }
 
 /* Estado vazio (sem conversas/grupos) com uma leve respiração no ícone */
+/* ── CHAMADAS DE VOZ E VÍDEO (Agora) ─────────────────────────────────────── */
+.call-btn-wrapper { position: relative; }
+
+.call-type-menu {
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 60;
+    background: var(--surface-2, #1c1c1e); border: 1px solid var(--glass-border);
+    border-radius: 14px; padding: 6px; min-width: 190px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    animation: scaleIn 0.15s ease;
+}
+.call-type-option {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    background: none; border: none; color: var(--text-main, #fff);
+    font-size: 14px; font-weight: 500; padding: 11px 10px; border-radius: 9px;
+    cursor: pointer; text-align: left;
+}
+.call-type-option svg { width: 18px; height: 18px; fill: var(--ios-blue, #0a84ff); flex-shrink: 0; }
+.call-type-option:hover, .call-type-option:active { background: rgba(255,255,255,0.08); }
+
+.call-screen {
+    position: absolute; inset: 0; width: 100%; height: 100%; z-index: 500;
+    background: linear-gradient(180deg, #1a1a1d 0%, #0a0a0c 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    padding: 60px 24px 50px; overflow: hidden;
+    animation: fadeIn 0.25s ease;
+}
+.call-remote-video {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;
+}
+.call-local-video {
+    position: absolute; top: 16px; right: 16px; width: 100px; height: 140px; z-index: 3;
+    object-fit: cover; border-radius: 14px; border: 2px solid rgba(255,255,255,0.25);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+.call-content {
+    position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center;
+    gap: 10px; margin-top: 20px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+}
+.call-status-label { font-size: 14px; font-weight: 600; color: var(--ios-blue, #0a84ff); letter-spacing: 0.4px; text-transform: uppercase; }
+.call-avatar-wrapper { position: relative; width: 128px; height: 128px; margin: 10px 0; display: flex; align-items: center; justify-content: center; }
+.call-avatar-large { width: 116px; height: 116px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,0.15); position: relative; z-index: 2; }
+.call-ring-pulse { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--ios-blue, #0a84ff); animation: splashRing 1.8s ease-out infinite; }
+.call-content h2 { font-size: 24px; font-weight: 700; color: #fff; margin: 0; }
+.call-timer { font-size: 15px; color: rgba(255,255,255,0.65); font-variant-numeric: tabular-nums; }
+
+.call-actions-row { position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 26px; width: 100%; }
+.call-action-btn {
+    width: 62px; height: 62px; border-radius: 50%; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4); transition: transform 0.15s ease;
+}
+.call-action-btn:active { transform: scale(0.92); }
+.call-action-btn svg { width: 26px; height: 26px; fill: #fff; }
+.call-accept-btn { background: #30d158; }
+.call-decline-btn { background: #ff453a; }
+.call-mini-btn {
+    width: 50px; height: 50px; border-radius: 50%; border: none; cursor: pointer;
+    background: rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: center;
+}
+.call-mini-btn svg { width: 22px; height: 22px; fill: #fff; }
+.call-mini-btn.active-mute, .call-mini-btn.active-off { background: #fff; }
+.call-mini-btn.active-mute svg, .call-mini-btn.active-off svg { fill: #1c1c1e; }
+
+/* Lista de chamadas (aba Chamadas) */
+.call-row-icon { display: flex; align-items: center; gap: 4px; font-size: 12.5px; }
+.call-row-icon.missed, .call-row-icon.declined { color: #ff453a; }
+.call-row-icon.answered { color: var(--text-muted, #8e8e93); }
+.call-row-icon svg { width: 13px; height: 13px; }
+
 @keyframes emptyBreathe { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.04); } }
 
 /* ── SPLASH SCREEN (abertura animada) ───────────────────────────────────── */
