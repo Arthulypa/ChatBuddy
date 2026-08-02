@@ -3213,6 +3213,7 @@ document.getElementById('btn-start-video-call').addEventListener('click', () => 
 
 // ── Iniciar uma chamada (eu sou o chamador) ─────────────────────────────────
 function startOutgoingCall(type) {
+    alert('DEBUG: activeChatId=' + activeChatId + ' | activeRecipientId=' + activeRecipientId + ' | uid=' + (currentUser ? currentUser.uid : 'sem currentUser'));
     if (!activeChatId || !activeRecipientId) return;
     if (currentUser.uid === "offline_user") { alert("Chamadas precisam de internet."); return; }
     if (agoraClient) { alert("Você já está em uma chamada."); return; }
