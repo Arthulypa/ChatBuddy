@@ -563,6 +563,7 @@ auth.onAuthStateChanged(user => {
                 listenToChatRequests();
                 setupPushNotifications();
                 watchAccountStatus(user.uid);
+                listenForIncomingCalls();
                 ensureMainGroup();
             } else {
                 changeView('profile');
@@ -2033,7 +2034,7 @@ document.getElementById('btn-logout').addEventListener('click', () => {
 document.getElementById('tab-chats').addEventListener('click', () => switchMainTab('chats'));
 document.getElementById('tab-groups').addEventListener('click', () => { switchMainTab('groups'); loadGroupsList(); });
 document.getElementById('tab-status').addEventListener('click', () => switchMainTab('status'));
-document.getElementById('tab-calls').addEventListener('click', () => switchMainTab('calls'));
+document.getElementById('tab-calls').addEventListener('click', () => { switchMainTab('calls'); loadCallsList(); });
 
 function switchMainTab(target) {
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
@@ -3164,3 +3165,352 @@ document.getElementById('btn-confirm-create-group').addEventListener('click', ()
         triggerSystemPopup('Grupo criado!', `"${name}" foi criado com sucesso.`, payload.avatar);
     });
 });
+
+// ═════════════════════════════════════════════════════════════════════════
+// CHAMADAS DE VOZ E VÍDEO (via Agora — só conversas diretas, sem grupo)
+// ═════════════════════════════════════════════════════════════════════════
+const AGORA_APP_ID = "b2c42331195644748e7bd90cf751d88c";
+
+let agoraClient        = null;   // cliente RTC ativo durante a chamada
+let localMicTrack      = null;
+let localCamTrack      = null;
+let activeCallId        = null;  // chave do nó calls/ em uso agora
+let activeCallType      = null;  // 'audio' | 'video'
+let activeCallOtherUid  = null;
+let isCallCaller        = false; // true se EU disquei a chamada
+let callRingTimeout     = null;  // timeout de "ninguém atendeu"
+let callTimerInterval   = null;
+let callStartedAt       = null;
+let callsListenStartTime = Date.now();
+let isMicMuted = false, isCamOff = false;
+
+// ── Abrir/fechar o menu de escolha (voz/vídeo) ──────────────────────────────
+document.getElementById('btn-call-menu').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('call-type-menu').classList.toggle('hidden');
+});
+document.addEventListener('click', () => document.getElementById('call-type-menu').classList.add('hidden'));
+
+document.getElementById('btn-start-voice-call').addEventListener('click', () => {
+    document.getElementById('call-type-menu').classList.add('hidden');
+    startOutgoingCall('audio');
+});
+document.getElementById('btn-start-video-call').addEventListener('click', () => {
+    document.getElementById('call-type-menu').classList.add('hidden');
+    startOutgoingCall('video');
+});
+
+// ── Iniciar uma chamada (eu sou o chamador) ─────────────────────────────────
+function startOutgoingCall(type) {
+    if (!activeChatId || !activeRecipientId) return;
+    if (currentUser.uid === "offline_user") { alert("Chamadas precisam de internet."); return; }
+    if (agoraClient) { alert("Você já está em uma chamada."); return; }
+    if (blockedUsers[activeRecipientId]) { alert("Você bloqueou esse contato."); return; }
+    if (typeof AgoraRTC === "undefined") { alert("Não foi possível carregar o serviço de chamada. Verifique sua internet."); return; }
+
+    const myProfile = JSON.parse(localStorage.getItem(`profile_${currentUser.uid}`) || '{}');
+    const recipientNameEl = document.getElementById('active-chat-name');
+    const recipientAvatarEl = document.getElementById('active-chat-avatar');
+
+    const callRef = database.ref('calls').push();
+    const callData = {
+        id: callRef.key,
+        type: type,
+        status: 'ringing',
+        callerId: currentUser.uid,
+        callerNickname: myProfile.nickname || 'Usuário',
+        callerAvatar: myProfile.avatar || DEFAULT_AVATAR,
+        receiverId: activeRecipientId,
+        receiverNickname: recipientNameEl ? recipientNameEl.innerText : 'Usuário',
+        receiverAvatar: recipientAvatarEl ? recipientAvatarEl.src : DEFAULT_AVATAR,
+        createdAt: firebase.database.ServerValue.TIMESTAMP
+    };
+
+    callRef.set(callData).then(() => {
+        isCallCaller       = true;
+        activeCallId       = callRef.key;
+        activeCallType      = type;
+        activeCallOtherUid  = activeRecipientId;
+        showCallScreen({
+            name: callData.receiverNickname,
+            avatar: callData.receiverAvatar,
+            statusLabel: 'Chamando...',
+            showIncomingButtons: false,
+            showActiveButtons: false,
+            showRingPulse: true
+        });
+
+        // Se ninguém atender em 35s, encerra como "não atendida"
+        callRingTimeout = setTimeout(() => {
+            database.ref(`calls/${callRef.key}`).once('value', snap => {
+                const c = snap.val();
+                if (c && c.status === 'ringing') {
+                    database.ref(`calls/${callRef.key}`).update({ status: 'missed', endedAt: firebase.database.ServerValue.TIMESTAMP });
+                }
+            });
+            cleanupCallUI();
+        }, 35000);
+
+        // Escuta o próprio pedido de chamada pra saber quando foi aceita/recusada
+        database.ref(`calls/${callRef.key}`).on('value', snap => {
+            const c = snap.val();
+            if (!c) return;
+            if (c.status === 'accepted' && agoraClient === null) {
+                clearTimeout(callRingTimeout);
+                joinAgoraChannel(callRef.key, type, false);
+            } else if (c.status === 'declined') {
+                triggerSystemPopup('Chamada recusada', `${callData.receiverNickname} recusou a chamada.`, callData.receiverAvatar);
+                database.ref(`calls/${callRef.key}`).off('value');
+                cleanupCallUI();
+            }
+        });
+    }).catch(err => alert('Erro ao iniciar chamada: ' + err.message));
+}
+
+// ── Escutar chamadas recebidas (chamado uma vez após login) ────────────────
+function listenForIncomingCalls() {
+    if (!currentUser || currentUser.uid === "offline_user") return;
+    callsListenStartTime = Date.now();
+    database.ref('calls').orderByChild('receiverId').equalTo(currentUser.uid).on('child_added', snap => {
+        const c = snap.val();
+        if (!c || c.status !== 'ringing') return;
+        if (c.createdAt && c.createdAt < callsListenStartTime) return; // ignora chamadas antigas
+        if (blockedUsers[c.callerId]) return;
+        if (agoraClient || activeCallId) return; // já em outra chamada — poderia registrar como "perdida" aqui também
+        showIncomingCall(snap.key, c);
+    });
+}
+
+function showIncomingCall(callId, c) {
+    activeCallId       = callId;
+    activeCallType      = c.type;
+    activeCallOtherUid  = c.callerId;
+    isCallCaller        = false;
+    showCallScreen({
+        name: c.callerNickname,
+        avatar: c.callerAvatar,
+        statusLabel: c.type === 'video' ? 'Chamada de vídeo recebida' : 'Chamada de voz recebida',
+        showIncomingButtons: true,
+        showActiveButtons: false,
+        showRingPulse: true
+    });
+    // Se a pessoa desistir/cancelar antes de eu atender, fecho a tela sozinho
+    database.ref(`calls/${callId}`).on('value', snap => {
+        const cc = snap.val();
+        if (!cc || cc.status === 'missed') {
+            database.ref(`calls/${callId}`).off('value');
+            if (!agoraClient) cleanupCallUI();
+        }
+    });
+}
+
+document.getElementById('btn-call-accept').addEventListener('click', () => {
+    if (!activeCallId) return;
+    database.ref(`calls/${activeCallId}`).update({ status: 'accepted', answeredAt: firebase.database.ServerValue.TIMESTAMP });
+    joinAgoraChannel(activeCallId, activeCallType, true);
+});
+
+document.getElementById('btn-call-decline').addEventListener('click', () => {
+    if (!activeCallId) return;
+    database.ref(`calls/${activeCallId}`).update({ status: 'declined', endedAt: firebase.database.ServerValue.TIMESTAMP });
+    database.ref(`calls/${activeCallId}`).off('value');
+    cleanupCallUI();
+});
+
+document.getElementById('btn-call-end').addEventListener('click', () => endActiveCall());
+
+// ── Conectar de fato na sala da Agora (usada por quem liga e por quem atende) ──
+async function joinAgoraChannel(callId, type, iAmReceiver) {
+    try {
+        agoraClient = AgoraRTC.createClient({ mode: "rtc", codec: "vp8" });
+
+        agoraClient.on("user-published", async (user, mediaType) => {
+            await agoraClient.subscribe(user, mediaType);
+            if (mediaType === "video") {
+                const remoteVideoEl = document.getElementById('call-remote-video');
+                remoteVideoEl.classList.remove('hidden');
+                user.videoTrack.play(remoteVideoEl);
+            }
+            if (mediaType === "audio") user.audioTrack.play();
+        });
+        agoraClient.on("user-left", () => endActiveCall());
+
+        await agoraClient.join(AGORA_APP_ID, callId, null, null);
+
+        localMicTrack = await AgoraRTC.createMicrophoneAudioTrack();
+        const tracksToPublish = [localMicTrack];
+        if (type === 'video') {
+            localCamTrack = await AgoraRTC.createCameraVideoTrack();
+            tracksToPublish.push(localCamTrack);
+            const localVideoEl = document.getElementById('call-local-video');
+            localVideoEl.classList.remove('hidden');
+            localCamTrack.play(localVideoEl);
+            document.getElementById('btn-call-camera').classList.remove('hidden');
+        }
+        await agoraClient.publish(tracksToPublish);
+
+        callStartedAt = Date.now();
+        showCallScreen({
+            statusLabel: '',
+            showIncomingButtons: false,
+            showActiveButtons: true,
+            showRingPulse: false,
+            keepNameAvatar: true
+        });
+        document.getElementById('call-timer').classList.remove('hidden');
+        startCallTimer();
+    } catch (err) {
+        alert('Não foi possível conectar a chamada: ' + err.message);
+        endActiveCall();
+    }
+}
+
+function startCallTimer() {
+    stopCallTimer();
+    callTimerInterval = setInterval(() => {
+        const secs = Math.floor((Date.now() - callStartedAt) / 1000);
+        const m = String(Math.floor(secs / 60)).padStart(2, '0');
+        const s = String(secs % 60).padStart(2, '0');
+        document.getElementById('call-timer').innerText = `${m}:${s}`;
+    }, 1000);
+}
+function stopCallTimer() { if (callTimerInterval) clearInterval(callTimerInterval); callTimerInterval = null; }
+
+// ── Encerrar a chamada ativa (por qualquer um dos dois lados) ──────────────
+function endActiveCall() {
+    if (activeCallId) {
+        const wasAccepted = !!callStartedAt;
+        const duration = wasAccepted ? Math.floor((Date.now() - callStartedAt) / 1000) : 0;
+        database.ref(`calls/${activeCallId}`).update({
+            status: wasAccepted ? 'ended' : (isCallCaller ? 'missed' : 'declined'),
+            endedAt: firebase.database.ServerValue.TIMESTAMP,
+            duration: duration
+        });
+        database.ref(`calls/${activeCallId}`).off('value');
+    }
+    cleanupCallUI();
+}
+
+function cleanupCallUI() {
+    clearTimeout(callRingTimeout);
+    stopCallTimer();
+    if (localMicTrack) { localMicTrack.close(); localMicTrack = null; }
+    if (localCamTrack) { localCamTrack.close(); localCamTrack = null; }
+    if (agoraClient) { agoraClient.leave().catch(() => {}); agoraClient = null; }
+
+    document.getElementById('call-screen').classList.add('hidden');
+    document.getElementById('call-remote-video').classList.add('hidden');
+    document.getElementById('call-local-video').classList.add('hidden');
+    document.getElementById('call-timer').classList.add('hidden');
+    document.getElementById('call-timer').innerText = '00:00';
+    document.getElementById('btn-call-camera').classList.add('hidden');
+    document.getElementById('call-remote-video').srcObject = null;
+
+    isMicMuted = false; isCamOff = false;
+    document.getElementById('btn-call-mute').classList.remove('active-mute');
+    document.getElementById('btn-call-camera').classList.remove('active-off');
+
+    activeCallId = null; activeCallType = null; activeCallOtherUid = null;
+    isCallCaller = false; callStartedAt = null;
+
+    loadCallsList();
+}
+
+function showCallScreen({ name, avatar, statusLabel, showIncomingButtons, showActiveButtons, showRingPulse, keepNameAvatar }) {
+    if (!keepNameAvatar) {
+        document.getElementById('call-remote-name').innerText = name || 'Usuário';
+        document.getElementById('call-remote-avatar').src = avatar || DEFAULT_AVATAR;
+    }
+    document.getElementById('call-status-label').innerText = statusLabel || '';
+    document.getElementById('call-status-label').style.display = statusLabel ? 'block' : 'none';
+    document.getElementById('call-ring-pulse').style.display = showRingPulse ? 'block' : 'none';
+    document.getElementById('call-incoming-actions').classList.toggle('hidden', !showIncomingButtons);
+    document.getElementById('call-active-actions').classList.toggle('hidden', !showActiveButtons);
+    document.getElementById('call-screen').classList.remove('hidden');
+}
+
+// ── Mudo / câmera durante a chamada ─────────────────────────────────────────
+document.getElementById('btn-call-mute').addEventListener('click', () => {
+    if (!localMicTrack) return;
+    isMicMuted = !isMicMuted;
+    localMicTrack.setEnabled(!isMicMuted);
+    document.getElementById('btn-call-mute').classList.toggle('active-mute', isMicMuted);
+});
+document.getElementById('btn-call-camera').addEventListener('click', () => {
+    if (!localCamTrack) return;
+    isCamOff = !isCamOff;
+    localCamTrack.setEnabled(!isCamOff);
+    document.getElementById('btn-call-camera').classList.toggle('active-off', isCamOff);
+});
+
+// ── Lista da aba "Chamadas" (histórico, com indicador de atendida/recusada) ──
+function loadCallsList() {
+    if (!currentUser || currentUser.uid === "offline_user") return;
+    const container = document.getElementById('calls-list');
+    Promise.all([
+        database.ref('calls').orderByChild('callerId').equalTo(currentUser.uid).limitToLast(50).once('value'),
+        database.ref('calls').orderByChild('receiverId').equalTo(currentUser.uid).limitToLast(50).once('value')
+    ]).then(([sentSnap, receivedSnap]) => {
+        const all = {};
+        sentSnap.forEach(s => { const c = s.val(); if (c.status !== 'ringing') all[s.key] = c; });
+        receivedSnap.forEach(s => { const c = s.val(); if (c.status !== 'ringing') all[s.key] = c; });
+        const list = Object.values(all).sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+
+        if (list.length === 0) {
+            container.innerHTML = '<div class="empty-state">Nenhuma chamada efetuada.</div>';
+            return;
+        }
+        container.innerHTML = '';
+        list.forEach(c => {
+            const isOutgoing = c.callerId === currentUser.uid;
+            const otherName  = isOutgoing ? c.receiverNickname : c.callerNickname;
+            const otherAvatar = isOutgoing ? c.receiverAvatar : c.callerAvatar;
+            const otherUid   = isOutgoing ? c.receiverId : c.callerId;
+
+            let statusClass = 'answered';
+            let statusText  = c.type === 'video' ? 'Chamada de vídeo' : 'Chamada de voz';
+            if (c.status === 'missed')   { statusClass = 'missed';   statusText = isOutgoing ? 'Não atendida' : 'Perdida'; }
+            if (c.status === 'declined') { statusClass = 'declined'; statusText = isOutgoing ? 'Recusada' : 'Você recusou'; }
+            if (c.status === 'ended' && c.duration) {
+                const m = String(Math.floor(c.duration / 60)).padStart(2, '0');
+                const s = String(c.duration % 60).padStart(2, '0');
+                statusText += ` · ${m}:${s}`;
+            }
+            const timeStr = c.createdAt ? new Date(c.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
+            const arrowIcon = isOutgoing
+                ? '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M9 5l7 7-7 7"/></svg>'
+                : '<svg viewBox="0 0 24 24"><path fill="currentColor" d="M15 5l-7 7 7 7"/></svg>';
+
+            const row = document.createElement('div');
+            row.className = 'chat-item-row';
+            row.innerHTML = `
+                <img src="${otherAvatar || DEFAULT_AVATAR}" alt="">
+                <div class="chat-item-info">
+                    <div class="chat-item-header">
+                        <h4>${otherName || 'Usuário'}</h4>
+                        <span style="font-size:12px;color:var(--text-muted);">${timeStr}</span>
+                    </div>
+                    <p class="call-row-icon ${statusClass}">${arrowIcon}<span>${statusText}</span></p>
+                </div>`;
+            row.addEventListener('click', () => {
+                database.ref(`users/${otherUid}`).once('value').then(uSnap => {
+                    const u = uSnap.val(); if (!u) return;
+                    database.ref('chats').once('value').then(chatsSnap => {
+                        let foundChatId = null;
+                        chatsSnap.forEach(cs => {
+                            const chat = cs.val();
+                            if (chat.participants && chat.participants[currentUser.uid] && chat.participants[otherUid]) foundChatId = cs.key;
+                        });
+                        activeRecipientId = otherUid;
+                        activeChatId = foundChatId;
+                        document.getElementById('active-chat-name').innerText = getDisplayName(u);
+                        document.getElementById('active-chat-avatar').src = u.avatar || DEFAULT_AVATAR;
+                        startOutgoingCall(c.type);
+                    });
+                });
+            });
+            container.appendChild(row);
+        });
+    });
+}
+
