@@ -34,17 +34,22 @@ function changeView(target) {
     if (viewPages[target]) viewPages[target].classList.remove('hidden');
 }
 
-// ─── BOTÃO SSO MATRIX (DIRECIONA PARA O LOGIN OFICIAL E RETORNA AO APP) ─────
+// ─── BOTÃO SSO MATRIX (REDIRECIONAMENTO OFICIAL MATRIX.ORG) ─────────────────
 document.addEventListener('click', (e) => {
     if (e.target && (e.target.id === 'btn-login-matrix' || e.target.closest('#btn-login-matrix'))) {
         e.preventDefault();
-        const currentUrl = window.location.origin + window.location.pathname;
-        const matrixAuthUrl = `${HOMESERVER_URL}/_matrix/static/client/login/#?redirectUrl=${encodeURIComponent(currentUrl)}`;
-        window.location.href = matrixAuthUrl;
+        
+        // Define a URL atual do seu app para onde o Matrix.org deve retornar após o login
+        const redirectUrl = window.location.origin + window.location.pathname;
+        
+        // URL de SSO oficial do Matrix.org v3 (evita falhas e telas de fallback)
+        const directSsoUrl = `${HOMESERVER_URL}/_matrix/client/v3/login/sso/redirect?redirectUrl=${encodeURIComponent(redirectUrl)}`;
+        
+        window.location.href = directSsoUrl;
     }
 });
 
-// ─── VALIDAÇÃO E SESSÃO ────────────────────────────────────────────────────
+// ─── VALIDAÇÃO E CAPTURA DO TOKEN DO MATRIX ────────────────────────────────
 async function validateAndStartMatrixSession() {
     const urlParams = new URLSearchParams(window.location.search);
     let loginToken = urlParams.get('loginToken');
@@ -55,6 +60,7 @@ async function validateAndStartMatrixSession() {
     }
 
     if (loginToken) {
+        // Limpa a URL para remover o token por segurança
         window.history.replaceState({}, document.title, window.location.pathname);
         try {
             const baseClient = matrixcs.createClient({ baseUrl: HOMESERVER_URL });
@@ -67,7 +73,7 @@ async function validateAndStartMatrixSession() {
             initMatrixClient(response.access_token, response.user_id);
         } catch (err) {
             console.error("Erro ao autenticar token Matrix:", err);
-            alert("Erro ao validar login. Tente novamente.");
+            alert("Erro ao validar login com o Matrix.org. Tente novamente.");
             changeView('login');
         }
         return;
