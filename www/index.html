@@ -720,7 +720,19 @@
         </div>
     </div>
 
+    <div id="debug-error-banner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:99999;background:#b00020;color:#fff;font-family:monospace;font-size:12px;padding:10px;max-height:40vh;overflow:auto;white-space:pre-wrap;"></div>
     <script>
+        function showDebugError(msg) {
+            var el = document.getElementById('debug-error-banner');
+            el.style.display = 'block';
+            el.textContent += msg + '\n\n';
+        }
+        window.addEventListener('error', function (e) {
+            showDebugError('ERRO: ' + e.message + ' (' + e.filename + ':' + e.lineno + ')');
+        });
+        window.addEventListener('unhandledrejection', function (e) {
+            showDebugError('PROMISE REJEITADA: ' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+        });
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
