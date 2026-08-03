@@ -1,7 +1,26 @@
 // ─── MATRIX SERVICE — substitui firebase.auth() / firebase.database() / firebase.storage() ──
-// Carrega o SDK como módulo ES direto de um CDN (não existe mais um bundle "global"
-// pronto pra <script> comum nas versões recentes do matrix-js-sdk).
-import * as sdk from "https://esm.run/matrix-js-sdk@34.9.0";
+// O SDK é carregado sob demanda (só quando for realmente preciso criar o client),
+// não na primeira linha do arquivo — assim, se o CDN falhar, o resto do app
+// (botões, tela de login, etc.) continua funcionando normalmente.
+const SDK_CDN_URLS = [
+    "https://esm.run/matrix-js-sdk@34.9.0",
+    "https://cdn.jsdelivr.net/npm/matrix-js-sdk@34.9.0/+esm",
+    "https://esm.sh/matrix-js-sdk@34.9.0"
+];
+let _sdkModule = null;
+async function loadSdk() {
+    if (_sdkModule) return _sdkModule;
+    let lastErr = null;
+    for (const url of SDK_CDN_URLS) {
+        try {
+            _sdkModule = await import(/* @vite-ignore */ url);
+            return _sdkModule;
+        } catch (err) {
+            lastErr = err;
+        }
+    }
+    throw new Error('Não consegui carregar o matrix-js-sdk de nenhum CDN. Último erro: ' + lastErr?.message);
+}
 
 // Se um dia vocês subirem o próprio Synapse, é só trocar essa URL.
 const HOMESERVER_URL = "https://matrix.org";
@@ -142,6 +161,7 @@ export const MatrixService = {
     async login(userOrMxid, password) {
         // Aceita tanto "fulano" quanto "@fulano:matrix.org"
         const user = userOrMxid.startsWith('@') ? userOrMxid : userOrMxid;
+        const sdk = await loadSdk();
         const tempClient = sdk.createClient({ baseUrl: HOMESERVER_URL });
         const res = await tempClient.login('m.login.password', {
             identifier: { type: 'm.id.user', user },
@@ -182,6 +202,7 @@ export const MatrixService = {
             userId = who.user_id;
             localStorage.setItem('mx_user_id', userId);
         }
+        const sdk = await loadSdk();
         this.client = sdk.createClient({
             baseUrl: HOMESERVER_URL,
             accessToken,
