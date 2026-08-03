@@ -68,15 +68,15 @@ function showError(msg) {
 
 // ─── LOGIN / CRIAR CONTA — via account.matrix.org (OIDC) ────────────────────
 // O matrix.org hoje usa um sistema próprio de login (parecido com "Continuar com
-// Google"), então login e criação de conta acontecem na página deles mesmo —
-// não dá (nem deve) pra reimplementar isso dentro do nosso app.
-document.getElementById('btn-login').addEventListener('click', () => {
-    MatrixService.startOidcFlow('login').catch(err => showError('Erro: ' + err.message));
+// Google"), então login e criação de conta acontecem na página deles mesmo.
+document.getElementById('btn-login').addEventListener('click', async () => {
+    alert('Clique recebido, iniciando redirecionamento...'); // TEMPORÁRIO — remove depois de confirmar
+    try {
+        await MatrixService.startOidcFlow('login');
+    } catch (err) {
+        alert('ERRO: ' + err.message);
+    }
 });
-document.getElementById('btn-to-register').addEventListener('click', () => {
-    MatrixService.startOidcFlow('create').catch(err => showError('Erro: ' + err.message));
-});
-document.getElementById('btn-to-login').addEventListener('click', () => changeView('login'));
 
 // ─── PERFIL INICIAL ─────────────────────────────────────────────────────────
 document.getElementById('initial-avatar-file').addEventListener('change', (e) => {
