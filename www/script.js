@@ -7,6 +7,7 @@
     const savedBubbleMode = localStorage.getItem('chatbuddy_bubble_mode') || 'normal';
     const savedBubbleGradient = localStorage.getItem('chatbuddy_bubble_gradient') || 'oceano';
     const savedAnimation = localStorage.getItem('chatbuddy_animation') || 'padrao';
+    const savedWallpaper = localStorage.getItem('chatbuddy_wallpaper') || 'padrao';
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.documentElement.setAttribute('data-accent', savedAccent);
     document.documentElement.setAttribute('data-font', savedFont);
@@ -14,6 +15,7 @@
     document.documentElement.setAttribute('data-bubble-mode', savedBubbleMode);
     document.documentElement.setAttribute('data-bubble-gradient', savedBubbleGradient);
     document.documentElement.setAttribute('data-animation', savedAnimation);
+    document.documentElement.setAttribute('data-chat-wallpaper', savedWallpaper);
 })();
 
 // ─── AVATAR PADRÃO (estilo WhatsApp) — sempre funciona, mesmo offline ──────
@@ -1937,6 +1939,7 @@ function refreshPersonalizationUI() {
     const bubbleMode = localStorage.getItem('chatbuddy_bubble_mode') || 'normal';
     const bubbleGradient = localStorage.getItem('chatbuddy_bubble_gradient') || 'oceano';
     const animation = localStorage.getItem('chatbuddy_animation') || 'padrao';
+    const wallpaper = localStorage.getItem('chatbuddy_wallpaper') || 'padrao';
     document.querySelectorAll('.theme-option').forEach(btn => {
         btn.classList.toggle('active-theme', btn.dataset.themeValue === theme);
     });
@@ -1954,8 +1957,13 @@ function refreshPersonalizationUI() {
     });
     document.getElementById('btn-bubble-mode-normal').classList.toggle('active-bubble-mode', bubbleMode === 'normal');
     document.getElementById('btn-bubble-mode-gradient').classList.toggle('active-bubble-mode', bubbleMode === 'gradient');
+    document.getElementById('btn-bubble-mode-blur').classList.toggle('active-bubble-mode', bubbleMode === 'blur');
     document.getElementById('bubble-picker-normal').classList.toggle('hidden', bubbleMode !== 'normal');
     document.getElementById('bubble-picker-gradient').classList.toggle('hidden', bubbleMode !== 'gradient');
+    document.getElementById('bubble-blur-preview').classList.toggle('hidden', bubbleMode !== 'blur');
+    document.querySelectorAll('.wallpaper-option').forEach(btn => {
+        btn.classList.toggle('active-wallpaper', btn.dataset.wallpaperValue === wallpaper);
+    });
     document.querySelectorAll('.anim-option').forEach(btn => {
         btn.classList.toggle('active-anim', btn.dataset.animValue === animation);
     });
@@ -2014,12 +2022,25 @@ document.getElementById('btn-bubble-mode-normal').addEventListener('click', () =
 document.getElementById('btn-bubble-mode-gradient').addEventListener('click', () => {
     document.documentElement.setAttribute('data-bubble-mode', 'gradient');
     localStorage.setItem('chatbuddy_bubble_mode', 'gradient');
-    // Garante que já exista um gradiente ativo mesmo se o usuário nunca escolheu um antes
     if (!localStorage.getItem('chatbuddy_bubble_gradient')) {
         document.documentElement.setAttribute('data-bubble-gradient', 'oceano');
         localStorage.setItem('chatbuddy_bubble_gradient', 'oceano');
     }
     refreshPersonalizationUI();
+});
+document.getElementById('btn-bubble-mode-blur').addEventListener('click', () => {
+    document.documentElement.setAttribute('data-bubble-mode', 'blur');
+    localStorage.setItem('chatbuddy_bubble_mode', 'blur');
+    refreshPersonalizationUI();
+});
+
+document.querySelectorAll('.wallpaper-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const wallpaper = btn.dataset.wallpaperValue;
+        document.documentElement.setAttribute('data-chat-wallpaper', wallpaper);
+        localStorage.setItem('chatbuddy_wallpaper', wallpaper);
+        refreshPersonalizationUI();
+    });
 });
 
 document.querySelectorAll('.anim-option').forEach(btn => {
