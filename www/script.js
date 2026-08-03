@@ -70,11 +70,10 @@ function showError(msg) {
 // O matrix.org hoje usa um sistema próprio de login (parecido com "Continuar com
 // Google"), então login e criação de conta acontecem na página deles mesmo.
 document.getElementById('btn-login').addEventListener('click', async () => {
-    alert('Clique recebido, iniciando redirecionamento...'); // TEMPORÁRIO — remove depois de confirmar
     try {
         await MatrixService.startOidcFlow('login');
     } catch (err) {
-        alert('ERRO: ' + err.message);
+        showError('Erro ao iniciar login: ' + err.message);
     }
 });
 
