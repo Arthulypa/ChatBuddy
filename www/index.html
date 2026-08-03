@@ -723,7 +723,11 @@
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('/sw.js').catch(() => {});
         }
+        // Import dinâmico: se script.js (ou algo que ele importa) falhar,
+        // o erro aparece no banner em vez de travar tudo em silêncio.
+        import('./script.js').catch(function (err) {
+            showDebugError('FALHA AO CARREGAR script.js: ' + err.message);
+        });
     </script>
-    <script type="module" src="script.js"></script>
 </body>
 </html>
