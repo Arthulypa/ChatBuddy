@@ -36,6 +36,28 @@
         </div>
     </div>
 
+    <div id="matrix-login-modal" class="modal hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center; z-index:9999;">
+        <div class="auth-box glass-premium" style="max-width:400px; width:90%; position:relative; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h3 class="ios-title" style="font-size:20px; margin:0;">Login Matrix.org</h3>
+                <button id="btn-close-matrix-modal" style="background:transparent; border:none; color:var(--text-muted); font-size:22px; cursor:pointer;">&times;</button>
+            </div>
+            <p class="ios-subtitle" style="margin-bottom:20px;">Insira suas credenciais do Matrix para entrar no ChatBuddy:</p>
+            
+            <div class="input-group-premium" style="margin-bottom:14px;">
+                <input type="text" id="matrix-user-input" required placeholder=" ">
+                <label>Usuário (@usuario:matrix.org)</label>
+            </div>
+            
+            <div class="input-group-premium" style="margin-bottom:20px;">
+                <input type="password" id="matrix-pass-input" required placeholder=" ">
+                <label>Senha</label>
+            </div>
+
+            <button id="btn-submit-matrix-login" class="ios-btn-primary">Entrar na Conta</button>
+        </div>
+    </div>
+
     <div id="profile-page" class="auth-container hidden">
         <div class="auth-box glass-premium">
             <h2 class="ios-title" style="font-size: 22px;">Configurar Perfil</h2>
