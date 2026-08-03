@@ -34,22 +34,17 @@ function changeView(target) {
     if (viewPages[target]) viewPages[target].classList.remove('hidden');
 }
 
-// ─── BOTÃO SSO MATRIX (REDIRECIONAMENTO OFICIAL MATRIX.ORG) ─────────────────
+// ─── BOTÃO SSO MATRIX (DIRECIONAMENTO OFICIAL) ─────────────────────────────
 document.addEventListener('click', (e) => {
     if (e.target && (e.target.id === 'btn-login-matrix' || e.target.closest('#btn-login-matrix'))) {
         e.preventDefault();
-        
-        // Define a URL atual do seu app para onde o Matrix.org deve retornar após o login
         const redirectUrl = window.location.origin + window.location.pathname;
-        
-        // URL de SSO oficial do Matrix.org v3 (evita falhas e telas de fallback)
         const directSsoUrl = `${HOMESERVER_URL}/_matrix/client/v3/login/sso/redirect?redirectUrl=${encodeURIComponent(redirectUrl)}`;
-        
         window.location.href = directSsoUrl;
     }
 });
 
-// ─── VALIDAÇÃO E CAPTURA DO TOKEN DO MATRIX ────────────────────────────────
+// ─── VALIDAÇÃO E TROCA DO TOKEN DE SSO DO MATRIX ───────────────────────────
 async function validateAndStartMatrixSession() {
     const urlParams = new URLSearchParams(window.location.search);
     let loginToken = urlParams.get('loginToken');
@@ -60,25 +55,30 @@ async function validateAndStartMatrixSession() {
     }
 
     if (loginToken) {
-        // Limpa a URL para remover o token por segurança
+        // Limpa a URL imediatamente para sumir com o token por segurança
         window.history.replaceState({}, document.title, window.location.pathname);
+        
         try {
-            const baseClient = matrixcs.createClient({ baseUrl: HOMESERVER_URL });
-            const response = await baseClient.login("m.login.token", { token: loginToken });
+            // Cria um cliente temporário apenas para trocar o token de SSO por um Access Token definitivo
+            const tempClient = matrixcs.createClient({ baseUrl: HOMESERVER_URL });
+            const response = await tempClient.login("m.login.token", { token: loginToken });
 
+            // Salva as credenciais definitivas
             localStorage.setItem('matrix_access_token', response.access_token);
             localStorage.setItem('matrix_user_id', response.user_id);
             localStorage.setItem('matrix_device_id', response.device_id);
 
             initMatrixClient(response.access_token, response.user_id);
+            return;
         } catch (err) {
-            console.error("Erro ao autenticar token Matrix:", err);
-            alert("Erro ao validar login com o Matrix.org. Tente novamente.");
+            console.error("Erro ao validar token de SSO do Matrix:", err);
+            alert("A autenticação com o Matrix falhou ou expirou. Tente novamente.");
             changeView('login');
+            return;
         }
-        return;
     }
 
+    // Verifica se já existe sessão salva no navegador
     const savedToken  = localStorage.getItem('matrix_access_token');
     const savedUserId = localStorage.getItem('matrix_user_id');
 
@@ -116,7 +116,7 @@ async function startMatrixSync() {
             avatarEl.src = DEFAULT_AVATAR;
         }
     } catch (e) { 
-        console.warn("Sincronizado com perfil padrão:", e); 
+        console.warn("Perfil sincronizado com padrões:", e); 
     }
 
     matrixClient.on("Room.timeline", (event, room) => {
