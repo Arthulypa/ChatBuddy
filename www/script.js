@@ -30,7 +30,6 @@ const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,' + encodeURIComponent(
     '</g></svg>'
 );
 
-// ─── CONFIGURAÇÃO MATRIX ───────────────────────────────────────────────────
 const HOMESERVER_URL = "https://matrix.org";
 let matrixClient = null;
 let activeRoomId = null;
@@ -66,72 +65,53 @@ function triggerSystemPopup(title, text, avatarUrl) {
     }, 3500);
 }
 
-// ─── CONTROLE DO MODAL DE LOGIN MATRIX ─────────────────────────────────────
+// ─── BOTÃO SSO MATRIX (DIRECIONAMENTO OFICIAL MATRIX.ORG) ────────────────────
 document.addEventListener('click', (e) => {
-    const modal = document.getElementById('matrix-login-modal');
-    
-    // Clicou no botão principal "Entrar com Matrix"
     if (e.target && (e.target.id === 'btn-login-matrix' || e.target.closest('#btn-login-matrix'))) {
         e.preventDefault();
-        if (modal) modal.classList.remove('hidden');
-    }
-    
-    // Clicou no X para fechar o modal
-    if (e.target && (e.target.id === 'btn-close-matrix-modal' || e.target.closest('#btn-close-matrix-modal'))) {
-        e.preventDefault();
-        if (modal) modal.classList.add('hidden');
+        
+        // Pega a URL limpa atual para o Matrix.org redirecionar de volta
+        const redirectUrl = window.location.origin + window.location.pathname;
+        const directSsoUrl = `${HOMESERVER_URL}/_matrix/client/v3/login/sso/redirect?redirectUrl=${encodeURIComponent(redirectUrl)}`;
+        
+        window.location.href = directSsoUrl;
     }
 });
 
-// ─── EVENTOS DO DOM E AUTENTICAÇÃO ──────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    const btnSubmit = document.getElementById('btn-submit-matrix-login');
-    if (btnSubmit) {
-        btnSubmit.addEventListener('click', async () => {
-            const userInput = document.getElementById('matrix-user-input').value.trim();
-            const passInput = document.getElementById('matrix-pass-input').value.trim();
+// ─── VALIDAÇÃO E TROCA DO TOKEN DE SSO DO MATRIX.ORG ───────────────────────
+async function validateAndStartMatrixSession() {
+    const urlParams = new URLSearchParams(window.location.search);
+    let loginToken = urlParams.get('loginToken');
 
-            if (!userInput || !passInput) {
-                alert("Por favor, preencha o usuário e a senha.");
-                return;
-            }
-
-            let formattedUser = userInput;
-            if (!formattedUser.startsWith('@')) formattedUser = '@' + formattedUser;
-            if (!formattedUser.includes(':')) formattedUser = formattedUser + ':matrix.org';
-
-            btnSubmit.innerText = "Conectando...";
-            btnSubmit.disabled = true;
-
-            try {
-                const baseClient = matrixcs.createClient({ baseUrl: HOMESERVER_URL });
-                const response = await baseClient.login("m.login.password", {
-                    identifier: { type: "m.id.user", user: formattedUser },
-                    password: passInput
-                });
-
-                localStorage.setItem('matrix_access_token', response.access_token);
-                localStorage.setItem('matrix_user_id', response.user_id);
-                localStorage.setItem('matrix_device_id', response.device_id);
-
-                const modal = document.getElementById('matrix-login-modal');
-                if (modal) modal.classList.add('hidden');
-                
-                initMatrixClient(response.access_token, response.user_id);
-            } catch (err) {
-                console.error("Erro ao autenticar:", err);
-                alert("Erro ao conectar. Verifique seu usuário e senha.");
-                btnSubmit.innerText = "Entrar na Conta";
-                btnSubmit.disabled = false;
-            }
-        });
+    if (!loginToken && window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
+        loginToken = hashParams.get('loginToken');
     }
 
-    checkStoredSession();
-});
+    if (loginToken) {
+        // Limpa a URL imediatamente para remover o token por segurança
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        try {
+            // Cria cliente temporário focado estritamente na troca do token SSO oficial
+            const baseClient = matrixcs.createClient({ baseUrl: HOMESERVER_URL });
+            const response = await baseClient.login("m.login.token", { token: loginToken });
 
-// ─── VERIFICAÇÃO DE SESSÃO SALVA ─────────────────────────────────────────────
-function checkStoredSession() {
+            localStorage.setItem('matrix_access_token', response.access_token);
+            localStorage.setItem('matrix_user_id', response.user_id);
+            localStorage.setItem('matrix_device_id', response.device_id);
+
+            initMatrixClient(response.access_token, response.user_id);
+            return;
+        } catch (err) {
+            console.error("Erro ao processar o token de SSO do Matrix:", err);
+            alert("O token de autenticação expirou ou não pôde ser validado pelo Matrix.org. Tente novamente.");
+            changeView('login');
+            return;
+        }
+    }
+
+    // Verifica se já existe sessão salva no navegador
     const savedToken  = localStorage.getItem('matrix_access_token');
     const savedUserId = localStorage.getItem('matrix_user_id');
 
@@ -141,6 +121,8 @@ function checkStoredSession() {
         changeView('login');
     }
 }
+
+window.addEventListener('DOMContentLoaded', validateAndStartMatrixSession);
 
 // ─── INICIALIZAÇÃO DO SDK MATRIX ────────────────────────────────────────────
 async function initMatrixClient(token, userId) {
