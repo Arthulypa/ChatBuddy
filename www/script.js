@@ -1,11 +1,24 @@
-// ─── TEMA E PERSONALIZAÇÃO ─────────────────────────────────────────────────
+// ─── TEMA E PERSONALIZAÇÃO (aplica antes de tudo pra não piscar) ─────────────
 (function applyStoredTheme() {
-    const savedTheme  = localStorage.getItem('chatbuddy_theme')  || 'dark';
-    const savedAccent = localStorage.getItem('chatbuddy_accent') || 'blue';
+    const savedTheme          = localStorage.getItem('chatbuddy_theme')          || 'dark';
+    const savedAccent         = localStorage.getItem('chatbuddy_accent')         || 'blue';
+    const savedFont           = localStorage.getItem('chatbuddy_font')           || 'padrao';
+    const savedBubble         = localStorage.getItem('chatbuddy_bubble')         || 'blue';
+    const savedBubbleMode     = localStorage.getItem('chatbuddy_bubble_mode')    || 'normal';
+    const savedBubbleGradient = localStorage.getItem('chatbuddy_bubble_gradient')|| 'oceano';
+    const savedAnimation      = localStorage.getItem('chatbuddy_animation')      || 'padrao';
+    const savedWallpaper      = localStorage.getItem('chatbuddy_wallpaper')      || 'padrao';
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.documentElement.setAttribute('data-accent', savedAccent);
+    document.documentElement.setAttribute('data-font', savedFont);
+    document.documentElement.setAttribute('data-bubble', savedBubble);
+    document.documentElement.setAttribute('data-bubble-mode', savedBubbleMode);
+    document.documentElement.setAttribute('data-bubble-gradient', savedBubbleGradient);
+    document.documentElement.setAttribute('data-animation', savedAnimation);
+    document.documentElement.setAttribute('data-chat-wallpaper', savedWallpaper);
 })();
 
+// ─── AVATAR PADRÃO ─────────────────────────────────────────────────────────
 const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,' + encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
     '<defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs>' +
@@ -34,17 +47,19 @@ function changeView(target) {
     if (viewPages[target]) viewPages[target].classList.remove('hidden');
 }
 
-// ─── BOTÃO SSO MATRIX (DIRECIONAMENTO OFICIAL) ─────────────────────────────
+// ─── BOTÃO SSO MATRIX (REDIRECIONAMENTO OFICIAL) ─────────────────────────────
 document.addEventListener('click', (e) => {
     if (e.target && (e.target.id === 'btn-login-matrix' || e.target.closest('#btn-login-matrix'))) {
         e.preventDefault();
+        
         const redirectUrl = window.location.origin + window.location.pathname;
         const directSsoUrl = `${HOMESERVER_URL}/_matrix/client/v3/login/sso/redirect?redirectUrl=${encodeURIComponent(redirectUrl)}`;
+        
         window.location.href = directSsoUrl;
     }
 });
 
-// ─── VALIDAÇÃO E TROCA DO TOKEN DE SSO DO MATRIX ───────────────────────────
+// ─── VALIDAÇÃO E PROCESSAMENTO DO TOKEN DE SSO DO MATRIX ───────────────────
 async function validateAndStartMatrixSession() {
     const urlParams = new URLSearchParams(window.location.search);
     let loginToken = urlParams.get('loginToken');
@@ -55,15 +70,14 @@ async function validateAndStartMatrixSession() {
     }
 
     if (loginToken) {
-        // Limpa a URL imediatamente para sumir com o token por segurança
+        // Limpa a URL imediatamente para remover o token por segurança e estética
         window.history.replaceState({}, document.title, window.location.pathname);
         
         try {
-            // Cria um cliente temporário apenas para trocar o token de SSO por um Access Token definitivo
-            const tempClient = matrixcs.createClient({ baseUrl: HOMESERVER_URL });
-            const response = await tempClient.login("m.login.token", { token: loginToken });
+            // Cria cliente base para efetuar a troca do token de login do Matrix
+            const baseClient = matrixcs.createClient({ baseUrl: HOMESERVER_URL });
+            const response = await baseClient.login("m.login.token", { token: loginToken });
 
-            // Salva as credenciais definitivas
             localStorage.setItem('matrix_access_token', response.access_token);
             localStorage.setItem('matrix_user_id', response.user_id);
             localStorage.setItem('matrix_device_id', response.device_id);
@@ -71,14 +85,14 @@ async function validateAndStartMatrixSession() {
             initMatrixClient(response.access_token, response.user_id);
             return;
         } catch (err) {
-            console.error("Erro ao validar token de SSO do Matrix:", err);
-            alert("A autenticação com o Matrix falhou ou expirou. Tente novamente.");
+            console.error("Erro ao processar o token de SSO do Matrix:", err);
+            alert("O token de autenticação expirou ou não pôde ser validado pelo Matrix.org. Tente novamente.");
             changeView('login');
             return;
         }
     }
 
-    // Verifica se já existe sessão salva no navegador
+    // Verifica sessão salva anteriormente
     const savedToken  = localStorage.getItem('matrix_access_token');
     const savedUserId = localStorage.getItem('matrix_user_id');
 
@@ -116,7 +130,7 @@ async function startMatrixSync() {
             avatarEl.src = DEFAULT_AVATAR;
         }
     } catch (e) { 
-        console.warn("Perfil sincronizado com padrões:", e); 
+        console.warn("Sincronizado com perfil padrão:", e); 
     }
 
     matrixClient.on("Room.timeline", (event, room) => {
@@ -140,7 +154,7 @@ function loadChatList() {
     listContainer.innerHTML = '';
 
     if (rooms.length === 0) {
-        listContainer.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);">Nenhuma conversa ativa.</div>`;
+        listContainer.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);">Nenhuma conversa ativa no momento.</div>`;
         return;
     }
 
@@ -174,8 +188,10 @@ function openChatRoom(room) {
     const titleEl = document.getElementById('active-chat-name');
     if (titleEl) titleEl.innerText = room.name;
 
-    document.getElementById('chat-room-screen').classList.remove('hidden');
-    document.getElementById('empty-chat-panel').classList.add('hidden');
+    const chatScreen = document.getElementById('chat-room-screen');
+    const emptyPanel = document.getElementById('empty-chat-panel');
+    if (chatScreen) chatScreen.classList.remove('hidden');
+    if (emptyPanel) emptyPanel.classList.add('hidden');
 
     renderMessages(room);
 }
@@ -204,7 +220,7 @@ function renderMessages(room) {
     box.scrollTop = box.scrollHeight;
 }
 
-// ─── ENVIO E LOGOUT ────────────────────────────────────────────────────────
+// ─── ENVIO DE MENSAGENS E LOGOUT ───────────────────────────────────────────
 const msgInput = document.getElementById('message-input');
 const btnSend  = document.getElementById('btn-send');
 
@@ -224,7 +240,7 @@ if (msgInput && btnSend) {
         }).then(() => {
             msgInput.value = '';
             btnSend.classList.add('hidden');
-        });
+        }).catch(err => alert("Erro ao enviar mensagem: " + err));
     });
 }
 
