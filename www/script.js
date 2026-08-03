@@ -4,11 +4,15 @@
     const savedAccent    = localStorage.getItem('chatbuddy_accent')    || 'blue';
     const savedFont      = localStorage.getItem('chatbuddy_font')      || 'padrao';
     const savedBubble    = localStorage.getItem('chatbuddy_bubble')    || 'blue';
+    const savedBubbleMode = localStorage.getItem('chatbuddy_bubble_mode') || 'normal';
+    const savedBubbleGradient = localStorage.getItem('chatbuddy_bubble_gradient') || 'oceano';
     const savedAnimation = localStorage.getItem('chatbuddy_animation') || 'padrao';
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.documentElement.setAttribute('data-accent', savedAccent);
     document.documentElement.setAttribute('data-font', savedFont);
     document.documentElement.setAttribute('data-bubble', savedBubble);
+    document.documentElement.setAttribute('data-bubble-mode', savedBubbleMode);
+    document.documentElement.setAttribute('data-bubble-gradient', savedBubbleGradient);
     document.documentElement.setAttribute('data-animation', savedAnimation);
 })();
 
@@ -1199,8 +1203,12 @@ document.getElementById('ctx-delete-single').addEventListener('click', () => {
     document.getElementById('delete-options-modal').classList.remove('hidden');
 });
 document.getElementById('btn-delete-for-all').addEventListener('click', () => {
-    if(currentUser.uid !== "offline_user") {
-        database.ref(`chats/${activeChatId}/messages/${selectedMessageId}`).update({ deletedForAll: true, text: '', image: '', video: '', audio: '' });
+    if (currentUser.uid !== "offline_user") {
+        // Em grupo, a mensagem fica em groups/{id}/messages — não em chats/{id}/messages
+        const path = activeGroupId
+            ? `groups/${activeGroupId}/messages/${selectedMessageId}`
+            : `chats/${activeChatId}/messages/${selectedMessageId}`;
+        database.ref(path).update({ deletedForAll: true, text: '', image: '', video: '', audio: '' });
     }
     document.getElementById('delete-options-modal').classList.add('hidden');
 });
@@ -1926,6 +1934,8 @@ function refreshPersonalizationUI() {
     const accent    = localStorage.getItem('chatbuddy_accent')    || 'blue';
     const font      = localStorage.getItem('chatbuddy_font')      || 'padrao';
     const bubble    = localStorage.getItem('chatbuddy_bubble')    || 'blue';
+    const bubbleMode = localStorage.getItem('chatbuddy_bubble_mode') || 'normal';
+    const bubbleGradient = localStorage.getItem('chatbuddy_bubble_gradient') || 'oceano';
     const animation = localStorage.getItem('chatbuddy_animation') || 'padrao';
     document.querySelectorAll('.theme-option').forEach(btn => {
         btn.classList.toggle('active-theme', btn.dataset.themeValue === theme);
@@ -1936,9 +1946,16 @@ function refreshPersonalizationUI() {
     document.querySelectorAll('.font-option').forEach(btn => {
         btn.classList.toggle('active-font', btn.dataset.fontValue === font);
     });
-    document.querySelectorAll('.bubble-swatch').forEach(btn => {
+    document.querySelectorAll('#bubble-picker-normal .bubble-swatch').forEach(btn => {
         btn.classList.toggle('active-bubble', btn.dataset.bubbleValue === bubble);
     });
+    document.querySelectorAll('#bubble-picker-gradient .bubble-swatch').forEach(btn => {
+        btn.classList.toggle('active-bubble', btn.dataset.bubbleGradientValue === bubbleGradient);
+    });
+    document.getElementById('btn-bubble-mode-normal').classList.toggle('active-bubble-mode', bubbleMode === 'normal');
+    document.getElementById('btn-bubble-mode-gradient').classList.toggle('active-bubble-mode', bubbleMode === 'gradient');
+    document.getElementById('bubble-picker-normal').classList.toggle('hidden', bubbleMode !== 'normal');
+    document.getElementById('bubble-picker-gradient').classList.toggle('hidden', bubbleMode !== 'gradient');
     document.querySelectorAll('.anim-option').forEach(btn => {
         btn.classList.toggle('active-anim', btn.dataset.animValue === animation);
     });
@@ -1971,13 +1988,38 @@ document.querySelectorAll('.font-option').forEach(btn => {
     });
 });
 
-document.querySelectorAll('.bubble-swatch').forEach(btn => {
+document.querySelectorAll('#bubble-picker-normal .bubble-swatch').forEach(btn => {
     btn.addEventListener('click', () => {
         const bubble = btn.dataset.bubbleValue;
         document.documentElement.setAttribute('data-bubble', bubble);
         localStorage.setItem('chatbuddy_bubble', bubble);
         refreshPersonalizationUI();
     });
+});
+
+document.querySelectorAll('#bubble-picker-gradient .bubble-swatch').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const gradient = btn.dataset.bubbleGradientValue;
+        document.documentElement.setAttribute('data-bubble-gradient', gradient);
+        localStorage.setItem('chatbuddy_bubble_gradient', gradient);
+        refreshPersonalizationUI();
+    });
+});
+
+document.getElementById('btn-bubble-mode-normal').addEventListener('click', () => {
+    document.documentElement.setAttribute('data-bubble-mode', 'normal');
+    localStorage.setItem('chatbuddy_bubble_mode', 'normal');
+    refreshPersonalizationUI();
+});
+document.getElementById('btn-bubble-mode-gradient').addEventListener('click', () => {
+    document.documentElement.setAttribute('data-bubble-mode', 'gradient');
+    localStorage.setItem('chatbuddy_bubble_mode', 'gradient');
+    // Garante que já exista um gradiente ativo mesmo se o usuário nunca escolheu um antes
+    if (!localStorage.getItem('chatbuddy_bubble_gradient')) {
+        document.documentElement.setAttribute('data-bubble-gradient', 'oceano');
+        localStorage.setItem('chatbuddy_bubble_gradient', 'oceano');
+    }
+    refreshPersonalizationUI();
 });
 
 document.querySelectorAll('.anim-option').forEach(btn => {
