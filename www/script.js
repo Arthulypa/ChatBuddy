@@ -1,367 +1,294 @@
-import { MatrixService } from './matrix-client.js';
-
-// ─── PERSONALIZAÇÃO: TEMA (idêntico ao original, não depende de backend) ──
+// ─── PERSONALIZAÇÃO: TEMA E COR DE DESTAQUE (Aplica ao carregar para não piscar) ──
 (function applyStoredTheme() {
-    const savedTheme  = localStorage.getItem('chatbuddy_theme')  || 'dark';
-    const savedAccent = localStorage.getItem('chatbuddy_accent') || 'blue';
+    const savedTheme          = localStorage.getItem('chatbuddy_theme')          || 'dark';
+    const savedAccent         = localStorage.getItem('chatbuddy_accent')         || 'blue';
+    const savedFont           = localStorage.getItem('chatbuddy_font')           || 'padrao';
+    const savedBubble         = localStorage.getItem('chatbuddy_bubble')         || 'blue';
+    const savedBubbleMode     = localStorage.getItem('chatbuddy_bubble_mode')    || 'normal';
+    const savedBubbleGradient = localStorage.getItem('chatbuddy_bubble_gradient')|| 'oceano';
+    const savedAnimation      = localStorage.getItem('chatbuddy_animation')      || 'padrao';
+    const savedWallpaper      = localStorage.getItem('chatbuddy_wallpaper')      || 'padrao';
+
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.documentElement.setAttribute('data-accent', savedAccent);
+    document.documentElement.setAttribute('data-font', savedFont);
+    document.documentElement.setAttribute('data-bubble', savedBubble);
+    document.documentElement.setAttribute('data-bubble-mode', savedBubbleMode);
+    document.documentElement.setAttribute('data-bubble-gradient', savedBubbleGradient);
+    document.documentElement.setAttribute('data-animation', savedAnimation);
+    document.documentElement.setAttribute('data-chat-wallpaper', savedWallpaper);
 })();
 
+// ─── AVATAR PADRÃO ──────
 const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,' + encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
     '<defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs>' +
     '<circle cx="50" cy="50" r="50" fill="#8e8e93"/>' +
-    '<g clip-path="url(#c)" fill="#e5e5ea"><circle cx="50" cy="40" r="18"/><ellipse cx="50" cy="96" rx="34" ry="30"/></g></svg>'
+    '<g clip-path="url(#c)" fill="#e5e5ea">' +
+    '<circle cx="50" cy="40" r="18"/>' +
+    '<ellipse cx="50" cy="96" rx="34" ry="30"/>' +
+    '</g></svg>'
 );
 
-// ─── ESTADO GLOBAL ──────────────────────────────────────────────────────────
-let currentUser   = null;   // { uid, nickname, username, avatar }
-let activeRoomId  = null;
-let activeIsGroup = false;
-let pendingAvatarFile = null;
-let replyingToId  = null;
+// ─── CONFIGURAÇÕES MATRIX ───────────────────────────────────────────────────
+const HOMESERVER_URL = "https://matrix.org";
+let matrixClient = null;
+let activeRoomId = null;
 
-// ─── VIEWS ──────────────────────────────────────────────────────────────────
+// ─── ELEMENTOS DAS TELAS ─────────────────────────────────────────────────────
 const viewPages = {
-    login:    document.getElementById('login-page'),
-    register: document.getElementById('register-page'),
-    profile:  document.getElementById('profile-page'),
-    chat:     document.getElementById('chat-page')
+    login:   document.getElementById('login-page'),
+    profile: document.getElementById('profile-page'),
+    chat:    document.getElementById('chat-page')
 };
+
 function changeView(target) {
-    Object.keys(viewPages).forEach(k => viewPages[k].classList.add('hidden'));
-    viewPages[target].classList.remove('hidden');
-    hideSplashScreen();
-}
-function hideSplashScreen() {
-    const el = document.getElementById('app-splash-screen');
-    if (el) el.classList.add('splash-hide');
-}
-
-function showError(msg) {
-    alert(msg); // simples e direto — troque por um toast se preferir
-}
-
-// ─── BOOT: primeiro checa se voltamos do account.matrix.org, depois tenta sessão salva ──
-(async function boot() {
-    try {
-        const oidcClient = await MatrixService.handleOidcRedirect();
-        if (oidcClient) {
-            currentUser = await MatrixService.getMyProfile();
-            enterApp();
-            return;
-        }
-    } catch (e) {
-        showError('Erro ao concluir login: ' + e.message);
-    }
-    try {
-        const client = await MatrixService.restoreSession();
-        if (client) {
-            currentUser = await MatrixService.getMyProfile();
-            enterApp();
-            return;
-        }
-    } catch (e) { /* segue pro login */ }
-    changeView('login');
-})();
-
-// ─── LOGIN / CRIAR CONTA — via account.matrix.org (OIDC) ────────────────────
-// O matrix.org hoje usa um sistema próprio de login (parecido com "Continuar com
-// Google"), então login e criação de conta acontecem na página deles mesmo.
-document.getElementById('btn-login').addEventListener('click', async () => {
-    try {
-        await MatrixService.startOidcFlow('login');
-    } catch (err) {
-        showError('Erro ao iniciar login: ' + err.message);
-    }
-});
-
-// ─── PERFIL INICIAL ─────────────────────────────────────────────────────────
-document.getElementById('initial-avatar-file').addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    pendingAvatarFile = file;
-    const reader = new FileReader();
-    reader.onload = () => {
-        document.getElementById('initial-avatar-preview').src = reader.result;
-        document.getElementById('initial-avatar-preview').classList.remove('hidden');
-        document.getElementById('initial-avatar-placeholder').classList.add('hidden');
-    };
-    reader.readAsDataURL(file);
-});
-document.getElementById('btn-save-profile').addEventListener('click', async () => {
-    const displayName = document.getElementById('display-name').value.trim();
-    if (!displayName) return showError('Digite um apelido.');
-    try {
-        await MatrixService.setProfile(displayName, pendingAvatarFile);
-        currentUser = await MatrixService.getMyProfile();
-        enterApp();
-    } catch (err) {
-        showError('Erro ao salvar perfil: ' + err.message);
-    }
-});
-
-// ─── ENTRAR NO APP ──────────────────────────────────────────────────────────
-function enterApp() {
-    document.getElementById('current-user-header-nick').innerText = currentUser.nickname;
-    document.getElementById('current-user-header-avatar').src = currentUser.avatar || DEFAULT_AVATAR;
-    changeView('chat');
-    loadChatsList();
-    loadGroupsList();
-
-    MatrixService.onNewMessage((roomId, msg) => {
-        if (roomId === activeRoomId) appendMessageBubble(msg);
-        loadChatsList();
-        loadGroupsList();
+    Object.keys(viewPages).forEach(k => {
+        if (viewPages[k]) viewPages[k].classList.add('hidden');
     });
-    MatrixService.onRoomListChange(() => { loadChatsList(); loadGroupsList(); });
-    MatrixService.onInvite(() => loadRequestsList());
+    if (viewPages[target]) viewPages[target].classList.remove('hidden');
 }
 
-// ─── LISTA DE CONVERSAS (DMs) ───────────────────────────────────────────────
-function loadChatsList() {
-    const container = document.getElementById('chats-list');
-    const rooms = MatrixService.listRooms().filter(r => r.isDM && r.myMembership === 'join');
-    rooms.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
+// ─── NOTIFICAÇÃO POPUP SISTEMA ──────────────────────────────────────────────
+function triggerSystemPopup(title, text, avatarUrl) {
+    const popup = document.getElementById('popup-notification');
+    if (!popup) return;
+    document.getElementById('popup-title').innerText = title;
+    document.getElementById('popup-text').innerText  = text;
+    const img = document.getElementById('popup-avatar');
+    if (img) img.src = avatarUrl || DEFAULT_AVATAR;
 
-    if (rooms.length === 0) {
-        container.innerHTML = '<div class="empty-state">Nenhuma conversa ainda.</div>';
-    } else {
-        container.innerHTML = '';
-        rooms.forEach(r => container.appendChild(buildChatRow(r)));
-    }
-    loadRequestsList();
+    popup.classList.remove('hidden');
+    setTimeout(() => popup.classList.add('expanded'), 10);
+    setTimeout(() => {
+        popup.classList.remove('expanded');
+        setTimeout(() => popup.classList.add('hidden'), 300);
+    }, 3500);
 }
 
-function buildChatRow(room) {
-    const row = document.createElement('div');
-    row.className = 'chat-item-row';
-    const name = room.name || room.otherUserId;
-    row.innerHTML = `
-        <img src="${room.avatar || DEFAULT_AVATAR}" alt="">
-        <div class="chat-item-info">
-            <div class="chat-item-header">
-                <h4>${name}</h4>
-                <span style="font-size:12px;color:var(--text-muted);">${formatTime(room.lastTimestamp)}</span>
-            </div>
-            <p>${room.lastMessage || 'Nenhuma mensagem ainda'}</p>
-        </div>`;
-    row.addEventListener('click', () => openDirectChat(room.roomId, name, room.avatar));
-    return row;
-}
-
-function formatTime(ts) {
-    if (!ts) return '';
-    return new Date(ts).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-}
-
-// ─── SOLICITAÇÕES (convites de sala pendentes) ──────────────────────────────
-function loadRequestsList() {
-    const rooms = MatrixService.listRooms().filter(r => r.myMembership === 'invite');
-    document.getElementById('requests-banner').classList.toggle('hidden', rooms.length === 0);
-    document.getElementById('requests-badge').classList.toggle('hidden', rooms.length === 0);
-    document.getElementById('requests-badge').innerText = rooms.length || '';
-
-    const list = document.getElementById('requests-list');
-    list.innerHTML = '';
-    rooms.forEach(r => {
-        const row = document.createElement('div');
-        row.className = 'chat-item-row';
-        row.innerHTML = `
-            <img src="${r.avatar || DEFAULT_AVATAR}" alt="">
-            <div class="chat-item-info"><h4>${r.name || r.otherUserId}</h4><p>Convite para conversar</p></div>
-            <div style="display:flex;gap:6px;">
-                <button class="ios-btn-primary" style="padding:6px 12px;font-size:12px;" data-action="accept">Aceitar</button>
-                <button class="action-danger-btn" style="padding:6px 12px;font-size:12px;" data-action="reject">Recusar</button>
-            </div>`;
-        row.querySelector('[data-action="accept"]').addEventListener('click', async () => {
-            await MatrixService.acceptInvite(r.roomId); loadChatsList(); loadGroupsList();
-        });
-        row.querySelector('[data-action="reject"]').addEventListener('click', async () => {
-            await MatrixService.rejectInvite(r.roomId); loadRequestsList();
-        });
-        list.appendChild(row);
+// ─── AUTENTICAÇÃO MATRIX (SSO - CONTINUAR COM MATRIX) ─────────────────────────
+const btnLoginMatrix = document.getElementById('btn-login-matrix');
+if (btnLoginMatrix) {
+    btnLoginMatrix.addEventListener('click', () => {
+        const baseClient = matrixcs.createClient({ baseUrl: HOMESERVER_URL });
+        const redirectUrl = window.location.origin + window.location.pathname;
+        const ssoUrl = baseClient.getSsoLoginUrl(redirectUrl);
+        window.location.href = ssoUrl;
     });
 }
 
-// ─── NOVA CONVERSA (busca por usuário) ──────────────────────────────────────
-document.getElementById('btn-new-chat').addEventListener('click', async () => {
-    const term = prompt('Digite o @usuário do Matrix (ex: joao ou @joao:matrix.org):');
-    if (!term) return;
-    try {
-        const results = await MatrixService.searchUsers(term);
-        if (results.length === 0) return showError('Nenhum usuário encontrado.');
-        const target = results[0];
-        const roomId = await MatrixService.startDirectChat(target.uid);
-        openDirectChat(roomId, target.nickname, target.avatar);
-    } catch (err) {
-        showError('Erro ao iniciar conversa: ' + err.message);
-    }
-});
+// Validação e Inicialização da Sessão
+async function validateAndStartMatrixSession() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const loginToken = urlParams.get('loginToken');
 
-// ─── SALA DE CHAT (DM) ───────────────────────────────────────────────────────
-function openDirectChat(roomId, name, avatar) {
-    activeRoomId = roomId;
-    activeIsGroup = false;
-    document.getElementById('active-chat-name').innerText = name;
-    document.getElementById('active-chat-avatar').src = avatar || DEFAULT_AVATAR;
-    document.getElementById('chat-room-screen').classList.remove('hidden');
-    renderMessages(document.getElementById('messages-container'), MatrixService.getRoomMessages(roomId));
-    MatrixService.sendReadReceipt(roomId);
-}
-document.getElementById('btn-back-to-list').addEventListener('click', () => {
-    document.getElementById('chat-room-screen').classList.add('hidden');
-    activeRoomId = null;
-});
+    // 1. Se retornou do redirecionamento do Matrix com Token
+    if (loginToken) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        try {
+            const baseClient = matrixcs.createClient({ baseUrl: HOMESERVER_URL });
+            const response = await baseClient.login("m.login.token", { token: loginToken });
 
-function renderMessages(container, messages) {
-    container.innerHTML = '';
-    messages.forEach(m => container.appendChild(buildMessageBubble(m)));
-    container.scrollTop = container.scrollHeight;
-}
+            localStorage.setItem('matrix_access_token', response.access_token);
+            localStorage.setItem('matrix_user_id', response.user_id);
+            localStorage.setItem('matrix_device_id', response.device_id);
 
-function appendMessageBubble(msg) {
-    const containerId = activeIsGroup ? 'group-messages-container' : 'messages-container';
-    const container = document.getElementById(containerId);
-    container.appendChild(buildMessageBubble(msg));
-    container.scrollTop = container.scrollHeight;
-}
-
-function buildMessageBubble(msg) {
-    const div = document.createElement('div');
-    div.className = 'message ' + (msg.isMine ? 'sent' : 'received');
-    let inner = '';
-    if (msg.msgtype === 'm.image' && msg.url) {
-        inner = `<img src="${msg.url}" style="max-width:200px;border-radius:10px;">`;
-    } else {
-        inner = `<p>${escapeHtml(msg.body || '')}</p>`;
-    }
-    div.innerHTML = inner + `<span class="msg-time">${formatTime(msg.timestamp)}</span>`;
-    return div;
-}
-function escapeHtml(str) {
-    const d = document.createElement('div'); d.innerText = str; return d.innerHTML;
-}
-
-// ─── ENVIO DE MENSAGEM (texto / imagem) ─────────────────────────────────────
-document.getElementById('btn-send').addEventListener('click', sendCurrentMessage);
-document.getElementById('message-input').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendCurrentMessage();
-});
-async function sendCurrentMessage() {
-    const input = document.getElementById('message-input');
-    const text = input.value.trim();
-    if (!text || !activeRoomId) return;
-    input.value = '';
-    try {
-        await MatrixService.sendText(activeRoomId, text, replyingToId);
-        replyingToId = null;
-    } catch (err) {
-        showError('Erro ao enviar mensagem: ' + err.message);
-    }
-}
-document.getElementById('media-file-input').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file || !activeRoomId) return;
-    try { await MatrixService.sendImage(activeRoomId, file); }
-    catch (err) { showError('Erro ao enviar imagem: ' + err.message); }
-    e.target.value = '';
-});
-
-// ─── GRUPOS ─────────────────────────────────────────────────────────────────
-function loadGroupsList() {
-    const container = document.getElementById('groups-list');
-    const rooms = MatrixService.listRooms().filter(r => !r.isDM && r.myMembership === 'join');
-    rooms.sort((a, b) => b.lastTimestamp - a.lastTimestamp);
-    if (rooms.length === 0) {
-        container.innerHTML = '<div class="empty-state">Nenhum grupo ainda.</div>';
+            initMatrixClient(response.access_token, response.user_id);
+        } catch (err) {
+            alert("Erro na validação do login com Matrix.");
+            changeView('login');
+        }
         return;
     }
-    container.innerHTML = '';
-    rooms.forEach(r => {
+
+    // 2. Se já existia uma sessão gravada no smartphone
+    const savedToken  = localStorage.getItem('matrix_access_token');
+    const savedUserId = localStorage.getItem('matrix_user_id');
+
+    if (savedToken && savedUserId) {
+        initMatrixClient(savedToken, savedUserId);
+    } else {
+        changeView('login');
+    }
+}
+
+async function initMatrixClient(token, userId) {
+    matrixClient = matrixcs.createClient({
+        baseUrl: HOMESERVER_URL,
+        accessToken: token,
+        userId: userId
+    });
+
+    changeView('chat');
+    await startMatrixSync();
+}
+
+async function startMatrixSync() {
+    if (!matrixClient) return;
+
+    await matrixClient.startClient({ initialSyncLimit: 20 });
+
+    // Atualiza cabeçalho do usuário
+    try {
+        const profile = await matrixClient.getProfileInfo(matrixClient.getUserId());
+        const nickEl = document.getElementById('current-user-header-nick');
+        const avatarEl = document.getElementById('current-user-header-avatar');
+        
+        if (nickEl) nickEl.innerText = profile.displayname || matrixClient.getUserId();
+        if (avatarEl && profile.avatar_url) {
+            avatarEl.src = matrixClient.mxcUrlToHttp(profile.avatar_url, 50, 50, 'crop');
+        } else if (avatarEl) {
+            avatarEl.src = DEFAULT_AVATAR;
+        }
+    } catch (e) { console.log("Erro ao carregar perfil:", e); }
+
+    // Eventos em Tempo Real
+    matrixClient.on("Room.timeline", (event, room) => {
+        loadChatList();
+        if (room.roomId === activeRoomId) {
+            renderMessages(room);
+        } else if (event.getType() === "m.room.message" && event.getSender() !== matrixClient.getUserId()) {
+            triggerSystemPopup(room.name, event.getContent().body);
+        }
+    });
+
+    matrixClient.on("Room", () => loadChatList());
+    loadChatList();
+}
+
+window.addEventListener('DOMContentLoaded', validateAndStartMatrixSession);
+
+// ─── LISTAGEM DE SALAS E CONVERSAS ───────────────────────────────────────────
+function loadChatList() {
+    if (!matrixClient) return;
+    const rooms = matrixClient.getRooms();
+    const listContainer = document.getElementById('chats-list-container') || document.getElementById('chats-list');
+    if (!listContainer) return;
+
+    listContainer.innerHTML = '';
+
+    if (rooms.length === 0) {
+        listContainer.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);">Nenhuma conversa encontrada.</div>`;
+        return;
+    }
+
+    rooms.forEach(room => {
         const row = document.createElement('div');
         row.className = 'chat-item-row';
+        if (room.roomId === activeRoomId) row.classList.add('active-desktop-chat');
+
+        const name = room.name || "Sala Matrix";
+        const events = room.timeline;
+        let lastMsg = "Sem mensagens";
+        if (events.length > 0) {
+            const ev = events[events.length - 1].event;
+            if (ev.content && ev.content.body) lastMsg = ev.content.body;
+        }
+
         row.innerHTML = `
-            <img src="${r.avatar || DEFAULT_AVATAR}" alt="">
+            <img src="${DEFAULT_AVATAR}" class="chat-item-avatar">
             <div class="chat-item-info">
-                <div class="chat-item-header">
-                    <h4>${r.name}</h4>
-                    <span style="font-size:12px;color:var(--text-muted);">${formatTime(r.lastTimestamp)}</span>
-                </div>
-                <p>${r.lastMessage || 'Nenhuma mensagem ainda'}</p>
-            </div>`;
-        row.addEventListener('click', () => openGroupChat(r.roomId, r.name, r.avatar));
-        container.appendChild(row);
+                <div class="chat-item-header"><h4>${name}</h4></div>
+                <p>${lastMsg}</p>
+            </div>
+        `;
+        row.addEventListener('click', () => openChatRoom(room));
+        listContainer.appendChild(row);
     });
 }
 
-document.getElementById('btn-new-group').addEventListener('click', () => {
-    document.getElementById('create-group-modal').classList.remove('hidden');
-});
-document.getElementById('btn-close-create-group').addEventListener('click', () => {
-    document.getElementById('create-group-modal').classList.add('hidden');
-});
-document.getElementById('btn-confirm-create-group').addEventListener('click', async () => {
-    const name = document.getElementById('group-name-input').value.trim();
-    const desc = document.getElementById('group-desc-input').value.trim();
-    if (!name) return showError('Dê um nome ao grupo.');
-    try {
-        const roomId = await MatrixService.createGroup(name, desc, null, []);
-        document.getElementById('create-group-modal').classList.add('hidden');
-        loadGroupsList();
-        openGroupChat(roomId, name, '');
-    } catch (err) {
-        showError('Erro ao criar grupo: ' + err.message);
-    }
-});
+// ─── ABRIR CONVERSA E RENDERIZAR MENSAGENS ─────────────────────────────────
+function openChatRoom(room) {
+    activeRoomId = room.roomId;
+    const titleEl = document.getElementById('active-chat-name');
+    if (titleEl) titleEl.innerText = room.name;
 
-function openGroupChat(roomId, name, avatar) {
-    activeRoomId = roomId;
-    activeIsGroup = true;
-    document.getElementById('active-group-name').innerText = name;
-    document.getElementById('active-group-avatar').src = avatar || DEFAULT_AVATAR;
-    const members = MatrixService.getRoomMembers(roomId);
-    document.getElementById('active-group-members-count').innerText = members.length + ' membros';
-    document.getElementById('group-room-screen').classList.remove('hidden');
-    renderMessages(document.getElementById('group-messages-container'), MatrixService.getRoomMessages(roomId));
-    MatrixService.sendReadReceipt(roomId);
-}
-document.getElementById('btn-back-group').addEventListener('click', () => {
-    document.getElementById('group-room-screen').classList.add('hidden');
-    activeRoomId = null; activeIsGroup = false;
-});
-document.getElementById('btn-group-send').addEventListener('click', sendCurrentGroupMessage);
-async function sendCurrentGroupMessage() {
-    const input = document.getElementById('group-message-input');
-    if (!input) return;
-    const text = input.value.trim();
-    if (!text || !activeRoomId) return;
-    input.value = '';
-    try { await MatrixService.sendText(activeRoomId, text); }
-    catch (err) { showError('Erro ao enviar: ' + err.message); }
-}
-document.getElementById('group-message-input').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') sendCurrentGroupMessage();
-});
-document.getElementById('group-media-input').addEventListener('change', async (e) => {
-    const file = e.target.files[0];
-    if (!file || !activeRoomId) return;
-    try { await MatrixService.sendImage(activeRoomId, file); }
-    catch (err) { showError('Erro ao enviar imagem: ' + err.message); }
-    e.target.value = '';
-});
+    const chatScreen = document.getElementById('chat-room-screen');
+    const emptyPanel = document.getElementById('empty-chat-panel');
+    if (chatScreen) chatScreen.classList.remove('hidden');
+    if (emptyPanel) emptyPanel.classList.add('hidden');
 
-// ─── CONFIGURAÇÕES / LOGOUT ──────────────────────────────────────────────────
-document.getElementById('btn-main-settings')?.addEventListener('click', () => {
-    document.getElementById('settings-nickname').value = currentUser.nickname || '';
-    document.getElementById('settings-username').value = currentUser.username || '';
-    document.getElementById('settings-avatar-preview').src = currentUser.avatar || DEFAULT_AVATAR;
-    document.getElementById('settings-screen').classList.remove('hidden');
-});
-document.getElementById('btn-logout').addEventListener('click', () => {
-    if (confirm('Deseja sair da conta?')) {
-        MatrixService.logout();
-        location.reload();
-    }
-});
+    renderMessages(room);
+}
+
+function renderMessages(room) {
+    const box = document.getElementById('messages-container');
+    if (!box) return;
+
+    box.innerHTML = '';
+
+    room.timeline.forEach(event => {
+        const ev = event.event;
+        if (ev.type !== "m.room.message") return;
+
+        const isSent = ev.sender === matrixClient.getUserId();
+        const wrapper = document.createElement('div');
+        wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+
+        const card = document.createElement('div');
+        card.className = `message ${isSent ? 'sent' : 'received'}`;
+
+        if (ev.content.msgtype === "m.text") {
+            card.innerHTML = `<p>${ev.content.body}</p>`;
+        } else if (ev.content.msgtype === "m.image") {
+            const httpUrl = matrixClient.mxcUrlToHttp(ev.content.url);
+            card.innerHTML = `<img src="${httpUrl}" style="max-width:220px;border-radius:12px;">`;
+        }
+
+        wrapper.appendChild(card);
+        box.appendChild(wrapper);
+    });
+
+    box.scrollTop = box.scrollHeight;
+}
+
+// ─── ENVIAR MENSAGENS ────────────────────────────────────────────────────────
+const msgInput = document.getElementById('message-input');
+const btnSend  = document.getElementById('btn-send');
+
+if (msgInput && btnSend) {
+    msgInput.addEventListener('input', () => {
+        if (msgInput.value.trim().length > 0) btnSend.classList.remove('hidden');
+        else btnSend.classList.add('hidden');
+    });
+
+    btnSend.addEventListener('click', () => {
+        const txt = msgInput.value.trim();
+        if (!txt || !activeRoomId || !matrixClient) return;
+
+        matrixClient.sendEvent(activeRoomId, "m.room.message", {
+            msgtype: "m.text",
+            body: txt
+        }).then(() => {
+            msgInput.value = '';
+            btnSend.classList.add('hidden');
+        }).catch(err => alert("Erro ao enviar: " + err));
+    });
+}
+
+// ─── GERENCIAMENTO DE TEMA E CONTROLES LOCAIS (CONFIGURAÇÕES) ───────────────
+function bindSettingSelector(selector, storageKey, attrName) {
+    document.querySelectorAll(selector).forEach(btn => {
+        btn.addEventListener('click', () => {
+            const val = btn.dataset[Object.keys(btn.dataset)[0]];
+            document.documentElement.setAttribute(attrName, val);
+            localStorage.setItem(storageKey, val);
+        });
+    });
+}
+
+bindSettingSelector('.theme-option', 'chatbuddy_theme', 'data-theme');
+bindSettingSelector('.accent-swatch', 'chatbuddy_accent', 'data-accent');
+bindSettingSelector('.bubble-swatch', 'chatbuddy_bubble', 'data-bubble');
+
+// Desconectar Sessão
+const btnLogout = document.getElementById('btn-logout');
+if (btnLogout) {
+    btnLogout.addEventListener('click', () => {
+        if (matrixClient) matrixClient.logout();
+        localStorage.removeItem('matrix_access_token');
+        localStorage.removeItem('matrix_user_id');
+        localStorage.removeItem('matrix_device_id');
+        window.location.reload();
+    });
+}
