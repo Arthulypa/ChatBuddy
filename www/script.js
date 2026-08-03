@@ -1,4 +1,4 @@
-// ─── PERSONALIZAÇÃO: TEMA E COR DE DESTAQUE ─────────────────────────────────
+// ─── PERSONALIZAÇÃO: TEMA E COR DE DESTAQUE (Aplica antes de carregar para não piscar) ──
 (function applyStoredTheme() {
     const savedTheme          = localStorage.getItem('chatbuddy_theme')          || 'dark';
     const savedAccent         = localStorage.getItem('chatbuddy_accent')         || 'blue';
@@ -19,7 +19,7 @@
     document.documentElement.setAttribute('data-chat-wallpaper', savedWallpaper);
 })();
 
-// ─── AVATAR PADRÃO ─────────────────────────────────────────────────────────
+// ─── AVATAR PADRÃO (Estilo iOS) ─────────────────────────────────────────────
 const DEFAULT_AVATAR = 'data:image/svg+xml;utf8,' + encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
     '<defs><clipPath id="c"><circle cx="50" cy="50" r="50"/></clipPath></defs>' +
@@ -66,50 +66,55 @@ function triggerSystemPopup(title, text, avatarUrl) {
     }, 3500);
 }
 
-// ─── BOTÃO "ENTRAR COM MATRIX" (CORRIGIDO) ──────────────────────────────────
+// ─── BOTÃO "ENTRAR COM MATRIX" (FALLBACK OFICIAL MATRIX) ────────────────────
 document.addEventListener('click', (e) => {
     if (e.target && (e.target.id === 'btn-login-matrix' || e.target.closest('#btn-login-matrix'))) {
         e.preventDefault();
         
-        // Pega o endereço atual completo (Netlify/Local) sem parâmetros
+        // Endereço exato do seu app no Netlify / Localhost
         const currentUrl = window.location.origin + window.location.pathname;
         
-        // Redireciona diretamente para a rota SSO oficial do Matrix.org
-        const ssoUrl = `${HOMESERVER_URL}/_matrix/client/v3/login/sso/redirect?redirectUrl=${encodeURIComponent(currentUrl)}`;
+        // Página oficial do Matrix.org para autenticação segura
+        const matrixAuthUrl = `${HOMESERVER_URL}/_matrix/static/client/login/#?redirectUrl=${encodeURIComponent(currentUrl)}`;
         
-        window.location.href = ssoUrl;
+        window.location.href = matrixAuthUrl;
     }
 });
 
-// ─── VALIDAÇÃO DE TOKEN E SESSÃO DO MATRIX ─────────────────────────────────
+// ─── VALIDAÇÃO E INICIALIZAÇÃO DA SESSÃO MATRIX ────────────────────────────
 async function validateAndStartMatrixSession() {
+    // 1. Verifica se retornou com o token no parâmetro Search ou no Hash da URL
     const urlParams = new URLSearchParams(window.location.search);
-    const loginToken = urlParams.get('loginToken');
+    let loginToken = urlParams.get('loginToken');
 
-    // 1. Se o usuário acabou de voltar da página do Matrix com o token
+    if (!loginToken && window.location.hash) {
+        const hashParams = new URLSearchParams(window.location.hash.replace('#', '?'));
+        loginToken = hashParams.get('loginToken');
+    }
+
     if (loginToken) {
-        // Limpa a URL para sumir com o parâmetro loginToken
+        // Limpa a URL para remover o token da barra do navegador
         window.history.replaceState({}, document.title, window.location.pathname);
         
         try {
             const baseClient = matrixcs.createClient({ baseUrl: HOMESERVER_URL });
             const response = await baseClient.login("m.login.token", { token: loginToken });
 
-            // Salva as credenciais permanentes do usuário no smartphone
+            // Armazena a sessão permanente no dispositivo do usuário
             localStorage.setItem('matrix_access_token', response.access_token);
             localStorage.setItem('matrix_user_id', response.user_id);
             localStorage.setItem('matrix_device_id', response.device_id);
 
             initMatrixClient(response.access_token, response.user_id);
         } catch (err) {
-            console.error("Erro no Login Token Matrix:", err);
-            alert("Erro ao validar login com o Matrix. Tente novamente.");
+            console.error("Erro ao autenticar com token Matrix:", err);
+            alert("Erro ao validar login com Matrix. Tente novamente.");
             changeView('login');
         }
         return;
     }
 
-    // 2. Se o usuário já tinha feito login anteriormente
+    // 2. Se o usuário já possuir credenciais salvas no armazenamento local
     const savedToken  = localStorage.getItem('matrix_access_token');
     const savedUserId = localStorage.getItem('matrix_user_id');
 
@@ -120,7 +125,7 @@ async function validateAndStartMatrixSession() {
     }
 }
 
-// Inicializa a instância do SDK com as credenciais
+// Inicialização do SDK do Matrix
 async function initMatrixClient(token, userId) {
     matrixClient = matrixcs.createClient({
         baseUrl: HOMESERVER_URL,
@@ -132,14 +137,14 @@ async function initMatrixClient(token, userId) {
     await startMatrixSync();
 }
 
-// Inicia a sincronização das mensagens
+// Sincronização e escuta em tempo real
 async function startMatrixSync() {
     if (!matrixClient) return;
 
     try {
         await matrixClient.startClient({ initialSyncLimit: 20 });
 
-        // Carrega dados do perfil logado
+        // Carrega dados do perfil logado para exibir no topo
         const profile = await matrixClient.getProfileInfo(matrixClient.getUserId());
         const nickEl = document.getElementById('current-user-header-nick');
         const avatarEl = document.getElementById('current-user-header-avatar');
@@ -151,10 +156,10 @@ async function startMatrixSync() {
             avatarEl.src = DEFAULT_AVATAR;
         }
     } catch (e) { 
-        console.warn("Sincronização iniciada com perfil padrão:", e); 
+        console.warn("Sincronizando com perfil padrão:", e); 
     }
 
-    // Ouvinte para mensagens novas
+    // Escuta novas mensagens na timeline
     matrixClient.on("Room.timeline", (event, room) => {
         loadChatList();
         if (room.roomId === activeRoomId) {
@@ -170,7 +175,7 @@ async function startMatrixSync() {
 
 window.addEventListener('DOMContentLoaded', validateAndStartMatrixSession);
 
-// ─── LISTA DE CONVERSAS ────────────────────────────────────────────────────
+// ─── CARREGAR E EXIBIR LISTA DE CHATS ──────────────────────────────────────
 function loadChatList() {
     if (!matrixClient) return;
     const rooms = matrixClient.getRooms();
@@ -180,7 +185,7 @@ function loadChatList() {
     listContainer.innerHTML = '';
 
     if (rooms.length === 0) {
-        listContainer.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);">Nenhuma conversa ativa.</div>`;
+        listContainer.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);">Nenhuma conversa ativa no momento.</div>`;
         return;
     }
 
@@ -209,7 +214,7 @@ function loadChatList() {
     });
 }
 
-// ─── ABRIR SALA E RENDERIZAR CHAT ──────────────────────────────────────────
+// ─── ABRIR SALA DE CHAT E EXIBIR HISTÓRICO ──────────────────────────────────
 function openChatRoom(room) {
     activeRoomId = room.roomId;
     const titleEl = document.getElementById('active-chat-name');
@@ -254,7 +259,7 @@ function renderMessages(room) {
     box.scrollTop = box.scrollHeight;
 }
 
-// ─── ENVIAR MENSAGENS ──────────────────────────────────────────────────────
+// ─── ENVIAR NOVAS MENSAGENS ─────────────────────────────────────────────────
 const msgInput = document.getElementById('message-input');
 const btnSend  = document.getElementById('btn-send');
 
@@ -278,7 +283,7 @@ if (msgInput && btnSend) {
     });
 }
 
-// ─── PERSONALIZADORES E TEMA ────────────────────────────────────────────────
+// ─── CONFIGURAÇÕES E PERSONALIZAÇÃO ─────────────────────────────────────────
 function bindSettingSelector(selector, storageKey, attrName) {
     document.querySelectorAll(selector).forEach(btn => {
         btn.addEventListener('click', () => {
@@ -293,7 +298,7 @@ bindSettingSelector('.theme-option', 'chatbuddy_theme', 'data-theme');
 bindSettingSelector('.accent-swatch', 'chatbuddy_accent', 'data-accent');
 bindSettingSelector('.bubble-swatch', 'chatbuddy_bubble', 'data-bubble');
 
-// Desconectar Conta
+// Encerrar sessão
 const btnLogout = document.getElementById('btn-logout');
 if (btnLogout) {
     btnLogout.addEventListener('click', () => {
