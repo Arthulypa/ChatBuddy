@@ -10,6 +10,16 @@
 </head>
 <body>
 
+    <!-- SPLASH SCREEN (abertura animada, tipo WhatsApp) -->
+    <div id="app-splash-screen" class="app-splash-screen">
+        <div class="splash-icon-wrapper">
+            <svg viewBox="0 0 24 24" class="splash-icon"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.99 4.26L2 22l5.92-1.21C9.13 21.42 10.51 21.8 12 21.8c5.52 0 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
+            <div class="splash-ring"></div>
+        </div>
+        <h1 class="splash-title">ChatBuddy</h1>
+        <div class="splash-dots"><span></span><span></span><span></span></div>
+    </div>
+
     <div id="popup-notification" class="popup-notification hidden">
         <div class="popup-avatar-wrapper">
             <img id="popup-avatar" src="" alt="">
@@ -20,6 +30,7 @@
         </div>
     </div>
 
+    <!-- LOGIN -->
     <div id="login-page" class="auth-container">
         <div class="auth-box glass-premium">
             <div class="auth-logo">
@@ -27,37 +38,51 @@
                     <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.99 4.26L2 22l5.92-1.21C9.13 21.42 10.51 21.8 12 21.8c5.52 0 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
                 </div>
                 <h1 class="ios-title">ChatBuddy</h1>
-                <p class="ios-subtitle">Conectado de forma segura via Matrix.org</p>
+                <p class="ios-subtitle">Conectando você ao amanhã</p>
             </div>
-            
-            <button id="btn-login-matrix" class="ios-btn-primary" style="margin-top: 24px;">
-                Entrar com Matrix
-            </button>
-        </div>
-    </div>
-
-    <div id="matrix-login-modal" class="modal hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.75); backdrop-filter:blur(10px); display:flex; align-items:center; justify-content:center; z-index:9999;">
-        <div class="auth-box glass-premium" style="max-width:400px; width:90%; position:relative; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
-                <h3 class="ios-title" style="font-size:20px; margin:0;">Login Matrix.org</h3>
-                <button id="btn-close-matrix-modal" style="background:transparent; border:none; color:var(--text-muted); font-size:22px; cursor:pointer;">&times;</button>
+            <div class="input-group-premium">
+                <input type="email" id="email-login" required placeholder=" ">
+                <label>E-mail</label>
             </div>
-            <p class="ios-subtitle" style="margin-bottom:20px;">Insira suas credenciais do Matrix para entrar no ChatBuddy:</p>
-            
-            <div class="input-group-premium" style="margin-bottom:14px;">
-                <input type="text" id="matrix-user-input" required placeholder=" ">
-                <label>Usuário (@usuario:matrix.org)</label>
-            </div>
-            
-            <div class="input-group-premium" style="margin-bottom:20px;">
-                <input type="password" id="matrix-pass-input" required placeholder=" ">
+            <div class="input-group-premium">
+                <input type="password" id="password-login" required placeholder=" ">
                 <label>Senha</label>
             </div>
-
-            <button id="btn-submit-matrix-login" class="ios-btn-primary">Entrar na Conta</button>
+            <button id="btn-login" class="ios-btn-primary">Entrar</button>
+            <div class="divider-text">ou</div>
+            <button id="btn-google-login" class="ios-btn-google">
+                <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="Google" width="18">
+                Entrar com o Google
+            </button>
+            <p class="auth-switch">Não tem uma conta? <span id="btn-to-register" style="cursor:pointer;">Criar conta</span></p>
         </div>
     </div>
 
+    <!-- REGISTRO -->
+    <div id="register-page" class="auth-container hidden">
+        <div class="auth-box glass-premium">
+            <h1 class="ios-title">Criar Conta</h1>
+            <p class="ios-subtitle" style="margin-bottom: 25px;">Rápido, seguro e privado na ChatBuddy.</p>
+            <div id="reg-step-1">
+                <div class="input-group-premium">
+                    <input type="email" id="email-reg" required placeholder=" ">
+                    <label>E-mail</label>
+                </div>
+                <div class="input-group-premium">
+                    <input type="password" id="password-reg" required placeholder=" ">
+                    <label>Senha</label>
+                </div>
+                <button id="btn-send-code" class="ios-btn-primary">Enviar Código</button>
+            </div>
+            <div id="reg-step-2" class="hidden">
+                <p id="reg-step-2-info" style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;">Enviamos um link de verificação para o seu e-mail. Após clicar no link, volte aqui e pressione o botão abaixo.</p>
+                <button id="btn-verify-and-register" class="ios-btn-primary">Já verifiquei ✓</button>
+            </div>
+            <p class="auth-switch" style="margin-top:20px;">Já tem uma conta? <span id="btn-to-login">Fazer Login</span></p>
+        </div>
+    </div>
+
+    <!-- PERFIL INICIAL -->
     <div id="profile-page" class="auth-container hidden">
         <div class="auth-box glass-premium">
             <h2 class="ios-title" style="font-size: 22px;">Configurar Perfil</h2>
@@ -89,9 +114,11 @@
         </div>
     </div>
 
+    <!-- CHAT PRINCIPAL -->
     <div id="chat-page" class="app-container hidden">
         <header class="app-top-bar glass-premium">
             <h2 class="app-title">ChatBuddy</h2>
+            <!-- INCLUSÃO DA SEÇÃO DE EXIBIÇÃO DE INFORMAÇÕES DO USUÁRIO LOGADO -->
             <div id="current-user-header-profile" class="current-user-header-pill">
                 <img id="current-user-header-avatar" class="current-user-header-avatar" src="">
                 <span id="current-user-header-nick" class="current-user-header-nick">--</span>
@@ -112,12 +139,20 @@
                     <input type="text" id="search-contacts-input" placeholder="Buscar conversas pelo nome...">
                 </div>
                 <div id="chats-list" class="chats-list"></div>
+                <!-- Banner de solicitações pendentes -->
+                <div id="requests-banner" class="requests-banner hidden" onclick="document.getElementById('requests-modal').classList.remove('hidden')">
+                    <svg viewBox="0 0 24 24" style="width:18px;height:18px;flex-shrink:0;"><path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 9l-8-5V6l8 5 8-5v2l-8 5z"/></svg>
+                    <span id="requests-banner-text">Você tem solicitações de conversa</span>
+                    <svg viewBox="0 0 24 24" style="width:16px;height:16px;flex-shrink:0;opacity:0.5;"><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
+                </div>
                 <button id="btn-new-chat" class="btn-fab">
                     <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                 </button>
             </div>
             <div id="content-status" class="tab-pane hidden"><div class="empty-state">Nenhum status postado.</div></div>
-            <div id="content-calls" class="tab-pane hidden"><div class="empty-state">Nenhuma chamada efetuada.</div></div>
+            <div id="content-calls" class="tab-pane hidden">
+                <div id="calls-list" class="chats-list"></div>
+            </div>
             <div id="content-groups" class="tab-pane hidden">
                 <div id="groups-list" class="chats-list"></div>
                 <button id="btn-new-group" class="btn-fab">
@@ -126,11 +161,13 @@
             </div>
         </div>
 
+        <!-- EMPTY STATE PAINEL DIREITO -->
         <div id="empty-chat-panel" class="empty-chat-panel">
             <svg viewBox="0 0 24 24" style="width:56px;height:56px;opacity:0.2;margin-bottom:16px;"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
             <p style="color:#8e8e93;font-size:14px;font-weight:500;text-align:center;opacity:0.6;">Clique em qualquer mensagem para abrir</p>
         </div>
 
+        <!-- SALA DE CHAT -->
         <div id="chat-room-screen" class="chat-room-screen hidden">
             <header class="chat-header glass-premium">
                 <button id="btn-back-to-list" class="back-btn">
@@ -140,27 +177,92 @@
                     <div class="header-avatar-container">
                         <img id="active-chat-avatar" class="header-avatar" src="" alt="">
                         <span id="active-chat-online-badge" class="online-indicator-dot hidden"></span>
+                        <div id="blocked-header-badge" class="blocked-header-badge hidden">BLOQ</div>
                     </div>
                     <div>
                         <h2 id="active-chat-name" style="cursor:pointer;">Usuário</h2>
                         <p id="active-chat-status">offline</p>
                     </div>
                 </div>
+                <div class="call-btn-wrapper">
+                    <button id="btn-call-menu" class="icon-btn-dots">
+                        <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+                    </button>
+                    <div id="call-type-menu" class="call-type-menu hidden">
+                        <button id="btn-start-voice-call" class="call-type-option">
+                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+                            Chamada de voz
+                        </button>
+                        <button id="btn-start-video-call" class="call-type-option">
+                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                            Chamada de vídeo
+                        </button>
+                    </div>
+                </div>
                 <button id="btn-contact-menu" class="icon-btn-dots">
                     <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
                 </button>
             </header>
+
+            <div id="blocked-chat-banner" class="blocked-chat-banner hidden">
+                <svg viewBox="0 0 24 24" style="width:16px;height:16px;margin-right:8px;flex-shrink:0;"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.68L5.68 16.9A7.902 7.902 0 014 12zm8 8c-1.85 0-3.55-.63-4.9-1.68L18.32 7.1A7.902 7.902 0 0120 12c0 4.42-3.58 8-8 8z"/></svg>
+                Você bloqueou este usuário
+                <button id="btn-unblock-banner" class="unblock-btn-inline">Desbloquear</button>
+            </div>
+
             <div id="messages-container" class="messages-container"></div>
+
+            <div id="reply-bar" class="reply-bar hidden">
+                <div class="reply-bar-indicator"></div>
+                <div class="reply-bar-content">
+                    <span class="reply-bar-label">Respondendo</span>
+                    <p id="reply-bar-text" class="reply-bar-msg"></p>
+                </div>
+                <button id="btn-cancel-reply" class="reply-cancel-btn">
+                    <svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+
             <footer id="chat-footer-area" class="chat-footer glass-premium">
-                <div class="footer-input-row">
+                <!-- MENU DE ANEXO -->
+                <div id="attach-menu" class="attach-menu hidden">
+                    <button class="attach-menu-item" id="attach-image">
+                        <span class="attach-menu-icon" style="background:#0a84ff;">
+                            <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                        </span>
+                        <span>Foto</span>
+                    </button>
+                    <button class="attach-menu-item" id="attach-video">
+                        <span class="attach-menu-icon" style="background:#30d158;">
+                            <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                        </span>
+                        <span>Vídeo</span>
+                    </button>
+                    <button class="attach-menu-item" id="attach-doc">
+                        <span class="attach-menu-icon" style="background:#ff9f0a;">
+                            <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                        </span>
+                        <span>Arquivo</span>
+                    </button>
+                </div>
+                <div class="footer-input-row" id="footer-input-row">
+                    <button id="btn-attach" class="attach-btn" style="background:none; border:none; cursor:pointer;">
+                        <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-2.76 2.24-5 5-5s5 2.24 5 5v12.5c0 3.31-2.69 6-6 6s-6-2.69-6-6V6h2v11.5c0 2.21 1.79 4 4 4s4-1.79 4-4V5c0-1.66-1.34-3-3-3s-3 1.34-3 3v12.5c0 1.1.9 2 2 2s2-.9 2-2V6h2z"/></svg>
+                    </button>
+                    <input type="file" id="media-file-input" class="hidden" accept="image/*,video/*">
+                    <input type="file" id="doc-file-input" class="hidden" accept=".pdf,.doc,.docx,.txt,.zip,.xls,.xlsx,.ppt,.pptx">
                     <input type="text" id="message-input" placeholder="Mensagem">
                 </div>
                 <button id="btn-send" class="btn-send-round hidden">
                     <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:16px;height:16px;transform: rotate(-45deg) translate(2px, -1px);"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
                 </button>
+                <button id="btn-mic" class="btn-mic-round">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+                </button>
             </footer>
         </div>
 
+        <!-- CONFIGURAÇÕES (dentro do frame) -->
         <div id="settings-screen" class="settings-screen hidden">
             <header class="settings-screen-header glass-premium">
                 <button id="btn-back-settings" class="back-btn">
@@ -168,13 +270,588 @@
                 </button>
                 <h2>Configurações</h2>
             </header>
-            <div class="settings-screen-body" style="padding: 20px;">
-                <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red);">Desconectar Conta</button>
+            <div class="settings-tabs-bar">
+                <div class="settings-tab active" data-tab="conta">Conta</div>
+                <div class="settings-tab" data-tab="notif">Notificações</div>
+                <div class="settings-tab" data-tab="priv">Privacidade</div>
+                <div class="settings-tab" data-tab="seg">Segurança</div>
+                <div class="settings-tab" data-tab="personalizacao">Personalização</div>
+            </div>
+            <div class="settings-screen-body">
+                <div id="stab-conta" class="settings-tab-pane">
+                    <div class="settings-section-title">Perfil</div>
+                    <div class="settings-section-group glass-premium">
+                        <div class="settings-avatar-row">
+                            <div class="settings-avatar-wrapper">
+                                <img id="settings-avatar-preview" src="" alt="">
+                            </div>
+                            <label for="settings-avatar-input" class="settings-avatar-label">Alterar Foto</label>
+                            <input type="file" id="settings-avatar-input" accept="image/*" class="hidden">
+                        </div>
+                    </div>
+                    <div class="settings-section-group glass-premium" style="margin-top:12px;">
+                        <div class="input-group-premium" style="margin:12px 0 4px;">
+                            <input type="text" id="settings-nickname" placeholder=" ">
+                            <label>Apelido (Nickname)</label>
+                        </div>
+                        <div class="input-group-premium with-at-prefix" style="margin-bottom:4px;">
+                            <span class="at-prefix">@</span>
+                            <input type="text" id="settings-username" placeholder=" ">
+                            <label>Nome de usuário</label>
+                        </div>
+                        <div class="input-group-premium" style="margin-bottom:12px;">
+                            <input type="text" id="settings-bio" placeholder=" ">
+                            <label>Biografia</label>
+                        </div>
+                    </div>
+                    <button id="btn-save-account" class="ios-btn-primary" style="margin-top:12px;">Salvar Alterações</button>
+                    <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red);margin-top:10px;">Desconectar Conta</button>
+                </div>
+                <div id="stab-notif" class="settings-tab-pane hidden">
+                    <div class="settings-section-title">Notificações</div>
+                    <div class="settings-section-group glass-premium">
+                        <div class="settings-row-toggle">
+                            <div><p class="row-main-title">Silenciar Tudo</p><p class="row-sub-title">Nenhuma notificação será exibida</p></div>
+                            <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-mute-all"><span class="ios-switch-slider"></span></label>
+                        </div>
+                        <div style="height:1px;background:var(--glass-border);"></div>
+                        <div class="settings-row-toggle">
+                            <div><p class="row-main-title">Notificações Flutuantes</p><p class="row-sub-title">Bolinha que desce ao receber mensagem</p></div>
+                            <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-popup-global" checked><span class="ios-switch-slider"></span></label>
+                        </div>
+                    </div>
+                </div>
+                <div id="stab-priv" class="settings-tab-pane hidden">
+                    <div class="settings-section-title">Privacidade</div>
+                    <div class="settings-section-group glass-premium">
+                        <div class="settings-row-toggle">
+                            <div><p class="row-main-title">Confirmação de Leitura</p><p class="row-sub-title">Mostrar tique duplo verde ao ler</p></div>
+                            <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-read-receipts" checked><span class="ios-switch-slider"></span></label>
+                        </div>
+                        <div style="height:1px;background:var(--glass-border);"></div>
+                        <div class="settings-row-toggle">
+                            <div><p class="row-main-title">Confirmação de Online</p><p class="row-sub-title">Exibir "online" para outros usuários</p></div>
+                            <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-show-online" checked><span class="ios-switch-slider"></span></label>
+                        </div>
+                    </div>
+                </div>
+                <div id="stab-seg" class="settings-tab-pane hidden">
+                    <div class="settings-section-title">Segurança</div>
+                    <div class="settings-section-group glass-premium">
+                        <button id="btn-change-password" class="ios-btn-primary" style="margin:12px 0 4px;">Alterar Senha</button>
+                        <button id="btn-active-sessions" class="ios-btn-primary" style="background:rgba(255,255,255,0.08);margin-bottom:12px;">Ver Sessões Ativas</button>
+                    </div>
+                </div>
+                <div id="stab-personalizacao" class="settings-tab-pane hidden">
+                    <div class="settings-section-title">Tema</div>
+                    <div class="settings-section-group glass-premium" style="padding:14px;">
+                        <div class="theme-picker">
+                            <button class="theme-option" data-theme-value="dark">
+                                <span class="theme-swatch theme-swatch-dark"></span>
+                                <span>Escuro</span>
+                            </button>
+                            <button class="theme-option" data-theme-value="light">
+                                <span class="theme-swatch theme-swatch-light"></span>
+                                <span>Claro</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="settings-section-title" style="margin-top:16px;">Cor de Destaque</div>
+                    <div class="settings-section-group glass-premium" style="padding:14px;">
+                        <div class="accent-picker">
+                            <button class="accent-swatch" data-accent-value="claude" style="background:#D97757;" title="Laranja Claude"></button>
+                            <button class="accent-swatch" data-accent-value="blue"   style="background:#0a84ff;"></button>
+                            <button class="accent-swatch" data-accent-value="green"  style="background:#30d158;"></button>
+                            <button class="accent-swatch" data-accent-value="purple" style="background:#bf5af2;"></button>
+                            <button class="accent-swatch" data-accent-value="pink"   style="background:#ff375f;"></button>
+                            <button class="accent-swatch" data-accent-value="orange" style="background:#ff9f0a;"></button>
+                            <button class="accent-swatch" data-accent-value="red"    style="background:#ff453a;"></button>
+                        </div>
+                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">Muda a cor dos botões, ícones e destaques do app.</p>
+                    </div>
+                    <div class="settings-section-title" style="margin-top:16px;">Estilo do Texto</div>
+                    <div class="settings-section-group glass-premium" style="padding:14px;">
+                        <div class="font-picker">
+                            <button class="font-option" data-font-value="padrao"      style="font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;">Padrão</button>
+                            <button class="font-option" data-font-value="arredondado" style="font-family:'Trebuchet MS','Verdana',sans-serif;">Arredondado</button>
+                            <button class="font-option" data-font-value="classico"    style="font-family:Georgia,'Times New Roman',serif;">Clássico</button>
+                            <button class="font-option" data-font-value="sistema"     style="font-family:system-ui,sans-serif;">Seguir Sistema</button>
+                        </div>
+                    </div>
+                    <div class="settings-section-title" style="margin-top:16px;">Cor do Balão</div>
+                    <div class="settings-section-group glass-premium" style="padding:14px;">
+                        <div class="bubble-mode-toggle">
+                            <button id="btn-bubble-mode-normal" class="bubble-mode-btn">Cor normal</button>
+                            <button id="btn-bubble-mode-gradient" class="bubble-mode-btn">Gradiente</button>
+                            <button id="btn-bubble-mode-blur" class="bubble-mode-btn">Blur</button>
+                        </div>
+                        <div id="bubble-picker-normal" class="accent-picker">
+                            <button class="bubble-swatch" data-bubble-value="claude" style="background:#D97757;" title="Laranja Claude"></button>
+                            <button class="bubble-swatch" data-bubble-value="blue"   style="background:#0a84ff;"></button>
+                            <button class="bubble-swatch" data-bubble-value="green"  style="background:#30d158;"></button>
+                            <button class="bubble-swatch" data-bubble-value="purple" style="background:#bf5af2;"></button>
+                            <button class="bubble-swatch" data-bubble-value="pink"   style="background:#ff375f;"></button>
+                            <button class="bubble-swatch" data-bubble-value="orange" style="background:#ff9f0a;"></button>
+                            <button class="bubble-swatch" data-bubble-value="red"    style="background:#ff453a;"></button>
+                            <button class="bubble-swatch" data-bubble-value="yellow" style="background:#ffd60a;"></button>
+                            <button class="bubble-swatch" data-bubble-value="gray"   style="background:#8e8e93;"></button>
+                            <button class="bubble-swatch" data-bubble-value="white"  style="background:#f2f2f7;"></button>
+                            <button class="bubble-swatch" data-bubble-value="black"  style="background:#1c1c1e;"></button>
+                        </div>
+                        <div id="bubble-picker-gradient" class="accent-picker hidden">
+                            <button class="bubble-swatch" data-bubble-gradient-value="oceano"    style="background:linear-gradient(135deg,#0a84ff,#30d158);" title="Oceano"></button>
+                            <button class="bubble-swatch" data-bubble-gradient-value="roxo-azul" style="background:linear-gradient(135deg,#5e5ce6,#0a84ff);" title="Roxo-azul"></button>
+                            <button class="bubble-swatch" data-bubble-gradient-value="uva"        style="background:linear-gradient(135deg,#bf5af2,#ff375f);" title="Uva"></button>
+                            <button class="bubble-swatch" data-bubble-gradient-value="menta"       style="background:linear-gradient(135deg,#30d158,#64d2ff);" title="Menta"></button>
+                            <button class="bubble-swatch" data-bubble-gradient-value="por-do-sol"  style="background:linear-gradient(135deg,#ff9f0a,#ff375f);" title="Pôr do sol"></button>
+                            <button class="bubble-swatch" data-bubble-gradient-value="fogo"         style="background:linear-gradient(135deg,#ff453a,#ff9f0a);" title="Fogo"></button>
+                            <button class="bubble-swatch" data-bubble-gradient-value="dourado"      style="background:linear-gradient(135deg,#ffd60a,#ff9f0a);" title="Dourado"></button>
+                            <button class="bubble-swatch" data-bubble-gradient-value="carbono"      style="background:linear-gradient(135deg,#8e8e93,#1c1c1e);" title="Carbono"></button>
+                            <button class="bubble-swatch" data-bubble-gradient-value="aurora"       style="background:linear-gradient(135deg,#5e5ce6,#30d158,#ffd60a);" title="Aurora"></button>
+                        </div>
+                        <div id="bubble-blur-preview" class="bubble-blur-preview-row hidden">
+                            <div class="bubble-blur-sample">Assim fica sua bolha ✨</div>
+                        </div>
+                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">Cor das suas mensagens enviadas — o texto se ajusta sozinho pra nunca ficar ilegível.</p>
+                    </div>
+                    <div class="settings-section-title" style="margin-top:16px;">Tema da Conversa</div>
+                    <div class="settings-section-group glass-premium" style="padding:14px;">
+                        <div class="wallpaper-picker">
+                            <button class="wallpaper-option" data-wallpaper-value="padrao">
+                                <div class="wallpaper-thumb wallpaper-thumb-padrao"></div>
+                                <span>Padrão</span>
+                            </button>
+                            <button class="wallpaper-option" data-wallpaper-value="pontilhado">
+                                <div class="wallpaper-thumb wallpaper-thumb-pontilhado"></div>
+                                <span>Pontilhado</span>
+                            </button>
+                            <button class="wallpaper-option" data-wallpaper-value="gradiente">
+                                <div class="wallpaper-thumb wallpaper-thumb-gradiente"></div>
+                                <span>Gradiente</span>
+                            </button>
+                            <button class="wallpaper-option" data-wallpaper-value="ondas">
+                                <div class="wallpaper-thumb wallpaper-thumb-ondas"></div>
+                                <span>Ondas</span>
+                            </button>
+                            <button class="wallpaper-option" data-wallpaper-value="chatbuddy">
+                                <div class="wallpaper-thumb wallpaper-thumb-chatbuddy"></div>
+                                <span>ChatBuddy</span>
+                            </button>
+                        </div>
+                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">O fundo da conversa se ajusta sozinho entre o tema claro e escuro.</p>
+                    </div>
+                    <div class="settings-section-title" style="margin-top:16px;">Animações</div>
+                    <div class="settings-section-group glass-premium" style="padding:14px;">
+                        <div class="font-picker">
+                            <button class="anim-option" data-anim-value="padrao">Padrão (deslizar + fade)</button>
+                            <button class="anim-option" data-anim-value="suave">Suave (só fade)</button>
+                            <button class="anim-option" data-anim-value="dinamica">Dinâmica (bounce)</button>
+                            <button class="anim-option" data-anim-value="nenhuma">Nenhuma</button>
+                        </div>
+                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">Controla a animação de entrada das mensagens no chat e nos grupos.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    <!-- TELA DE CHAT DE GRUPO -->
+    <div id="group-room-screen" class="chat-room-screen hidden">
+        <header class="chat-header glass-premium">
+            <button id="btn-back-group" class="back-btn">
+                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+            <div class="active-user-info" id="btn-open-group-info" style="cursor:pointer;">
+                <div class="header-avatar-container">
+                    <img id="active-group-avatar" class="header-avatar" src="" alt="">
+                </div>
+                <div>
+                    <h2 id="active-group-name">Grupo</h2>
+                    <p id="active-group-members-count" style="font-size:11px;color:var(--text-muted);">0 membros</p>
+                </div>
+            </div>
+            <button id="btn-group-menu" class="icon-btn-dots">
+                <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+            </button>
+        </header>
+        <div id="group-messages-container" class="messages-container"></div>
+        <div id="group-reply-bar" class="reply-bar hidden">
+            <div class="reply-bar-indicator"></div>
+            <div class="reply-bar-content">
+                <span class="reply-bar-label">Respondendo</span>
+                <p id="group-reply-bar-text" class="reply-bar-msg"></p>
+            </div>
+            <button id="btn-cancel-group-reply" class="reply-cancel-btn">
+                <svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+            </button>
+        </div>
+        <div id="group-readonly-banner" class="blocked-chat-banner hidden" style="justify-content:center;">
+            <svg viewBox="0 0 24 24" style="width:15px;height:15px;margin-right:6px;"><path fill="currentColor" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+            Apenas admins podem enviar mensagens
+        </div>
+        <footer id="group-footer-area" class="chat-footer glass-premium">
+            <div id="group-attach-menu" class="attach-menu hidden">
+                <button class="attach-menu-item" id="group-attach-image">
+                    <span class="attach-menu-icon" style="background:#0a84ff;">
+                        <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
+                    </span>
+                    <span>Foto</span>
+                </button>
+                <button class="attach-menu-item" id="group-attach-video">
+                    <span class="attach-menu-icon" style="background:#30d158;">
+                        <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+                    </span>
+                    <span>Vídeo</span>
+                </button>
+                <button class="attach-menu-item" id="group-attach-doc">
+                    <span class="attach-menu-icon" style="background:#ff9f0a;">
+                        <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                    </span>
+                    <span>Arquivo</span>
+                </button>
+            </div>
+            <div class="footer-input-row">
+                <button id="btn-group-attach" class="attach-btn" style="background:none;border:none;cursor:pointer;">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-2.76 2.24-5 5-5s5 2.24 5 5v12.5c0 3.31-2.69 6-6 6s-6-2.69-6-6V6h2v11.5c0 2.21 1.79 4 4 4s4-1.79 4-4V5c0-1.66-1.34-3-3-3s-3 1.34-3 3v12.5c0 1.1.9 2 2 2s2-.9 2-2V6h2z"/></svg>
+                </button>
+                <input type="file" id="group-media-input" class="hidden" accept="image/*,video/*">
+                <input type="file" id="group-doc-input" class="hidden" accept=".pdf,.doc,.docx,.txt,.zip,.xls,.xlsx,.ppt,.pptx">
+                <input type="text" id="group-message-input" placeholder="Mensagem">
+            </div>
+            <button id="btn-group-send" class="btn-send-round hidden">
+                <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:16px;height:16px;transform:rotate(-45deg) translate(2px,-1px);"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+            </button>
+            <button id="btn-group-mic" class="btn-mic-round">
+                <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+            </button>
+        </footer>
+    </div>
+
+    <!-- SHEET INFO CONTATO (tela cheia, mesmo padrão das Configurações) -->
+    <div id="contact-info-sheet" class="settings-screen hidden">
+        <header class="settings-screen-header glass-premium">
+            <button id="btn-close-info-sheet" class="back-btn">
+                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+            <h2>Perfil</h2>
+        </header>
+        <div class="settings-screen-body">
+            <div class="profile-detail-header">
+                <div class="avatar-detail-wrapper">
+                    <img id="sheet-contact-avatar" src="" alt="" class="avatar-detail-large">
+                    <div id="sheet-blocked-badge" class="sheet-blocked-badge hidden">BLOQUEADO</div>
+                </div>
+                <h3 id="sheet-contact-nick">Nome</h3>
+                <p id="sheet-contact-user">@username</p>
+            </div>
+            <div class="profile-info-sections">
+                <div class="info-block">
+                    <span class="block-label">Biografia</span>
+                    <p id="sheet-contact-bio" class="block-content">Carregando...</p>
+                </div>
+                <div class="info-block">
+                    <span class="block-label">Status do Recado</span>
+                    <p id="sheet-contact-status" class="block-content">Disponível</p>
+                </div>
+            </div>
+            <div class="profile-actions-list">
+                <button id="btn-set-nickname" class="action-nickname-btn">
+                    <svg viewBox="0 0 24 24" style="width:16px;height:16px;margin-right:8px;"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    Definir Apelido
+                </button>
+                <div class="action-row-toggle">
+                    <span>Silenciar Notificações</span>
+                    <label class="ios-switch-wrapper">
+                        <input type="checkbox" id="toggle-silence-user">
+                        <span class="ios-switch-slider"></span>
+                    </label>
+                </div>
+                <button id="btn-sheet-block" class="action-danger-btn">Bloquear Usuário</button>
+                <button id="btn-sheet-unblock" class="action-unblock-btn hidden">Desbloquear Usuário</button>
+                <button id="btn-delete-contact" class="action-danger-btn">🗑️ Excluir Contato</button>
             </div>
         </div>
     </div>
 
-    <script src="https://browser.matrix.org/npm/matrix-js-sdk@34.1.1/browser-matrix.js"></script>
+    <!-- SHEET INFO DO GRUPO (tela cheia, mesmo padrão das Configurações) -->
+    <div id="group-info-sheet" class="settings-screen hidden">
+        <header class="settings-screen-header glass-premium">
+            <button id="btn-close-group-info" class="back-btn">
+                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+            <h2>Grupo</h2>
+        </header>
+        <div class="settings-screen-body">
+            <div class="profile-detail-header">
+                <img id="sheet-group-avatar" src="" alt="" class="avatar-detail-large">
+                <h3 id="sheet-group-name">Grupo</h3>
+                <p id="sheet-group-desc" style="font-size:13px;color:var(--text-muted);text-align:center;margin-top:4px;"></p>
+            </div>
+            <div id="sheet-group-members-list" class="chats-list" style="max-height:45dvh;overflow-y:auto;margin:10px 0;"></div>
+            <div id="group-admin-actions" class="hidden" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+                <button id="btn-edit-group" class="ios-btn-primary" style="font-size:13px;padding:10px;background:rgba(255,255,255,0.08);">✏️ Editar Grupo</button>
+                <button id="btn-add-group-member" class="ios-btn-primary" style="font-size:13px;padding:10px;">+ Adicionar Membro</button>
+            </div>
+            <button id="btn-leave-group" class="action-danger-btn" style="margin-bottom:8px;">Sair do Grupo</button>
+        </div>
+    </div>
+
+    <!-- TELA DE CHAMADA (chamando / recebendo / em andamento) -->
+    <div id="call-screen" class="call-screen hidden">
+        <video id="call-remote-video" class="call-remote-video hidden" autoplay playsinline></video>
+        <video id="call-local-video" class="call-local-video hidden" autoplay muted playsinline></video>
+
+        <div class="call-content">
+            <span id="call-status-label" class="call-status-label">Chamando...</span>
+            <div class="call-avatar-wrapper">
+                <img id="call-remote-avatar" class="call-avatar-large" src="" alt="">
+                <div id="call-ring-pulse" class="call-ring-pulse"></div>
+            </div>
+            <h2 id="call-remote-name">Nome</h2>
+            <p id="call-timer" class="call-timer hidden">00:00</p>
+        </div>
+
+        <div id="call-incoming-actions" class="call-actions-row hidden">
+            <button id="btn-call-decline" class="call-action-btn call-decline-btn">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 01-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" transform="rotate(135 12 12)"/></svg>
+            </button>
+            <button id="btn-call-accept" class="call-action-btn call-accept-btn">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
+            </button>
+        </div>
+
+        <div id="call-active-actions" class="call-actions-row hidden">
+            <button id="btn-call-mute" class="call-mini-btn">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
+            </button>
+            <button id="btn-call-camera" class="call-mini-btn hidden">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
+            </button>
+            <button id="btn-call-end" class="call-action-btn call-decline-btn">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 01-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" transform="rotate(135 12 12)"/></svg>
+            </button>
+        </div>
+    </div>
+
+    </div><!-- /chat-page -->
+
+    <!-- MODAL APELIDO -->
+    <div id="nickname-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:300px; text-align:center;">
+            <h3 style="margin-bottom:6px;">Definir Apelido</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Visível apenas para você</p>
+            <div class="input-group-premium">
+                <input type="text" id="nickname-input" placeholder=" " maxlength="30">
+                <label>Apelido personalizado</label>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+                <button id="btn-cancel-nickname" class="btn-profile-close" style="flex:1;">Cancelar</button>
+                <button id="btn-save-nickname" class="ios-btn-primary" style="flex:1;">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BLUR OVERLAY (Menu contexto corrigido) -->
+    <div id="blur-overlay" class="blur-overlay hidden">
+        <div id="focused-container" class="focused-container">
+            <div id="focused-message-wrapper" class="focused-message-wrapper"></div>
+            <div class="iphone-context-menu glass-premium" id="context-menu-box">
+                <div class="context-item" id="ctx-reply-msg">
+                    <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
+                    Responder
+                </div>
+                <div class="context-item" id="ctx-info-msg">
+                    <svg viewBox="0 0 24 24" class="mono-icon-light" style="width:16px; margin-right:8px;"><path fill="currentColor" d="M11 9h2V7h-2v2zm1 11c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-18C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 13h2v-4h-2v4z"/></svg>
+                    Info da Mensagem
+                </div>
+                <div class="context-item" id="ctx-edit-msg">
+                    <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    Editar Mensagem
+                </div>
+                <div class="context-item" id="ctx-copy-direct">
+                    <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+                    Copiar Texto
+                </div>
+                <div class="context-item danger" id="ctx-delete-single">
+                    <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    Apagar Mensagem
+                </div>
+                <div class="context-item cancel" id="ctx-close-menu">Voltar</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL APAGAR -->
+    <div id="delete-options-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:300px; text-align:center;">
+            <h3 style="margin-bottom:6px;">Apagar mensagem</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">Escolha como deseja apagar</p>
+            <div style="display:flex;flex-direction:column;gap:8px;">
+                <button id="btn-delete-for-all" class="ios-btn-primary" style="background:var(--ios-red);">Apagar para todos</button>
+                <button id="btn-delete-for-me" class="ios-btn-primary" style="background:rgba(255,255,255,0.08);">Apagar só para mim</button>
+                <button id="btn-cancel-delete" class="btn-profile-close">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL INFO MENSAGEM -->
+    <div id="msg-info-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width: 280px; text-align: center;">
+            <h3 style="margin-bottom:15px;">Detalhes do Envio</h3>
+            <p style="font-size:14px; margin-bottom:8px; color:var(--text-muted);">Enviado às: <span id="info-sent-time" style="color:var(--text-main); font-weight:600;">--:--</span></p>
+            <p id="info-read-time-row" style="font-size:14px; margin-bottom:20px; color:var(--text-muted);">Visto/Lido às: <span id="info-read-time" style="color:#30d158; font-weight:600;">--:--</span></p>
+            <div id="info-group-seen-list" class="hidden" style="text-align:left; max-height:240px; overflow-y:auto; margin-bottom:16px;"></div>
+            <button id="btn-close-msg-info" class="ios-btn-primary" style="padding:10px;">Fechar</button>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR MENSAGEM -->
+    <div id="edit-msg-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:320px;">
+            <h3 style="margin-bottom:12px; text-align:center;">Editar Mensagem</h3>
+            <div class="input-group-premium">
+                <input type="text" id="edit-msg-input" placeholder=" " maxlength="500">
+                <label>Novo texto</label>
+            </div>
+            <div style="display:flex;gap:8px;margin-top:4px;">
+                <button id="btn-cancel-edit" class="btn-profile-close" style="flex:1;">Cancelar</button>
+                <button id="btn-confirm-edit" class="ios-btn-primary" style="flex:1;">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NOVA CONVERSA (Com Input de Busca Segura por @) -->
+    <div id="contacts-modal" class="modal hidden">
+        <div class="modal-content glass-premium">
+            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
+                <h3>Nova Conversa</h3>
+                <button id="btn-close-modal" class="back-btn">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div class="search-bar-wrapper with-at-prefix" style="padding: 0 0 10px 0;">
+                <div class="at-input-wrap">
+                    <span class="at-prefix">@</span>
+                    <input type="text" id="search-by-username-input" placeholder="Digite o nome (ex: art)">
+                </div>
+            </div>
+            <div id="contacts-list-modal" class="chats-list"></div>
+        </div>
+    </div>
+
+    <!-- VISUALIZADOR DE MÍDIA PREMIUM (ZOOM) -->
+    <div id="media-viewer" class="media-viewer hidden">
+        <button id="media-viewer-close" class="media-viewer-close">&times;</button>
+        <div id="media-viewer-container" style="position:relative; overflow:hidden; display:flex; justify-content:center; align-items:center; width:100%; height:100%;"></div>
+    </div>
+
+    <!-- MODAL SOLICITAÇÕES DE CONVERSA -->
+    <div id="requests-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:360px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:15px;">
+                <h3>Solicitações</h3>
+                <button id="btn-close-requests-modal" class="back-btn">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div id="requests-list" class="chats-list" style="max-height:60dvh;overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- MODAL CRIAR GRUPO -->
+    <div id="create-group-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:360px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:15px;">
+                <h3>Criar Grupo</h3>
+                <button id="btn-close-create-group" class="back-btn">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div class="avatar-upload-container-premium" style="margin-bottom:12px;">
+                <div class="avatar-preview-wrapper">
+                    <img id="group-avatar-preview" src="" class="hidden" style="width:64px;height:64px;border-radius:50%;object-fit:cover;">
+                    <div id="group-avatar-placeholder" style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
+                        <svg viewBox="0 0 24 24" style="width:28px;height:28px;opacity:0.5;"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                    </div>
+                </div>
+                <label for="group-avatar-file" class="avatar-file-label-premium" style="font-size:12px;">Foto do Grupo</label>
+                <input type="file" id="group-avatar-file" accept="image/*" class="hidden">
+            </div>
+            <div class="input-group-premium" style="margin-bottom:12px;">
+                <input type="text" id="group-name-input" placeholder=" " maxlength="50">
+                <label>Nome do Grupo</label>
+            </div>
+            <div class="input-group-premium" style="margin-bottom:12px;">
+                <input type="text" id="group-desc-input" placeholder=" " maxlength="120">
+                <label>Descrição (opcional)</label>
+            </div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Adicionar membros (busque pelo @):</p>
+            <div class="search-bar-wrapper with-at-prefix" style="padding:0 0 8px 0;">
+                <div class="at-input-wrap">
+                    <span class="at-prefix">@</span>
+                    <input type="text" id="group-member-search" placeholder="usuario">
+                </div>
+            </div>
+            <div id="group-member-results" class="chats-list" style="max-height:140px;overflow-y:auto;margin-bottom:10px;"></div>
+            <div id="group-selected-members" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;min-height:28px;"></div>
+            <button id="btn-confirm-create-group" class="ios-btn-primary">Criar Grupo</button>
+        </div>
+    </div>
+
+
+
+    <!-- MODAL EDITAR GRUPO (nome, descrição, foto — só admin/dono) -->
+    <div id="edit-group-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:360px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:15px;">
+                <h3>Editar Grupo</h3>
+                <button id="btn-close-edit-group" class="back-btn">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div class="avatar-upload-container-premium" style="margin-bottom:12px;">
+                <div class="avatar-preview-wrapper">
+                    <img id="edit-group-avatar-preview" src="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;">
+                </div>
+                <label for="edit-group-avatar-file" class="avatar-file-label-premium" style="font-size:12px;">Alterar Foto</label>
+                <input type="file" id="edit-group-avatar-file" accept="image/*" class="hidden">
+            </div>
+            <div class="input-group-premium" style="margin-bottom:12px;">
+                <input type="text" id="edit-group-name-input" placeholder=" " maxlength="50">
+                <label>Nome do Grupo</label>
+            </div>
+            <div class="input-group-premium" style="margin-bottom:12px;">
+                <input type="text" id="edit-group-desc-input" placeholder=" " maxlength="120">
+                <label>Descrição (opcional)</label>
+            </div>
+            <button id="btn-save-edit-group" class="ios-btn-primary">Salvar Alterações</button>
+        </div>
+    </div>
+
+    <!-- MODAL ADICIONAR MEMBRO AO GRUPO -->
+    <div id="add-member-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:340px;">
+            <h3 style="margin-bottom:12px;text-align:center;">Adicionar Membro</h3>
+            <div class="search-bar-wrapper with-at-prefix" style="padding:0 0 8px 0;">
+                <div class="at-input-wrap">
+                    <span class="at-prefix">@</span>
+                    <input type="text" id="add-member-search" placeholder="usuario">
+                </div>
+            </div>
+            <div id="add-member-results" class="chats-list" style="max-height:200px;overflow-y:auto;"></div>
+            <button id="btn-close-add-member" class="btn-profile-close" style="margin-top:10px;">Cancelar</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/agora-rtc-sdk-ng@4.24.4/AgoraRTC_N-production.min.js"></script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
+    </script>
     <script src="script.js"></script>
 </body>
 </html>
