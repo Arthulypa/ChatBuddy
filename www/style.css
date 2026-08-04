@@ -110,7 +110,7 @@ html[data-theme="light"] .bubble-blur-sample {
 }
 
 /* ── Temas de fundo da conversa (se ajustam sozinhos ao tema claro/escuro) ─── */
-.wallpaper-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.wallpaper-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px; }
 .wallpaper-option { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; }
 .wallpaper-thumb { width: 100%; aspect-ratio: 1; border-radius: 12px; border: 2px solid transparent; background-color: var(--surface-1); position: relative; }
 .wallpaper-option.active-wallpaper .wallpaper-thumb { border-color: var(--ios-blue); }
@@ -137,6 +137,21 @@ html[data-chat-wallpaper="ondas"] .messages-container {
 }
 html[data-theme="light"][data-chat-wallpaper="ondas"] .messages-container {
     background-image: repeating-linear-gradient(135deg, rgba(0,0,0,0.035) 0 2px, transparent 2px 22px);
+}
+
+/* Tema "ChatBuddy": doodle com balão de chat, chamada, reação e check de lido */
+html[data-chat-wallpaper="chatbuddy"] .messages-container {
+    background-color: var(--surface-1);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.11)' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 18h26a7 7 0 017 7v15a7 7 0 01-7 7H33l-7 8v-8h-8a7 7 0 01-7-7V25a7 7 0 017-7z'/%3E%3Cpath d='M112 24c-9 0-16 6-16 14 0 4 2 8 5 10l-2 9 9-4c1 0 2 1 4 1 9 0 16-6 16-14s-7-16-16-16z'/%3E%3Cpath d='M100 100l6 6 13-13'/%3E%3Cpath d='M35 108c-3-4-3-9 1-12 3-3 8-2 10 1 2-3 7-4 10-1 4 3 4 8 1 12l-11 11z'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 150px 150px;
+}
+html[data-theme="light"][data-chat-wallpaper="chatbuddy"] .messages-container {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Cg fill='none' stroke='rgba(0,0,0,0.11)' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 18h26a7 7 0 017 7v15a7 7 0 01-7 7H33l-7 8v-8h-8a7 7 0 01-7-7V25a7 7 0 017-7z'/%3E%3Cpath d='M112 24c-9 0-16 6-16 14 0 4 2 8 5 10l-2 9 9-4c1 0 2 1 4 1 9 0 16-6 16-14s-7-16-16-16z'/%3E%3Cpath d='M100 100l6 6 13-13'/%3E%3Cpath d='M35 108c-3-4-3-9 1-12 3-3 8-2 10 1 2-3 7-4 10-1 4 3 4 8 1 12l-11 11z'/%3E%3C/g%3E%3C/svg%3E");
+}
+.wallpaper-thumb-chatbuddy {
+    background-color: var(--surface-1);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 150 150'%3E%3Cg fill='none' stroke='rgba(128,128,128,0.55)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 18h26a7 7 0 017 7v15a7 7 0 01-7 7H33l-7 8v-8h-8a7 7 0 01-7-7V25a7 7 0 017-7z'/%3E%3Cpath d='M112 24c-9 0-16 6-16 14 0 4 2 8 5 10l-2 9 9-4c1 0 2 1 4 1 9 0 16-6 16-14s-7-16-16-16z'/%3E%3Cpath d='M100 100l6 6 13-13'/%3E%3Cpath d='M35 108c-3-4-3-9 1-12 3-3 8-2 10 1 2-3 7-4 10-1 4 3 4 8 1 12l-11 11z'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 60px 60px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--app-font); -webkit-tap-highlight-color: transparent; }
