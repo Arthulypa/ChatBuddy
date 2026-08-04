@@ -121,8 +121,11 @@
             <button id="rail-home-btn" class="rail-icon-btn active-rail" title="Conversas">
                 <svg viewBox="0 0 24 24"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
             </button>
+            <button id="rail-groups-btn" class="rail-icon-btn" title="Grupos">
+                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+            </button>
             <div id="spaces-rail-list" class="spaces-rail-list"></div>
-            <button id="rail-add-space-btn" class="rail-icon-btn rail-add-btn" title="Criar espaço">
+            <button id="rail-add-space-btn" class="rail-icon-btn rail-add-btn" title="Criar">
                 <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             </button>
             <div class="rail-spacer"></div>
@@ -145,8 +148,6 @@
         <nav class="app-tabs glass-premium">
             <div class="tab-item active" id="tab-chats">Conversas <span id="requests-badge" class="requests-badge hidden"></span></div>
             <div class="tab-item" id="tab-groups">Grupos</div>
-            <div class="tab-item" id="tab-status">Status</div>
-            <div class="tab-item" id="tab-calls">Chamadas</div>
         </nav>
         <div class="tab-content-container">
             <div id="content-chats" class="tab-pane">
@@ -169,10 +170,8 @@
                     <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                 </button>
             </div>
-            <div id="content-status" class="tab-pane hidden"><div class="empty-state">Nenhum status postado.</div></div>
-            <div id="content-calls" class="tab-pane hidden">
-                <div id="calls-list" class="chats-list"></div>
-            </div>
+            <!-- Lista de histórico de chamadas continua existindo fora da navegação principal (usada internamente) -->
+            <div id="calls-list" class="hidden"></div>
             <div id="content-groups" class="tab-pane hidden">
                 <div id="groups-list" class="chats-list"></div>
                 <button id="btn-new-group" class="btn-fab">
@@ -777,74 +776,79 @@
         </div>
     </div>
 
-    <!-- MODAL CRIAR GRUPO -->
+    <!-- MODAL CRIAR GRUPO / ESPAÇO (unificado, estilo FluffyChat) -->
     <div id="create-group-modal" class="modal hidden">
         <div class="modal-content glass-premium" style="max-width:360px;">
             <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:15px;">
-                <h3>Criar Grupo</h3>
+                <h3 id="create-modal-title">Criar Grupo</h3>
                 <button id="btn-close-create-group" class="back-btn">
                     <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
                 </button>
             </div>
-            <div class="avatar-upload-container-premium" style="margin-bottom:12px;">
-                <div class="avatar-preview-wrapper">
-                    <img id="group-avatar-preview" src="" class="hidden" style="width:64px;height:64px;border-radius:50%;object-fit:cover;">
-                    <div id="group-avatar-placeholder" style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
-                        <svg viewBox="0 0 24 24" style="width:28px;height:28px;opacity:0.5;"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+
+            <!-- Alternador Grupo / Espaço (some quando já se está dentro de um espaço) -->
+            <div id="create-type-toggle" class="type-toggle-wrap">
+                <button type="button" id="toggle-type-group" class="type-toggle-btn active-type-toggle" data-type="group">
+                    <svg viewBox="0 0 24 24" style="width:14px;height:14px;"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+                    Grupo
+                </button>
+                <button type="button" id="toggle-type-space" class="type-toggle-btn" data-type="space">Espaço</button>
+            </div>
+
+            <!-- Campos de GRUPO -->
+            <div id="group-fields-container">
+                <div class="avatar-upload-container-premium" style="margin-bottom:12px;">
+                    <div class="avatar-preview-wrapper">
+                        <img id="group-avatar-preview" src="" class="hidden" style="width:64px;height:64px;border-radius:50%;object-fit:cover;">
+                        <div id="group-avatar-placeholder" style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
+                            <svg viewBox="0 0 24 24" style="width:28px;height:28px;opacity:0.5;"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                        </div>
+                    </div>
+                    <label for="group-avatar-file" class="avatar-file-label-premium" style="font-size:12px;">Foto do Grupo</label>
+                    <input type="file" id="group-avatar-file" accept="image/*" class="hidden">
+                </div>
+                <div class="input-group-premium" style="margin-bottom:12px;">
+                    <input type="text" id="group-name-input" placeholder=" " maxlength="50">
+                    <label>Nome do Grupo</label>
+                </div>
+                <div class="input-group-premium" style="margin-bottom:12px;">
+                    <input type="text" id="group-desc-input" placeholder=" " maxlength="120">
+                    <label>Descrição (opcional)</label>
+                </div>
+                <div class="input-group-premium" style="margin-bottom:12px;">
+                    <select id="group-space-select" style="width:100%;padding:12px 10px;background:transparent;border:none;color:var(--text-main);font-size:14px;">
+                        <option value="">Nenhum espaço</option>
+                    </select>
+                </div>
+                <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Adicionar membros (busque pelo @):</p>
+                <div class="search-bar-wrapper with-at-prefix" style="padding:0 0 8px 0;">
+                    <div class="at-input-wrap">
+                        <span class="at-prefix">@</span>
+                        <input type="text" id="group-member-search" placeholder="usuario">
                     </div>
                 </div>
-                <label for="group-avatar-file" class="avatar-file-label-premium" style="font-size:12px;">Foto do Grupo</label>
-                <input type="file" id="group-avatar-file" accept="image/*" class="hidden">
+                <div id="group-member-results" class="chats-list" style="max-height:140px;overflow-y:auto;margin-bottom:10px;"></div>
+                <div id="group-selected-members" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;min-height:28px;"></div>
             </div>
-            <div class="input-group-premium" style="margin-bottom:12px;">
-                <input type="text" id="group-name-input" placeholder=" " maxlength="50">
-                <label>Nome do Grupo</label>
-            </div>
-            <div class="input-group-premium" style="margin-bottom:12px;">
-                <input type="text" id="group-desc-input" placeholder=" " maxlength="120">
-                <label>Descrição (opcional)</label>
-            </div>
-            <div class="input-group-premium" style="margin-bottom:12px;">
-                <select id="group-space-select" style="width:100%;padding:12px 10px;background:transparent;border:none;color:var(--text-main);font-size:14px;">
-                    <option value="">Nenhum espaço</option>
-                </select>
-            </div>
-            <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Adicionar membros (busque pelo @):</p>
-            <div class="search-bar-wrapper with-at-prefix" style="padding:0 0 8px 0;">
-                <div class="at-input-wrap">
-                    <span class="at-prefix">@</span>
-                    <input type="text" id="group-member-search" placeholder="usuario">
+
+            <!-- Campos de ESPAÇO -->
+            <div id="space-fields-container" class="hidden">
+                <div class="input-group-premium" style="margin-bottom:14px;">
+                    <input type="text" id="space-name-input" placeholder=" " maxlength="30">
+                    <label>Nome do Espaço</label>
+                </div>
+                <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Cor do ícone</p>
+                <div class="accent-picker" style="margin-bottom:16px;">
+                    <button class="space-color-swatch active-space-color" data-space-color="#D97757" style="background:#D97757;"></button>
+                    <button class="space-color-swatch" data-space-color="#0a84ff" style="background:#0a84ff;"></button>
+                    <button class="space-color-swatch" data-space-color="#30d158" style="background:#30d158;"></button>
+                    <button class="space-color-swatch" data-space-color="#bf5af2" style="background:#bf5af2;"></button>
+                    <button class="space-color-swatch" data-space-color="#ff375f" style="background:#ff375f;"></button>
+                    <button class="space-color-swatch" data-space-color="#ff9f0a" style="background:#ff9f0a;"></button>
                 </div>
             </div>
-            <div id="group-member-results" class="chats-list" style="max-height:140px;overflow-y:auto;margin-bottom:10px;"></div>
-            <div id="group-selected-members" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;min-height:28px;"></div>
-            <button id="btn-confirm-create-group" class="ios-btn-primary">Criar Grupo</button>
-        </div>
-    </div>
 
-    <!-- MODAL CRIAR ESPAÇO -->
-    <div id="create-space-modal" class="modal hidden">
-        <div class="modal-content glass-premium" style="max-width:340px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:15px;">
-                <h3>Criar Espaço</h3>
-                <button id="btn-close-create-space" class="back-btn">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
-            </div>
-            <div class="input-group-premium" style="margin-bottom:14px;">
-                <input type="text" id="space-name-input" placeholder=" " maxlength="30">
-                <label>Nome do Espaço</label>
-            </div>
-            <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Cor do ícone</p>
-            <div class="accent-picker" style="margin-bottom:16px;">
-                <button class="space-color-swatch active-space-color" data-space-color="#D97757" style="background:#D97757;"></button>
-                <button class="space-color-swatch" data-space-color="#0a84ff" style="background:#0a84ff;"></button>
-                <button class="space-color-swatch" data-space-color="#30d158" style="background:#30d158;"></button>
-                <button class="space-color-swatch" data-space-color="#bf5af2" style="background:#bf5af2;"></button>
-                <button class="space-color-swatch" data-space-color="#ff375f" style="background:#ff375f;"></button>
-                <button class="space-color-swatch" data-space-color="#ff9f0a" style="background:#ff9f0a;"></button>
-            </div>
-            <button id="btn-confirm-create-space" class="ios-btn-primary">Criar Espaço</button>
+            <button id="btn-confirm-create-group" class="ios-btn-primary">Criar Grupo</button>
         </div>
     </div>
 
