@@ -570,6 +570,7 @@ auth.onAuthStateChanged(user => {
                 setupPushNotifications();
                 watchAccountStatus(user.uid);
                 listenForIncomingCalls();
+                loadSpacesList();
                 ensureMainGroup();
             } else {
                 changeView('profile');
@@ -1386,6 +1387,7 @@ function loadChatList() {
             if (Object.keys(cacheListRows).length === 0) {
                 listContainer.innerHTML = `<div class="empty-state">Nenhuma conversa ativa.</div>`;
             }
+            applyChatFilter();
         }
 
         rawChats.forEach((item, idx) => {
@@ -1413,6 +1415,7 @@ function renderChatListRows(cachedObject) {
         const row = cachedObject[k];
         createChatRowElement(row.chatId, row.recipient, row.chatData);
     });
+    applyChatFilter();
 }
 
 function createChatRowElement(chatId, uData, chatData) {
@@ -1424,11 +1427,14 @@ function createChatRowElement(chatId, uData, chatData) {
 
     let msgKeys = chatData.messages ? Object.keys(chatData.messages) : [];
     let lastMsgText = "Nenhuma mensagem";
+    let isUnread = false;
     if (msgKeys.length > 0) {
         let lastMsg = chatData.messages[msgKeys[msgKeys.length - 1]];
         if (lastMsg.deletedForAll) lastMsgText = "🚫 Mensagem apagada";
         else lastMsgText = lastMsg.text || (lastMsg.audio ? "🎵 Áudio" : "📷 Mídia");
+        isUnread = lastMsg.senderId && lastMsg.senderId !== currentUser.uid && lastMsg.status !== 'read';
     }
+    row.dataset.unread = isUnread ? 'true' : 'false';
 
     const blockBadge = isBlocked(uData.uid) ? `<span class="header-badge blocked-list-badge">BLOQUEADO</span>` : '';
 
@@ -1440,6 +1446,7 @@ function createChatRowElement(chatId, uData, chatData) {
             </div>
             <p>${lastMsgText}</p>
         </div>
+        ${isUnread ? '<span class="unread-dot"></span>' : ''}
     `;
     row.addEventListener('click', () => {
         if (activeChatId === chatId && !document.getElementById('chat-room-screen').classList.contains('hidden')) {
@@ -3235,12 +3242,138 @@ document.getElementById('btn-confirm-create-group').addEventListener('click', ()
     };
 
     ref.set(payload).then(() => {
+        const spaceId = document.getElementById('group-space-select').value;
+        if (spaceId) database.ref(`spaces/${spaceId}/groupIds/${ref.key}`).set(true);
         document.getElementById('create-group-modal').classList.add('hidden');
         switchMainTab('groups');
         loadGroupsList();
         triggerSystemPopup('Grupo criado!', `"${name}" foi criado com sucesso.`, payload.avatar);
     });
 });
+
+// ═════════════════════════════════════════════════════════════════════════
+// FILTROS DA LISTA DE CONVERSAS (Conversas / Não lidas / Grupos)
+// ═════════════════════════════════════════════════════════════════════════
+let activeChatFilter = 'todas';
+
+function applyChatFilter() {
+    document.querySelectorAll('#chats-list .chat-item-row').forEach(row => {
+        const show = activeChatFilter === 'todas' || (activeChatFilter === 'nao-lidas' && row.dataset.unread === 'true');
+        row.classList.toggle('filtered-out', !show);
+    });
+}
+
+document.querySelectorAll('.filter-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const val = btn.dataset.filterValue;
+        if (val === 'grupos') { switchMainTab('groups'); return; }
+        activeChatFilter = val;
+        document.querySelectorAll('.filter-pill').forEach(b => b.classList.toggle('active', b.dataset.filterValue === val));
+        applyChatFilter();
+    });
+});
+
+// ═════════════════════════════════════════════════════════════════════════
+// SIDEBAR DE ESPAÇOS (rail estilo FluffyChat — organiza grupos em coleções)
+// ═════════════════════════════════════════════════════════════════════════
+let allSpaces = {};          // { spaceId: {name, color, ownerId, groupIds} }
+let activeSpaceFilterId = null;
+
+function loadSpacesList() {
+    if (!currentUser || currentUser.uid === 'offline_user') return;
+    database.ref('spaces').on('value', snap => {
+        allSpaces = {};
+        const railList = document.getElementById('spaces-rail-list');
+        const selectEl = document.getElementById('group-space-select');
+        railList.innerHTML = '';
+        selectEl.innerHTML = '<option value="">Nenhum espaço</option>';
+
+        snap.forEach(child => {
+            const s = child.val();
+            if (!s || s.ownerId !== currentUser.uid) return;
+            allSpaces[child.key] = s;
+
+            const btn = document.createElement('button');
+            btn.className = 'space-rail-icon';
+            btn.style.background = s.color || '#0a84ff';
+            btn.title = s.name || 'Espaço';
+            btn.dataset.spaceId = child.key;
+            btn.innerText = (s.name || '?').trim().charAt(0).toUpperCase();
+            if (activeSpaceFilterId === child.key) btn.classList.add('active-rail');
+            btn.addEventListener('click', () => selectSpace(child.key));
+            railList.appendChild(btn);
+
+            const opt = document.createElement('option');
+            opt.value = child.key;
+            opt.innerText = s.name || 'Espaço';
+            selectEl.appendChild(opt);
+        });
+    });
+}
+
+function selectSpace(spaceId) {
+    activeSpaceFilterId = spaceId;
+    document.getElementById('rail-home-btn').classList.remove('active-rail');
+    document.querySelectorAll('.space-rail-icon').forEach(b => b.classList.toggle('active-rail', b.dataset.spaceId === spaceId));
+    switchMainTab('groups');
+    applyGroupsSpaceFilter();
+}
+
+function applyGroupsSpaceFilter() {
+    const space = activeSpaceFilterId ? allSpaces[activeSpaceFilterId] : null;
+    document.querySelectorAll('#groups-list .chat-item-row').forEach(row => {
+        const show = !space || (space.groupIds && space.groupIds[row.dataset.groupId]);
+        row.classList.toggle('filtered-out', !show);
+    });
+}
+
+document.getElementById('rail-home-btn').addEventListener('click', () => {
+    activeSpaceFilterId = null;
+    document.getElementById('rail-home-btn').classList.add('active-rail');
+    document.querySelectorAll('.space-rail-icon').forEach(b => b.classList.remove('active-rail'));
+    switchMainTab('chats');
+});
+
+document.getElementById('rail-add-people-btn').addEventListener('click', () => {
+    document.getElementById('btn-new-chat').click();
+});
+
+// ── Criar espaço ────────────────────────────────────────────────────────────
+let selectedSpaceColor = '#D97757';
+document.getElementById('rail-add-space-btn').addEventListener('click', () => {
+    if (currentUser.uid === 'offline_user') return alert('Indisponível no modo offline.');
+    document.getElementById('space-name-input').value = '';
+    document.getElementById('create-space-modal').classList.remove('hidden');
+});
+document.getElementById('btn-close-create-space').addEventListener('click', () => {
+    document.getElementById('create-space-modal').classList.add('hidden');
+});
+document.querySelectorAll('.space-color-swatch').forEach(btn => {
+    btn.addEventListener('click', () => {
+        selectedSpaceColor = btn.dataset.spaceColor;
+        document.querySelectorAll('.space-color-swatch').forEach(b => b.classList.remove('active-space-color'));
+        btn.classList.add('active-space-color');
+    });
+});
+document.getElementById('btn-confirm-create-space').addEventListener('click', () => {
+    const name = document.getElementById('space-name-input').value.trim();
+    if (!name) return alert('Digite o nome do espaço.');
+    const ref = database.ref('spaces').push();
+    ref.set({
+        id: ref.key, name, color: selectedSpaceColor, ownerId: currentUser.uid,
+        groupIds: {}, createdAt: firebase.database.ServerValue.TIMESTAMP
+    }).then(() => {
+        document.getElementById('create-space-modal').classList.add('hidden');
+        triggerSystemPopup('Espaço criado!', `"${name}" já está na sua sidebar.`, DEFAULT_AVATAR);
+    });
+});
+
+// Reaplica o filtro de espaço sempre que a lista de grupos for atualizada
+const _origLoadGroupsList = loadGroupsList;
+loadGroupsList = function () {
+    _origLoadGroupsList();
+    setTimeout(applyGroupsSpaceFilter, 300);
+};
 
 // ═════════════════════════════════════════════════════════════════════════
 // CHAMADAS DE VOZ E VÍDEO (via Agora — só conversas diretas, sem grupo)
