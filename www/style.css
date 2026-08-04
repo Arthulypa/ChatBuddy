@@ -109,6 +109,18 @@ html[data-bubble-mode="gradient"][data-bubble-gradient="aurora"]     { --msg-sen
 }
 .space-rail-icon:hover, .space-rail-icon.active-rail { border-radius: 12px; box-shadow: 0 0 0 2px var(--surface-1), 0 0 0 3.5px var(--ios-blue); }
 
+/* ── Alternador Grupo / Espaço (modal de criação, estilo FluffyChat) ────────── */
+.type-toggle-wrap {
+    display: flex; gap: 4px; padding: 4px; margin: 0 auto 18px; width: fit-content;
+    background: rgba(255,255,255,0.06); border-radius: 20px; border: 1px solid var(--glass-border);
+}
+.type-toggle-btn {
+    display: flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 16px; border: none;
+    background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.type-toggle-btn.active-type-toggle { background: rgba(255,255,255,0.12); color: var(--text-main); }
+
 /* ── Filtros acima da busca (Conversas / Não lidas / Grupos) ────────────────── */
 .chat-filter-pills { display: flex; gap: 8px; padding: 10px 12px 4px; }
 .filter-pill {
@@ -253,8 +265,14 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
         left: 84px;
     }
     .app-container > header { top: 10px; height: 60px; z-index: 10; border-radius: 14px 14px 0 0; }
-    .app-container > nav { top: 70px; height: 44px; z-index: 10; }
-    .app-container > .tab-content-container { top: 114px; bottom: 10px; height: auto !important; border-radius: 0 0 14px 14px; border: 1px solid var(--glass-border); border-top: none; }
+    /* A barra de abas (Conversas/Grupos/Status/Chamadas) some no PC/tablet: a navegação
+       fica só na sidebar de espaços, e os filtros (Todas/Não lidas/Grupos) já ficam
+       acima da busca dentro do próprio painel. */
+    .app-container > nav { display: none !important; }
+    .app-container > .tab-content-container { top: 70px; bottom: 10px; height: auto !important; border-radius: 0 0 14px 14px; border: 1px solid var(--glass-border); border-top: none; }
+
+    /* O "+" flutuante some no PC/tablet: criar conversa/grupo/espaço já fica na sidebar. */
+    .btn-fab { display: none !important; }
 
     .chat-room-screen {
         position: absolute !important;
