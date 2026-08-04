@@ -2113,11 +2113,9 @@ document.getElementById('btn-logout').addEventListener('click', () => {
     }
 });
 
-// Navegação de abas nativa principal
+// Navegação de abas nativa principal (só Conversas e Grupos)
 document.getElementById('tab-chats').addEventListener('click', () => switchMainTab('chats'));
 document.getElementById('tab-groups').addEventListener('click', () => { switchMainTab('groups'); loadGroupsList(); });
-document.getElementById('tab-status').addEventListener('click', () => switchMainTab('status'));
-document.getElementById('tab-calls').addEventListener('click', () => { switchMainTab('calls'); loadCallsList(); });
 
 function switchMainTab(target) {
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
@@ -3127,11 +3125,24 @@ document.getElementById('add-member-search').addEventListener('input', () => {
     }, 300);
 });
 
-// ─── CRIAR GRUPO ────────────────────────────────────────────────────────────
+// ─── CRIAR GRUPO / ESPAÇO (modal unificado, estilo FluffyChat) ─────────────
 const selectedGroupMembers = new Map(); // uid -> userData
 let groupAvatarBase64 = '';
+let createType = 'group'; // 'group' | 'space' — controla qual formulário fica visível
 
-document.getElementById('btn-new-group').addEventListener('click', () => {
+function setCreateType(type) {
+    createType = type;
+    document.getElementById('toggle-type-group').classList.toggle('active-type-toggle', type === 'group');
+    document.getElementById('toggle-type-space').classList.toggle('active-type-toggle', type === 'space');
+    document.getElementById('group-fields-container').classList.toggle('hidden', type !== 'group');
+    document.getElementById('space-fields-container').classList.toggle('hidden', type !== 'space');
+    document.getElementById('create-modal-title').innerText = type === 'group' ? 'Criar Grupo' : 'Criar Espaço';
+    document.getElementById('btn-confirm-create-group').innerText = type === 'group' ? 'Criar Grupo' : 'Criar Espaço';
+}
+
+// Abre o modal unificado. Se `forceGroup` for true, o alternador Grupo/Espaço
+// fica escondido e só é possível criar um grupo (usado dentro de um espaço e no FAB mobile).
+function openCreateModal(forceGroup) {
     selectedGroupMembers.clear();
     groupAvatarBase64 = '';
     document.getElementById('group-name-input').value = '';
@@ -3141,12 +3152,32 @@ document.getElementById('btn-new-group').addEventListener('click', () => {
     document.getElementById('group-selected-members').innerHTML = '';
     document.getElementById('group-avatar-preview').classList.add('hidden');
     document.getElementById('group-avatar-placeholder').style.display = 'flex';
+    document.getElementById('space-name-input').value = '';
+
+    const toggleWrap = document.getElementById('create-type-toggle');
+    toggleWrap.classList.toggle('hidden', !!forceGroup);
+    setCreateType('group');
+
+    // Se estivermos dentro de um espaço específico, o novo grupo já nasce vinculado a ele.
+    const spaceSelect = document.getElementById('group-space-select');
+    if (typeof activeSpaceFilterId !== 'undefined' && activeSpaceFilterId && spaceSelect.querySelector(`option[value="${activeSpaceFilterId}"]`)) {
+        spaceSelect.value = activeSpaceFilterId;
+    } else {
+        spaceSelect.value = '';
+    }
+
     document.getElementById('create-group-modal').classList.remove('hidden');
-});
+}
+
+// FAB mobile (dentro da aba Grupos): cria só grupo, sem alternador.
+document.getElementById('btn-new-group').addEventListener('click', () => openCreateModal(true));
 
 document.getElementById('btn-close-create-group').addEventListener('click', () => {
     document.getElementById('create-group-modal').classList.add('hidden');
 });
+
+document.getElementById('toggle-type-group').addEventListener('click', () => setCreateType('group'));
+document.getElementById('toggle-type-space').addEventListener('click', () => setCreateType('space'));
 
 document.getElementById('group-avatar-file').addEventListener('change', (e) => {
     const file = e.target.files[0];
@@ -3219,7 +3250,7 @@ function updateSelectedMembersDisplay() {
     });
 }
 
-document.getElementById('btn-confirm-create-group').addEventListener('click', () => {
+function confirmCreateGroup() {
     const name = document.getElementById('group-name-input').value.trim();
     if (!name) return alert('Digite o nome do grupo.');
 
@@ -3249,6 +3280,14 @@ document.getElementById('btn-confirm-create-group').addEventListener('click', ()
         loadGroupsList();
         triggerSystemPopup('Grupo criado!', `"${name}" foi criado com sucesso.`, payload.avatar);
     });
+}
+
+document.getElementById('btn-confirm-create-group').addEventListener('click', () => {
+    if (createType === 'space') {
+        confirmCreateSpace();
+    } else {
+        confirmCreateGroup();
+    }
 });
 
 // ═════════════════════════════════════════════════════════════════════════
@@ -3314,6 +3353,7 @@ function loadSpacesList() {
 function selectSpace(spaceId) {
     activeSpaceFilterId = spaceId;
     document.getElementById('rail-home-btn').classList.remove('active-rail');
+    document.getElementById('rail-groups-btn').classList.remove('active-rail');
     document.querySelectorAll('.space-rail-icon').forEach(b => b.classList.toggle('active-rail', b.dataset.spaceId === spaceId));
     switchMainTab('groups');
     applyGroupsSpaceFilter();
@@ -3330,24 +3370,36 @@ function applyGroupsSpaceFilter() {
 document.getElementById('rail-home-btn').addEventListener('click', () => {
     activeSpaceFilterId = null;
     document.getElementById('rail-home-btn').classList.add('active-rail');
+    document.getElementById('rail-groups-btn').classList.remove('active-rail');
     document.querySelectorAll('.space-rail-icon').forEach(b => b.classList.remove('active-rail'));
     switchMainTab('chats');
+});
+
+// Item fixo "Grupos" na sidebar (abaixo de Conversas), fora de qualquer espaço
+document.getElementById('rail-groups-btn').addEventListener('click', () => {
+    activeSpaceFilterId = null;
+    document.getElementById('rail-home-btn').classList.remove('active-rail');
+    document.getElementById('rail-groups-btn').classList.add('active-rail');
+    document.querySelectorAll('.space-rail-icon').forEach(b => b.classList.remove('active-rail'));
+    switchMainTab('groups');
+    loadGroupsList();
 });
 
 document.getElementById('rail-add-people-btn').addEventListener('click', () => {
     document.getElementById('btn-new-chat').click();
 });
 
-// ── Criar espaço ────────────────────────────────────────────────────────────
+// ── Criar espaço (reaproveita o modal unificado acima) ─────────────────────
 let selectedSpaceColor = '#D97757';
+
+// Botão "+" da sidebar: se já estiver dentro de um espaço, só cria grupo
+// (sem alternador); no nível raiz (Conversas/Grupos), mostra o alternador Grupo/Espaço.
 document.getElementById('rail-add-space-btn').addEventListener('click', () => {
     if (currentUser.uid === 'offline_user') return alert('Indisponível no modo offline.');
-    document.getElementById('space-name-input').value = '';
-    document.getElementById('create-space-modal').classList.remove('hidden');
+    const insideSpace = typeof activeSpaceFilterId !== 'undefined' && !!activeSpaceFilterId;
+    openCreateModal(insideSpace);
 });
-document.getElementById('btn-close-create-space').addEventListener('click', () => {
-    document.getElementById('create-space-modal').classList.add('hidden');
-});
+
 document.querySelectorAll('.space-color-swatch').forEach(btn => {
     btn.addEventListener('click', () => {
         selectedSpaceColor = btn.dataset.spaceColor;
@@ -3355,7 +3407,8 @@ document.querySelectorAll('.space-color-swatch').forEach(btn => {
         btn.classList.add('active-space-color');
     });
 });
-document.getElementById('btn-confirm-create-space').addEventListener('click', () => {
+
+function confirmCreateSpace() {
     const name = document.getElementById('space-name-input').value.trim();
     if (!name) return alert('Digite o nome do espaço.');
     const ref = database.ref('spaces').push();
@@ -3363,10 +3416,10 @@ document.getElementById('btn-confirm-create-space').addEventListener('click', ()
         id: ref.key, name, color: selectedSpaceColor, ownerId: currentUser.uid,
         groupIds: {}, createdAt: firebase.database.ServerValue.TIMESTAMP
     }).then(() => {
-        document.getElementById('create-space-modal').classList.add('hidden');
+        document.getElementById('create-group-modal').classList.add('hidden');
         triggerSystemPopup('Espaço criado!', `"${name}" já está na sua sidebar.`, DEFAULT_AVATAR);
     });
-});
+}
 
 // Reaplica o filtro de espaço sempre que a lista de grupos for atualizada
 const _origLoadGroupsList = loadGroupsList;
