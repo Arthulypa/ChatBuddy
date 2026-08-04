@@ -1041,13 +1041,25 @@ document.getElementById('media-viewer-close').addEventListener('click', () => {
 
 // ─── LONG PRESS ─────────────────────────────────────────────────────────────
 function applyLongPress(element, callback, onStart, onCancel) {
-    let timer = null; let moved = false;
-    const start = (e) => {
-        moved = false; onStart && onStart(e);
-        timer = setTimeout(() => { if (!moved) callback(e); }, 500);
+    let timer = null; let startX = 0; let startY = 0; let cancelled = false;
+    const MOVE_TOLERANCE = 12; // px — tolera o tremor natural do dedo sem cancelar o "segurar"
+
+    const getXY = (e) => {
+        if (e.touches && e.touches[0]) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+        return { x: e.clientX, y: e.clientY };
     };
-    const cancel = () => { clearTimeout(timer); onCancel && onCancel(); };
-    const move = () => { moved = true; cancel(); };
+
+    const start = (e) => {
+        const { x, y } = getXY(e);
+        startX = x; startY = y; cancelled = false;
+        onStart && onStart(e);
+        timer = setTimeout(() => { if (!cancelled) callback(e); }, 500);
+    };
+    const cancel = () => { clearTimeout(timer); cancelled = true; onCancel && onCancel(); };
+    const move = (e) => {
+        const { x, y } = getXY(e);
+        if (Math.abs(x - startX) > MOVE_TOLERANCE || Math.abs(y - startY) > MOVE_TOLERANCE) cancel();
+    };
     element.addEventListener('touchstart',  start,  { passive: true });
     element.addEventListener('touchend',    cancel, { passive: true });
     element.addEventListener('touchmove',   move,   { passive: true });
