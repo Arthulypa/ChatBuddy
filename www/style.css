@@ -413,6 +413,7 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 
 .message {
     max-width: 72%; padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.45; display: flex; flex-direction: column; position: relative; word-break: break-word; transition: transform 0.15s ease, box-shadow 0.15s ease; user-select: none; -webkit-user-select: none;
+    touch-action: manipulation; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; cursor: pointer;
 }
 .message.sent     { background: var(--msg-sent);     align-self: flex-end;   border-bottom-right-radius: 4px; color: var(--msg-sent-text); }
 .message.received { background: var(--msg-received); align-self: flex-start; border-bottom-left-radius: 4px;  color: var(--text-main); }
