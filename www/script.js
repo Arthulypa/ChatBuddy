@@ -2208,6 +2208,8 @@ document.getElementById('tab-spaces').addEventListener('click', () => { switchMa
 document.getElementById('tab-groups').addEventListener('click', () => { switchMainTab('groups'); loadGroupsList(); });
 
 function switchMainTab(target) {
+    // Se a tela de um espaço estiver aberta na área de seleção, fecha antes de trocar de aba
+    if (typeof activeSpaceRoomId !== 'undefined' && activeSpaceRoomId) closeSpaceRoom();
     document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
     document.getElementById(`tab-${target}`).classList.add('active');
@@ -3677,9 +3679,10 @@ function openSpaceRoom(spaceId) {
     renderSpaceRoomHeader();
     renderSpaceGroupsList();
 
+    // Esconde a aba atual (Conversas/Espaços/Grupos) e mostra a tela do espaço
+    // no mesmo lugar — a lista de grupos do espaço fica na parte de selecionar o chat.
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
     document.getElementById('space-room-screen').classList.remove('hidden');
-    const emptyPanel = document.getElementById('empty-chat-panel');
-    if (emptyPanel) emptyPanel.classList.add('hidden');
 }
 
 function renderSpaceRoomHeader() {
@@ -3729,12 +3732,13 @@ function closeSpaceRoom() {
     document.querySelectorAll('.space-rail-icon').forEach(b => b.classList.remove('active-rail'));
     activeSpaceRoomId = null;
     activeSpaceRoomData = null;
+    // Volta a mostrar a lista da aba Espaços no lugar onde a tela do espaço estava
+    const spacesPane = document.getElementById('content-spaces');
+    if (spacesPane) spacesPane.classList.remove('hidden');
 }
 
 document.getElementById('btn-back-space').addEventListener('click', () => {
     closeSpaceRoom();
-    const emptyPanel = document.getElementById('empty-chat-panel');
-    if (emptyPanel) emptyPanel.classList.remove('hidden');
 });
 
 // Criar grupo já vinculado a este espaço específico
