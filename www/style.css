@@ -265,14 +265,16 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
         left: 84px;
     }
     .app-container > header { top: 10px; height: 60px; z-index: 10; border-radius: 14px 14px 0 0; }
-    /* No PC/tablet a barra de abas (Conversas/Espaços/Grupos) fica visível dentro do
-       mesmo painel da lista — é aqui que a seleção de espaço também mora agora,
-       em vez de ficar isolada na sidebar. */
-    .app-container > nav { display: flex !important; top: 70px; height: 44px; z-index: 9; border-radius: 0; border: 1px solid var(--glass-border); border-top: none; border-bottom: none; }
-    .app-container > .tab-content-container { top: 114px; bottom: 10px; height: auto !important; border-radius: 0 0 14px 14px; border: 1px solid var(--glass-border); border-top: none; }
+    /* No PC/tablet a barra de abas (Conversas/Espaços/Grupos) não existe mais — Conversas e Grupos
+       ficam nos ícones fixos da sidebar de espaços, e cada espaço vira sua própria bolinha ali também. */
+    .app-container > nav { display: none !important; }
+    .app-container > .tab-content-container { top: 70px; bottom: 10px; height: auto !important; border-radius: 0 0 14px 14px; border: 1px solid var(--glass-border); border-top: none; }
 
-    /* O "+" flutuante some no PC/tablet: criar conversa/grupo/espaço já fica na sidebar. */
+    /* O "+" flutuante some no PC/tablet: criar conversa/grupo/espaço já fica na sidebar.
+       Exceção: o botão de criar grupo DENTRO de um espaço aberto continua visível,
+       porque essa ação só existe ali dentro, não tem equivalente na sidebar. */
     .btn-fab { display: none !important; }
+    #btn-new-group-in-space { display: flex !important; }
 
     .chat-room-screen {
         position: absolute !important;
