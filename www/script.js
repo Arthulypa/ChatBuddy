@@ -755,7 +755,7 @@ function openChatRoom(chatId, recipientData) {
     if (activeGroupId) closeGroupRoom();
 
     // Novo chat sendo aberto: reseta o controle de "já animado" (a primeira carga pode animar normalmente)
-    if (activeChatId !== chatId) renderedMsgIds = new Set();
+    if (activeChatId !== chatId) { renderedMsgIds = new Set(); lastMsgRenderOrderIds = []; lastMsgRenderFingerprint = []; }
 
     activeChatId      = chatId;
     activeRecipientId = recipientData.uid;
@@ -819,10 +819,118 @@ function openChatRoom(chatId, recipientData) {
     }
 }
 
+let lastMsgRenderOrderIds = []; // ids na ordem da última renderização
+let lastMsgRenderFingerprint = []; // "impressão digital" de cada mensagem já renderizada (id+status+edição)
+
+function fingerprintDirectMsg(data) {
+    return `${data.id}|${data.status || ''}|${data.edited ? 1 : 0}|${data.deletedForAll ? 1 : 0}`;
+}
+
+// Monta o elemento de uma mensagem (extraído pra poder reaproveitar tanto no render completo
+// quanto na atualização incremental — é isso que evita recriar o histórico inteiro a cada envio)
+function buildDirectMessageWrapper(data, idx, allMessages, recipientData) {
+    const isSent  = data.senderId === currentUser.uid;
+    const prevMsg = idx > 0 ? allMessages[idx - 1] : null;
+    const nextMsg = idx < allMessages.length - 1 ? allMessages[idx + 1] : null;
+
+    const sameAsPrev = prevMsg && prevMsg.senderId === data.senderId && !prevMsg.deletedForAll && !data.deletedForAll;
+    const sameAsNext = nextMsg && nextMsg.senderId === data.senderId && !nextMsg.deletedForAll && !data.deletedForAll;
+
+    if (data.deletedForAll) {
+        const wrapper = document.createElement('div');
+        wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+        wrapper.dataset.msgId = data.id;
+        if (renderedMsgIds.has(data.id)) wrapper.classList.add('no-anim');
+        else renderedMsgIds.add(data.id);
+        const card = document.createElement('div');
+        card.className = `message ${isSent ? 'sent' : 'received'} deleted-msg`;
+        card.innerHTML = `<p>🚫 Mensagem apagada</p>`;
+        wrapper.appendChild(card);
+        return wrapper;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+    // Agrupamento: reduz espaçamento entre mensagens do mesmo remetente
+    if (sameAsPrev) wrapper.classList.add('grouped-msg');
+    wrapper.dataset.msgId = data.id;
+    // Só anima quem é realmente novo — mensagens já vistas antes não repetem a animação de entrada
+    if (renderedMsgIds.has(data.id)) wrapper.classList.add('no-anim');
+    else renderedMsgIds.add(data.id);
+
+    const arrow = document.createElement('div');
+    arrow.className = 'reply-arrow';
+    arrow.innerHTML = `<svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>`;
+
+    const card = document.createElement('div');
+    card.className = `message ${isSent ? 'sent' : 'received'}`;
+
+    // Bordas arredondadas estilo Instagram
+    if (isSent) {
+        if (sameAsPrev && sameAsNext) card.classList.add('bubble-mid-sent');
+        else if (sameAsPrev && !sameAsNext) card.classList.add('bubble-last-sent');
+        else if (!sameAsPrev && sameAsNext) card.classList.add('bubble-first-sent');
+    } else {
+        if (sameAsPrev && sameAsNext) card.classList.add('bubble-mid-received');
+        else if (sameAsPrev && !sameAsNext) card.classList.add('bubble-last-received');
+        else if (!sameAsPrev && sameAsNext) card.classList.add('bubble-first-received');
+    }
+
+    if(data.status === 'offline_pending') card.classList.add('is-offline-pending');
+
+    let quotedHtml = '';
+    if (data.replyTo) {
+        const who = data.replyTo.senderId === currentUser.uid ? 'Você' : getDisplayName(recipientData);
+        quotedHtml = `<div class="quoted-msg"><span>${who}</span>${data.replyTo.text || '📷 Mídia'}</div>`;
+    }
+
+    let content = quotedHtml;
+    if (data.image) {
+        content += `<img src="${data.image}" class="message-img media-target">`;
+    } else if (data.video) {
+        content += `<video src="${data.video}" class="message-video media-target" controls></video>`;
+    } else if (data.document) {
+        const sizeKB = data.documentSize ? Math.round(data.documentSize/1024) : '?';
+        content += `<a href="${data.document}" download="${data.documentName || 'arquivo'}" class="doc-message-link" onclick="event.stopPropagation()">
+            <svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><path fill="currentColor" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+            <div><span class="doc-name">${data.documentName || 'Arquivo'}</span><span class="doc-size">${sizeKB} KB</span></div>
+        </a>`;
+    } else if (data.audio) {
+        const durationFormatted = data.audioDuration ? formatAudioTime(data.audioDuration) : "0:00";
+        content += `
+            <div class="audio-message-container">
+                <button class="audio-play-btn" onclick="playAudioMessage('${data.audio}', this)">
+                    <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                <div class="audio-progress-bar-wrapper">
+                    <div class="audio-progress-bar-fill"></div>
+                </div>
+                <span class="audio-duration-tag">${durationFormatted}</span>
+            </div>
+        `;
+    }
+    
+    content += data.text  ? `<p>${data.text}</p>` : '';
+    if (data.edited) content += `<span class="edited-tag">Editada</span>`;
+    // Ticks só na última mensagem do grupo (ou se for única)
+    const ticks = isSent ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
+    card.innerHTML = content + ticks;
+
+    applyLongPress(card, (e) => {
+        card.classList.remove('pressing');
+        openContextMenu(data, card, wrapper, e);
+    }, () => card.classList.add('pressing'), () => card.classList.remove('pressing'));
+
+    applySwipeToReply(wrapper, card, arrow, data);
+
+    if (isSent) { wrapper.appendChild(card); wrapper.appendChild(arrow); }
+    else        { wrapper.appendChild(arrow); wrapper.appendChild(card); }
+    return wrapper;
+}
+
 function renderMessages(snap, recipientData, isRawArray = false) {
     const box = document.getElementById('messages-container');
     const prevScrollBottom = box.scrollHeight - box.scrollTop - box.clientHeight;
-    box.innerHTML = '';
 
     const cachePayload = {};
 
@@ -837,106 +945,34 @@ function renderMessages(snap, recipientData, isRawArray = false) {
         allMessages.push(data);
     });
 
-    // Renderiza com agrupamento estilo Instagram
-    allMessages.forEach((data, idx) => {
-        const isSent  = data.senderId === currentUser.uid;
-        const prevMsg = idx > 0 ? allMessages[idx - 1] : null;
-        const nextMsg = idx < allMessages.length - 1 ? allMessages[idx + 1] : null;
-
-        const sameAsPrev = prevMsg && prevMsg.senderId === data.senderId && !prevMsg.deletedForAll && !data.deletedForAll;
-        const sameAsNext = nextMsg && nextMsg.senderId === data.senderId && !nextMsg.deletedForAll && !data.deletedForAll;
-
-        if (data.deletedForAll) {
-            const wrapper = document.createElement('div');
-            wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
-            if (renderedMsgIds.has(data.id)) wrapper.classList.add('no-anim');
-            else renderedMsgIds.add(data.id);
-            const card = document.createElement('div');
-            card.className = `message ${isSent ? 'sent' : 'received'} deleted-msg`;
-            card.innerHTML = `<p>🚫 Mensagem apagada</p>`;
-            wrapper.appendChild(card);
-            box.appendChild(wrapper);
-            return;
+    const newOrder = allMessages.map(m => m.id);
+    const newFingerprints = allMessages.map(fingerprintDirectMsg);
+    // Só entra no caminho rápido (atualizar só a "cauda") se todo o histórico anterior,
+    // exceto no máximo a última mensagem, estiver idêntico ao que já foi renderizado.
+    // Isso evita recriar tudo a cada envio, mas ainda pega recibos de leitura em mensagens antigas.
+    const oldLen = lastMsgRenderFingerprint.length;
+    let canAppendOnly = box.children.length > 0 && oldLen > 0 && newFingerprints.length >= oldLen;
+    if (canAppendOnly) {
+        for (let i = 0; i < oldLen - 1; i++) {
+            if (newFingerprints[i] !== lastMsgRenderFingerprint[i]) { canAppendOnly = false; break; }
         }
+    }
 
-        const wrapper = document.createElement('div');
-        wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
-        // Agrupamento: reduz espaçamento entre mensagens do mesmo remetente
-        if (sameAsPrev) wrapper.classList.add('grouped-msg');
-        wrapper.dataset.msgId = data.id;
-        // Só anima quem é realmente novo — mensagens já vistas antes não repetem a animação de entrada
-        if (renderedMsgIds.has(data.id)) wrapper.classList.add('no-anim');
-        else renderedMsgIds.add(data.id);
-
-        const arrow = document.createElement('div');
-        arrow.className = 'reply-arrow';
-        arrow.innerHTML = `<svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>`;
-
-        const card = document.createElement('div');
-        card.className = `message ${isSent ? 'sent' : 'received'}`;
-
-        // Bordas arredondadas estilo Instagram
-        if (isSent) {
-            if (sameAsPrev && sameAsNext) card.classList.add('bubble-mid-sent');
-            else if (sameAsPrev && !sameAsNext) card.classList.add('bubble-last-sent');
-            else if (!sameAsPrev && sameAsNext) card.classList.add('bubble-first-sent');
-        } else {
-            if (sameAsPrev && sameAsNext) card.classList.add('bubble-mid-received');
-            else if (sameAsPrev && !sameAsNext) card.classList.add('bubble-last-received');
-            else if (!sameAsPrev && sameAsNext) card.classList.add('bubble-first-received');
+    if (canAppendOnly) {
+        const staleFromIdx = Math.max(0, oldLen - 1);
+        for (let i = staleFromIdx; i < oldLen; i++) {
+            const oldEl = box.querySelector(`[data-msg-id="${lastMsgRenderOrderIds[i]}"]`);
+            if (oldEl) oldEl.remove();
         }
-
-        if(data.status === 'offline_pending') card.classList.add('is-offline-pending');
-
-        let quotedHtml = '';
-        if (data.replyTo) {
-            const who = data.replyTo.senderId === currentUser.uid ? 'Você' : getDisplayName(recipientData);
-            quotedHtml = `<div class="quoted-msg"><span>${who}</span>${data.replyTo.text || '📷 Mídia'}</div>`;
+        for (let i = staleFromIdx; i < allMessages.length; i++) {
+            box.appendChild(buildDirectMessageWrapper(allMessages[i], i, allMessages, recipientData));
         }
-
-        let content = quotedHtml;
-        if (data.image) {
-            content += `<img src="${data.image}" class="message-img media-target">`;
-        } else if (data.video) {
-            content += `<video src="${data.video}" class="message-video media-target" controls></video>`;
-        } else if (data.document) {
-            const sizeKB = data.documentSize ? Math.round(data.documentSize/1024) : '?';
-            content += `<a href="${data.document}" download="${data.documentName || 'arquivo'}" class="doc-message-link" onclick="event.stopPropagation()">
-                <svg viewBox="0 0 24 24" style="width:20px;height:20px;flex-shrink:0;"><path fill="currentColor" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-                <div><span class="doc-name">${data.documentName || 'Arquivo'}</span><span class="doc-size">${sizeKB} KB</span></div>
-            </a>`;
-        } else if (data.audio) {
-            const durationFormatted = data.audioDuration ? formatAudioTime(data.audioDuration) : "0:00";
-            content += `
-                <div class="audio-message-container">
-                    <button class="audio-play-btn" onclick="playAudioMessage('${data.audio}', this)">
-                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                    </button>
-                    <div class="audio-progress-bar-wrapper">
-                        <div class="audio-progress-bar-fill"></div>
-                    </div>
-                    <span class="audio-duration-tag">${durationFormatted}</span>
-                </div>
-            `;
-        }
-        
-        content += data.text  ? `<p>${data.text}</p>` : '';
-        if (data.edited) content += `<span class="edited-tag">Editada</span>`;
-        // Ticks só na última mensagem do grupo (ou se for única)
-        const ticks = isSent ? `<div class="msg-meta-row">${buildTicks(data.status)}</div>` : '';
-        card.innerHTML = content + ticks;
-
-        applyLongPress(card, (e) => {
-            card.classList.remove('pressing');
-            openContextMenu(data, card, wrapper, e);
-        }, () => card.classList.add('pressing'), () => card.classList.remove('pressing'));
-
-        applySwipeToReply(wrapper, card, arrow, data);
-
-        if (isSent) { wrapper.appendChild(card); wrapper.appendChild(arrow); }
-        else        { wrapper.appendChild(arrow); wrapper.appendChild(card); }
-        box.appendChild(wrapper);
-    });
+    } else {
+        box.innerHTML = '';
+        allMessages.forEach((data, idx) => box.appendChild(buildDirectMessageWrapper(data, idx, allMessages, recipientData)));
+    }
+    lastMsgRenderOrderIds = newOrder;
+    lastMsgRenderFingerprint = newFingerprints;
 
     if(activeChatId && Object.keys(cachePayload).length > 0) {
         localStorage.setItem(`offline_hist_${activeChatId}`, JSON.stringify(cachePayload));
@@ -1338,6 +1374,8 @@ document.getElementById('btn-cancel-reply').addEventListener('click', () => {
 });
 
 // ─── LISTAGEM DE CONVERSAS ATIVAS ───────────────────────────────────────────
+const recipientProfileCache = {}; // uid -> dados do usuário, evita rebuscar pela rede toda vez que a lista atualiza
+
 function loadChatList() {
     if (currentUser.uid === "offline_user") {
         const localChats = localStorage.getItem('offline_chat_list');
@@ -1368,44 +1406,84 @@ function loadChatList() {
             return;
         }
 
-        // Busca todos os usuários em paralelo e só renderiza quando TODOS chegaram
+        // Só busca pela rede quem ainda não está em cache — é isso que fazia o app
+        // travar a cada mensagem enviada (rebuscava TODOS os perfis toda vez).
         const cacheListRows = {};
-        let resolved = 0;
-        const results = new Array(rawChats.length).fill(null);
+        const pending = rawChats.filter(item => !recipientProfileCache[item.recipientId]);
+        let waiting = pending.length;
 
-        function checkDone() {
-            if (resolved !== rawChats.length) return;
-            // Atualiza sem piscar: só limpa e re-renderiza no final
-            listContainer.innerHTML = '';
-            results.forEach(r => {
-                if (!r) return;
-                cacheListRows[r.chatId] = { chatId: r.chatId, recipient: r.uData, chatData: r.chatData };
-                createChatRowElement(r.chatId, r.uData, r.chatData);
+        function finishRender() {
+            rawChats.forEach(item => {
+                const uData = recipientProfileCache[item.recipientId];
+                if (!uData) return;
+                cacheListRows[item.chatId] = { chatId: item.chatId, recipient: uData, chatData: item.chatData };
             });
             try { localStorage.setItem('offline_chat_list', JSON.stringify(cacheListRows)); }
             catch (e) { /* armazenamento cheio: ignora silenciosamente, não trava o app */ }
             if (Object.keys(cacheListRows).length === 0) {
                 listContainer.innerHTML = `<div class="empty-state">Nenhuma conversa ativa.</div>`;
+                return;
             }
+            // Atualiza só o que mudou em vez de apagar e recriar a lista inteira
+            // (era isso que fazia a lista "piscar" toda vez que uma mensagem era enviada)
+            reconcileChatListDOM(rawChats);
             applyChatFilter();
         }
 
-        rawChats.forEach((item, idx) => {
+        if (waiting === 0) { finishRender(); return; }
+
+        pending.forEach(item => {
             database.ref(`users/${item.recipientId}`).once('value')
                 .then(uSnap => {
                     const uData = uSnap.val();
-                    if (uData) results[idx] = { chatId: item.chatId, uData, chatData: item.chatData };
+                    if (uData) recipientProfileCache[item.recipientId] = uData;
                 })
                 .catch(err => {
                     // Não deixa uma única falha (ex: permissão negada) travar a lista inteira para sempre
                     console.warn('Falha ao carregar usuário do chat:', item.recipientId, err);
                 })
                 .finally(() => {
-                    resolved++;
-                    checkDone();
+                    waiting--;
+                    if (waiting === 0) finishRender();
                 });
         });
     });
+}
+
+// Reconcilia a lista de conversas com o DOM atual: só cria linhas novas, atualiza
+// as que mudaram e remove as que sumiram — sem apagar tudo e recriar do zero.
+function reconcileChatListDOM(rawChats) {
+    const listContainer = document.getElementById('chats-list');
+    const existingRows = {};
+    listContainer.querySelectorAll(':scope > .chat-item-row').forEach(row => { existingRows[row.dataset.chatId] = row; });
+
+    const seen = new Set();
+    let cursor = null;
+    rawChats.forEach(item => {
+        const uData = recipientProfileCache[item.recipientId];
+        if (!uData) return;
+        seen.add(item.chatId);
+
+        let row = existingRows[item.chatId];
+        if (row) {
+            fillChatRowContent(row, item.chatId, uData, item.chatData);
+        } else {
+            row = buildChatRowElement(item.chatId, uData, item.chatData);
+        }
+
+        // Garante a ordem certa (mais recente primeiro) sem recriar o que já existe
+        const wantedNext = cursor ? cursor.nextSibling : listContainer.firstChild;
+        if (wantedNext !== row) listContainer.insertBefore(row, wantedNext);
+        cursor = row;
+    });
+
+    Object.keys(existingRows).forEach(chatId => {
+        if (!seen.has(chatId)) existingRows[chatId].remove();
+    });
+
+    if (listContainer.children.length === 0) {
+        listContainer.innerHTML = `<div class="empty-state">Nenhuma conversa ativa.</div>`;
+    }
 }
 
 function renderChatListRows(cachedObject) {
@@ -1418,13 +1496,7 @@ function renderChatListRows(cachedObject) {
     applyChatFilter();
 }
 
-function createChatRowElement(chatId, uData, chatData) {
-    const listContainer = document.getElementById('chats-list');
-    const row = document.createElement('div');
-    row.className = 'chat-item-row';
-    row.dataset.chatId = chatId;
-    if(chatId === activeChatId) row.classList.add('active-desktop-chat');
-
+function computeChatRowInfo(chatId, uData, chatData) {
     let msgKeys = chatData.messages ? Object.keys(chatData.messages) : [];
     let lastMsgText = "Nenhuma mensagem";
     let isUnread = false;
@@ -1434,20 +1506,32 @@ function createChatRowElement(chatId, uData, chatData) {
         else lastMsgText = lastMsg.text || (lastMsg.audio ? "🎵 Áudio" : "📷 Mídia");
         isUnread = lastMsg.senderId && lastMsg.senderId !== currentUser.uid && lastMsg.status !== 'read';
     }
-    row.dataset.unread = isUnread ? 'true' : 'false';
-
     const blockBadge = isBlocked(uData.uid) ? `<span class="header-badge blocked-list-badge">BLOQUEADO</span>` : '';
+    return { lastMsgText, isUnread, blockBadge };
+}
 
+// Preenche/atualiza o conteúdo de uma linha já existente (usado tanto na criação quanto na atualização)
+function fillChatRowContent(row, chatId, uData, chatData) {
+    const info = computeChatRowInfo(chatId, uData, chatData);
+    row.dataset.unread = info.isUnread ? 'true' : 'false';
+    row.classList.toggle('active-desktop-chat', chatId === activeChatId);
     row.innerHTML = `
         <img src="${uData.avatar}" alt="">
         <div class="chat-item-info">
             <div class="chat-item-header">
-                <h4>${getDisplayName(uData)}</h4>${blockBadge}
+                <h4>${getDisplayName(uData)}</h4>${info.blockBadge}
             </div>
-            <p>${lastMsgText}</p>
+            <p>${info.lastMsgText}</p>
         </div>
-        ${isUnread ? '<span class="unread-dot"></span>' : ''}
+        ${info.isUnread ? '<span class="unread-dot"></span>' : ''}
     `;
+}
+
+function buildChatRowElement(chatId, uData, chatData) {
+    const row = document.createElement('div');
+    row.className = 'chat-item-row';
+    row.dataset.chatId = chatId;
+    fillChatRowContent(row, chatId, uData, chatData);
     row.addEventListener('click', () => {
         if (activeChatId === chatId && !document.getElementById('chat-room-screen').classList.contains('hidden')) {
             closeChatRoom();
@@ -1457,7 +1541,12 @@ function createChatRowElement(chatId, uData, chatData) {
             openChatRoom(chatId, uData);
         }
     });
-    listContainer.appendChild(row);
+    return row;
+}
+
+// Mantido por compatibilidade com quem ainda chama do jeito antigo (cria e já anexa)
+function createChatRowElement(chatId, uData, chatData) {
+    document.getElementById('chats-list').appendChild(buildChatRowElement(chatId, uData, chatData));
 }
 
 // ─── BOTÃO ANEXAR — MENU DE MÍDIAS ──────────────────────────────────────────
@@ -2425,7 +2514,7 @@ function openGroupRoom(groupId, groupData) {
     if (activeChatId) closeChatRoom();
 
     // Novo grupo sendo aberto: reseta o controle de "já animado"
-    if (activeGroupId !== groupId) renderedGroupMsgIds = new Set();
+    if (activeGroupId !== groupId) { renderedGroupMsgIds = new Set(); lastGroupMsgRenderOrderIds = []; lastGroupMsgRenderFingerprint = []; }
 
     activeGroupId   = groupId;
     activeGroupData = groupData;
@@ -2479,10 +2568,104 @@ function openGroupRoom(groupId, groupData) {
 }
 
 // ─── RENDERIZAR MENSAGENS DO GRUPO ──────────────────────────────────────────
+let lastGroupMsgRenderOrderIds = [];
+let lastGroupMsgRenderFingerprint = [];
+
+function fingerprintGroupMsg(data) {
+    const seenCount = data.seenBy ? Object.keys(data.seenBy).length : 0;
+    return `${data.id}|${data.status || ''}|${seenCount}|${data.edited ? 1 : 0}|${data.deletedForAll ? 1 : 0}`;
+}
+
+function buildGroupMessageWrapper(data, idx, allMessages, groupData) {
+    const isSent  = data.senderId === currentUser.uid;
+    const prevMsg = idx > 0 ? allMessages[idx - 1] : null;
+    const nextMsg = idx < allMessages.length - 1 ? allMessages[idx + 1] : null;
+    const sameAsPrev = prevMsg && prevMsg.senderId === data.senderId;
+    const sameAsNext = nextMsg && nextMsg.senderId === data.senderId;
+
+    if (data.deletedForAll) {
+        const w = document.createElement('div');
+        w.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+        w.dataset.msgId = data.id;
+        if (renderedGroupMsgIds.has(data.id)) w.classList.add('no-anim');
+        else renderedGroupMsgIds.add(data.id);
+        const c = document.createElement('div');
+        c.className = `message ${isSent ? 'sent' : 'received'} deleted-msg`;
+        c.innerHTML = '<p>🚫 Mensagem apagada</p>';
+        w.appendChild(c);
+        return w;
+    }
+
+    const wrapper = document.createElement('div');
+    wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
+    wrapper.dataset.msgId = data.id;
+    if (sameAsPrev) wrapper.classList.add('grouped-msg');
+    // Só anima quem é realmente novo — evita repetir a animação em mensagens já vistas
+    if (renderedGroupMsgIds.has(data.id)) wrapper.classList.add('no-anim');
+    else renderedGroupMsgIds.add(data.id);
+
+    const card = document.createElement('div');
+    card.className = `message ${isSent ? 'sent' : 'received'}`;
+    if (isSent) {
+        if (sameAsPrev && sameAsNext) card.classList.add('bubble-mid-sent');
+        else if (sameAsPrev) card.classList.add('bubble-last-sent');
+        else if (sameAsNext) card.classList.add('bubble-first-sent');
+    } else {
+        if (sameAsPrev && sameAsNext) card.classList.add('bubble-mid-received');
+        else if (sameAsPrev) card.classList.add('bubble-last-received');
+        else if (sameAsNext) card.classList.add('bubble-first-received');
+    }
+
+    let content = '';
+
+    // Mostra nome do remetente nos grupos (exceto para mensagens próprias ou agrupadas)
+    if (!isSent && !sameAsPrev) {
+        content += `<span class="group-sender-name">${data.senderNickname || 'Usuário'}</span>`;
+    }
+
+    if (data.replyTo) {
+        const who = data.replyTo.senderId === currentUser.uid ? 'Você' : data.replyTo.senderNickname || 'Usuário';
+        content += `<div class="quoted-msg"><span>${who}</span>${data.replyTo.text || '📷 Mídia'}</div>`;
+    }
+
+    if (data.image) content += `<img src="${data.image}" class="message-img media-target">`;
+    else if (data.video) content += `<video src="${data.video}" class="message-video media-target" controls></video>`;
+    else if (data.audio) {
+        const dur = data.audioDuration ? formatAudioTime(data.audioDuration) : '0:00';
+        content += `<div class="audio-message-container">
+            <button class="audio-play-btn" onclick="playAudioMessage('${data.audio}', this)">
+                <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+            </button>
+            <div class="audio-progress-bar-wrapper"><div class="audio-progress-bar-fill"></div></div>
+            <span class="audio-duration-tag">${dur}</span>
+        </div>`;
+    }
+
+    content += data.text ? `<p>${data.text}</p>` : '';
+    if (data.edited) content += `<span class="edited-tag">Editada</span>`;
+    const ticks = isSent ? buildGroupSeenIndicator(data, groupData) : '';
+    card.innerHTML = content + ticks;
+
+    // Long press abre menu de contexto simplificado para grupos
+    applyLongPress(card, (e) => {
+        card.classList.remove('pressing');
+        openGroupContextMenu(data, card, wrapper, e);
+    }, () => card.classList.add('pressing'), () => card.classList.remove('pressing'));
+
+    // Swipe para responder no grupo
+    const arrow2 = document.createElement('div');
+    arrow2.className = 'reply-arrow';
+    arrow2.innerHTML = `<svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>`;
+    applyGroupSwipeToReply(wrapper, card, arrow2, data);
+
+    if (isSent) { wrapper.appendChild(card); wrapper.appendChild(arrow2); }
+    else        { wrapper.appendChild(arrow2); wrapper.appendChild(card); }
+    return wrapper;
+}
+
 function renderGroupMessages(snap, groupData) {
     const box = document.getElementById('group-messages-container');
     const prevScrollBottom = box.scrollHeight - box.scrollTop - box.clientHeight;
-    box.innerHTML = '';
 
     const allMessages = [];
     snap.forEach(child => { const d = child.val(); if (d) allMessages.push(d); });
@@ -2495,89 +2678,31 @@ function renderGroupMessages(snap, groupData) {
         catch (e) { console.warn('Não foi possível cachear o histórico do grupo (armazenamento cheio?)', e); }
     }
 
-    allMessages.forEach((data, idx) => {
-        const isSent  = data.senderId === currentUser.uid;
-        const prevMsg = idx > 0 ? allMessages[idx - 1] : null;
-        const nextMsg = idx < allMessages.length - 1 ? allMessages[idx + 1] : null;
-        const sameAsPrev = prevMsg && prevMsg.senderId === data.senderId;
-        const sameAsNext = nextMsg && nextMsg.senderId === data.senderId;
-
-        if (data.deletedForAll) {
-            const w = document.createElement('div');
-            w.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
-            if (renderedGroupMsgIds.has(data.id)) w.classList.add('no-anim');
-            else renderedGroupMsgIds.add(data.id);
-            const c = document.createElement('div');
-            c.className = `message ${isSent ? 'sent' : 'received'} deleted-msg`;
-            c.innerHTML = '<p>🚫 Mensagem apagada</p>';
-            w.appendChild(c); box.appendChild(w); return;
+    const newOrder = allMessages.map(m => m.id);
+    const newFingerprints = allMessages.map(fingerprintGroupMsg);
+    const oldLen = lastGroupMsgRenderFingerprint.length;
+    let canAppendOnly = box.children.length > 0 && oldLen > 0 && newFingerprints.length >= oldLen;
+    if (canAppendOnly) {
+        for (let i = 0; i < oldLen - 1; i++) {
+            if (newFingerprints[i] !== lastGroupMsgRenderFingerprint[i]) { canAppendOnly = false; break; }
         }
+    }
 
-        const wrapper = document.createElement('div');
-        wrapper.className = `message-wrapper ${isSent ? 'sent' : 'received'}`;
-        if (sameAsPrev) wrapper.classList.add('grouped-msg');
-        // Só anima quem é realmente novo — evita repetir a animação em mensagens já vistas
-        if (renderedGroupMsgIds.has(data.id)) wrapper.classList.add('no-anim');
-        else renderedGroupMsgIds.add(data.id);
-
-        const card = document.createElement('div');
-        card.className = `message ${isSent ? 'sent' : 'received'}`;
-        if (isSent) {
-            if (sameAsPrev && sameAsNext) card.classList.add('bubble-mid-sent');
-            else if (sameAsPrev) card.classList.add('bubble-last-sent');
-            else if (sameAsNext) card.classList.add('bubble-first-sent');
-        } else {
-            if (sameAsPrev && sameAsNext) card.classList.add('bubble-mid-received');
-            else if (sameAsPrev) card.classList.add('bubble-last-received');
-            else if (sameAsNext) card.classList.add('bubble-first-received');
+    if (canAppendOnly) {
+        const staleFromIdx = Math.max(0, oldLen - 1);
+        for (let i = staleFromIdx; i < oldLen; i++) {
+            const oldEl = box.querySelector(`[data-msg-id="${lastGroupMsgRenderOrderIds[i]}"]`);
+            if (oldEl) oldEl.remove();
         }
-
-        let content = '';
-
-        // Mostra nome do remetente nos grupos (exceto para mensagens próprias ou agrupadas)
-        if (!isSent && !sameAsPrev) {
-            content += `<span class="group-sender-name">${data.senderNickname || 'Usuário'}</span>`;
+        for (let i = staleFromIdx; i < allMessages.length; i++) {
+            box.appendChild(buildGroupMessageWrapper(allMessages[i], i, allMessages, groupData));
         }
-
-        if (data.replyTo) {
-            const who = data.replyTo.senderId === currentUser.uid ? 'Você' : data.replyTo.senderNickname || 'Usuário';
-            content += `<div class="quoted-msg"><span>${who}</span>${data.replyTo.text || '📷 Mídia'}</div>`;
-        }
-
-        if (data.image) content += `<img src="${data.image}" class="message-img media-target">`;
-        else if (data.video) content += `<video src="${data.video}" class="message-video media-target" controls></video>`;
-        else if (data.audio) {
-            const dur = data.audioDuration ? formatAudioTime(data.audioDuration) : '0:00';
-            content += `<div class="audio-message-container">
-                <button class="audio-play-btn" onclick="playAudioMessage('${data.audio}', this)">
-                    <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                </button>
-                <div class="audio-progress-bar-wrapper"><div class="audio-progress-bar-fill"></div></div>
-                <span class="audio-duration-tag">${dur}</span>
-            </div>`;
-        }
-
-        content += data.text ? `<p>${data.text}</p>` : '';
-        if (data.edited) content += `<span class="edited-tag">Editada</span>`;
-        const ticks = isSent ? buildGroupSeenIndicator(data, groupData) : '';
-        card.innerHTML = content + ticks;
-
-        // Long press abre menu de contexto simplificado para grupos
-        applyLongPress(card, (e) => {
-            card.classList.remove('pressing');
-            openGroupContextMenu(data, card, wrapper, e);
-        }, () => card.classList.add('pressing'), () => card.classList.remove('pressing'));
-
-        // Swipe para responder no grupo
-        const arrow2 = document.createElement('div');
-        arrow2.className = 'reply-arrow';
-        arrow2.innerHTML = `<svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>`;
-        applyGroupSwipeToReply(wrapper, card, arrow2, data);
-
-        if (isSent) { wrapper.appendChild(card); wrapper.appendChild(arrow2); }
-        else        { wrapper.appendChild(arrow2); wrapper.appendChild(card); }
-        box.appendChild(wrapper);
-    });
+    } else {
+        box.innerHTML = '';
+        allMessages.forEach((data, idx) => box.appendChild(buildGroupMessageWrapper(data, idx, allMessages, groupData)));
+    }
+    lastGroupMsgRenderOrderIds = newOrder;
+    lastGroupMsgRenderFingerprint = newFingerprints;
 
     if (prevScrollBottom < 80) box.scrollTop = box.scrollHeight;
     bindMediaViewerEvents();
@@ -3384,10 +3509,8 @@ function loadSpacesList() {
     if (!currentUser || currentUser.uid === 'offline_user') return;
     database.ref('spaces').on('value', snap => {
         allSpaces = {};
-        const railList  = document.getElementById('spaces-rail-list');
         const selectEl  = document.getElementById('group-space-select');
         const mobileList = document.getElementById('spaces-mobile-list');
-        railList.innerHTML = '';
         selectEl.innerHTML = '<option value="">Nenhum espaço</option>';
         mobileList.innerHTML = '';
 
@@ -3398,16 +3521,6 @@ function loadSpacesList() {
             if (!s || !isSpaceMember(s)) return;
             allSpaces[child.key] = s;
             count++;
-
-            const btn = document.createElement('button');
-            btn.className = 'space-rail-icon';
-            btn.style.background = s.color || '#0a84ff';
-            btn.title = s.name || 'Espaço';
-            btn.dataset.spaceId = child.key;
-            btn.innerText = (s.name || '?').trim().charAt(0).toUpperCase();
-            if (activeSpaceFilterId === child.key) btn.classList.add('active-rail');
-            btn.addEventListener('click', () => openSpaceRoom(child.key));
-            railList.appendChild(btn);
 
             const opt = document.createElement('option');
             opt.value = child.key;
@@ -3460,6 +3573,20 @@ function applyGroupsSpaceFilter() {
         const memberOfItsSpace = !rowSpaceId || !!allSpaces[rowSpaceId];
         const matchesActiveFilter = !activeSpace || (activeSpace.groupIds && activeSpace.groupIds[row.dataset.groupId]);
         row.classList.toggle('filtered-out', !memberOfItsSpace || !matchesActiveFilter);
+
+        // Garante que o badge "Espaço: nome" apareça assim que os dados do espaço chegarem
+        // (a lista de grupos pode renderizar antes da lista de espaços terminar de carregar)
+        if (rowSpaceId && allSpaces[rowSpaceId]) {
+            const header = row.querySelector('.chat-item-header');
+            if (header && !header.querySelector('.group-space-badge')) {
+                const s = allSpaces[rowSpaceId];
+                const span = document.createElement('span');
+                span.className = 'header-badge group-space-badge';
+                span.style.cssText = `font-size:10px;background:rgba(255,255,255,0.06);color:${s.color || '#0a84ff'};border:1px solid ${s.color || '#0a84ff'};border-radius:20px;padding:1px 8px;white-space:nowrap;`;
+                span.innerText = `Espaço: ${s.name || ''}`;
+                header.appendChild(span);
+            }
+        }
     });
 }
 
