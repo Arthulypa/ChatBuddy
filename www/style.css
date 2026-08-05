@@ -430,6 +430,12 @@ body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-view
 .chat-room-screen { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: var(--app-max-width); height: 100dvh; background: var(--surface-1); display: flex; flex-direction: column; z-index: 150; animation: slideInRight 0.3s cubic-bezier(0.25,0.46,0.45,0.94); }
 @keyframes slideInRight { from { transform: translateX(calc(-50% + 40px)); opacity: 0.6; } to { transform: translateX(-50%); opacity: 1; } }
 
+/* Tela do espaço abrindo dentro do painel de seleção (mesma "caixa" do tab-content-container),
+   em vez do painel grande de chat. Herda toda a responsividade (mobile cheio / 320px no PC)
+   e só empilha header + lista de grupos verticalmente por dentro. */
+.space-room-as-list { display: flex; flex-direction: column; background: var(--surface-1); }
+.space-room-as-list .chat-header { background: transparent; }
+
 .chat-header { height: 64px; display: flex; align-items: center; padding: 0 12px; gap: 8px; flex-shrink: 0; }
 .active-user-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; overflow: hidden; cursor: pointer; }
 .active-user-info > div { min-width: 0; overflow: hidden; }
