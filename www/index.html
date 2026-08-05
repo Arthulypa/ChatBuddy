@@ -147,6 +147,7 @@
         </header>
         <nav class="app-tabs glass-premium">
             <div class="tab-item active" id="tab-chats">Conversas <span id="requests-badge" class="requests-badge hidden"></span></div>
+            <div class="tab-item" id="tab-spaces">Espaços</div>
             <div class="tab-item" id="tab-groups">Grupos</div>
         </nav>
         <div class="tab-content-container">
@@ -154,7 +155,6 @@
                 <div class="chat-filter-pills">
                     <button class="filter-pill active" data-filter-value="todas">Conversas</button>
                     <button class="filter-pill" data-filter-value="nao-lidas">Não lidas</button>
-                    <button class="filter-pill" data-filter-value="grupos">Grupos</button>
                 </div>
                 <div class="search-bar-wrapper">
                     <input type="text" id="search-contacts-input" placeholder="Buscar conversas pelo nome...">
@@ -172,6 +172,13 @@
             </div>
             <!-- Lista de histórico de chamadas continua existindo fora da navegação principal (usada internamente) -->
             <div id="calls-list" class="hidden"></div>
+            <!-- Aba ESPAÇOS (mobile) — lista dos espaços em que a pessoa é membro -->
+            <div id="content-spaces" class="tab-pane hidden">
+                <div id="spaces-mobile-list" class="chats-list"></div>
+                <button id="btn-new-space" class="btn-fab">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                </button>
+            </div>
             <div id="content-groups" class="tab-pane hidden">
                 <div id="groups-list" class="chats-list"></div>
                 <button id="btn-new-group" class="btn-fab">
@@ -545,6 +552,31 @@
         </footer>
     </div>
 
+    <!-- TELA DO ESPAÇO (lista os grupos que pertencem a este espaço) -->
+    <div id="space-room-screen" class="chat-room-screen hidden">
+        <header class="chat-header glass-premium">
+            <button id="btn-back-space" class="back-btn">
+                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+            <div class="active-user-info" id="btn-open-space-info" style="cursor:pointer;">
+                <div class="header-avatar-container">
+                    <div id="active-space-avatar" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">?</div>
+                </div>
+                <div>
+                    <h2 id="active-space-name">Espaço</h2>
+                    <p id="active-space-members-count" style="font-size:11px;color:var(--text-muted);">0 membros</p>
+                </div>
+            </div>
+            <button id="btn-space-menu" class="icon-btn-dots" onclick="openSpaceInfoSheet()">
+                <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+            </button>
+        </header>
+        <div id="space-groups-list" class="chats-list" style="padding:8px 0;"></div>
+        <button id="btn-new-group-in-space" class="btn-fab">
+            <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </button>
+    </div>
+
     <!-- SHEET INFO CONTATO (tela cheia, mesmo padrão das Configurações) -->
     <div id="contact-info-sheet" class="settings-screen hidden">
         <header class="settings-screen-header glass-premium">
@@ -611,6 +643,28 @@
                 <button id="btn-add-group-member" class="ios-btn-primary" style="font-size:13px;padding:10px;">+ Adicionar Membro</button>
             </div>
             <button id="btn-leave-group" class="action-danger-btn" style="margin-bottom:8px;">Sair do Grupo</button>
+        </div>
+    </div>
+
+    <!-- SHEET INFO DO ESPAÇO (tela cheia, mesmo padrão das Configurações) -->
+    <div id="space-info-sheet" class="settings-screen hidden">
+        <header class="settings-screen-header glass-premium">
+            <button id="btn-close-space-info" class="back-btn">
+                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            </button>
+            <h2>Espaço</h2>
+        </header>
+        <div class="settings-screen-body">
+            <div class="profile-detail-header">
+                <div id="sheet-space-avatar" style="width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:30px;">?</div>
+                <h3 id="sheet-space-name">Espaço</h3>
+            </div>
+            <div id="sheet-space-members-list" class="chats-list" style="max-height:45dvh;overflow-y:auto;margin:10px 0;"></div>
+            <div id="space-admin-actions" class="hidden" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+                <button id="btn-edit-space" class="ios-btn-primary" style="font-size:13px;padding:10px;background:rgba(255,255,255,0.08);">✏️ Editar Espaço</button>
+                <button id="btn-invite-space-member" class="ios-btn-primary" style="font-size:13px;padding:10px;">+ Convidar Pessoas</button>
+            </div>
+            <button id="btn-leave-space" class="action-danger-btn" style="margin-bottom:8px;">Sair do Espaço</button>
         </div>
     </div>
 
@@ -885,8 +939,8 @@
     <!-- MODAL ADICIONAR MEMBRO AO GRUPO -->
     <div id="add-member-modal" class="modal hidden">
         <div class="modal-content glass-premium" style="max-width:340px;">
-            <h3 style="margin-bottom:12px;text-align:center;">Adicionar Membro</h3>
-            <div class="search-bar-wrapper with-at-prefix" style="padding:0 0 8px 0;">
+            <h3 id="add-member-modal-title" style="margin-bottom:12px;text-align:center;">Adicionar Membro</h3>
+            <div id="add-member-search-wrap" class="search-bar-wrapper with-at-prefix" style="padding:0 0 8px 0;">
                 <div class="at-input-wrap">
                     <span class="at-prefix">@</span>
                     <input type="text" id="add-member-search" placeholder="usuario">
@@ -894,6 +948,32 @@
             </div>
             <div id="add-member-results" class="chats-list" style="max-height:200px;overflow-y:auto;"></div>
             <button id="btn-close-add-member" class="btn-profile-close" style="margin-top:10px;">Cancelar</button>
+        </div>
+    </div>
+
+    <!-- MODAL EDITAR ESPAÇO (nome, cor — só admin/dono) -->
+    <div id="edit-space-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:360px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:15px;">
+                <h3>Editar Espaço</h3>
+                <button id="btn-close-edit-space" class="back-btn">
+                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+            <div class="input-group-premium" style="margin-bottom:12px;">
+                <input type="text" id="edit-space-name-input" placeholder=" " maxlength="30">
+                <label>Nome do Espaço</label>
+            </div>
+            <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Cor do ícone</p>
+            <div class="accent-picker" style="margin-bottom:16px;">
+                <button class="edit-space-color-swatch active-space-color" data-space-color="#D97757" style="background:#D97757;"></button>
+                <button class="edit-space-color-swatch" data-space-color="#0a84ff" style="background:#0a84ff;"></button>
+                <button class="edit-space-color-swatch" data-space-color="#30d158" style="background:#30d158;"></button>
+                <button class="edit-space-color-swatch" data-space-color="#bf5af2" style="background:#bf5af2;"></button>
+                <button class="edit-space-color-swatch" data-space-color="#ff375f" style="background:#ff375f;"></button>
+                <button class="edit-space-color-swatch" data-space-color="#ff9f0a" style="background:#ff9f0a;"></button>
+            </div>
+            <button id="btn-save-edit-space" class="ios-btn-primary">Salvar Alterações</button>
         </div>
     </div>
 
