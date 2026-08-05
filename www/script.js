@@ -2113,8 +2113,9 @@ document.getElementById('btn-logout').addEventListener('click', () => {
     }
 });
 
-// Navegação de abas nativa principal (só Conversas e Grupos)
+// Navegação de abas nativa principal (Conversas, Espaços e Grupos)
 document.getElementById('tab-chats').addEventListener('click', () => switchMainTab('chats'));
+document.getElementById('tab-spaces').addEventListener('click', () => { switchMainTab('spaces'); loadSpacesList(); });
 document.getElementById('tab-groups').addEventListener('click', () => { switchMainTab('groups'); loadGroupsList(); });
 
 function switchMainTab(target) {
@@ -2309,6 +2310,18 @@ function isGroupOwner(groupData) {
     return groupData.ownerUid === currentUser.uid;
 }
 
+// ─── PERMISSÕES DE ESPAÇO ────────────────────────────────────────────────────
+// Membro do espaço: dono ou alguém convidado (spaces/{id}/members/{uid})
+function isSpaceMember(spaceData) {
+    if (!spaceData || !currentUser) return false;
+    return spaceData.ownerId === currentUser.uid || (spaceData.members && spaceData.members[currentUser.uid]);
+}
+// Admin do espaço: dono ou alguém promovido (spaces/{id}/admins/{uid})
+function isSpaceAdmin(spaceData) {
+    if (!spaceData || !currentUser) return false;
+    return spaceData.ownerId === currentUser.uid || (spaceData.admins && spaceData.admins[currentUser.uid]);
+}
+
 // ─── GRUPO PRINCIPAL: Cria se não existir e adiciona o usuário ──────────────
 function ensureMainGroup() {
     if (!currentUser || currentUser.uid === 'offline_user') return;
@@ -2372,6 +2385,7 @@ function loadGroupsList() {
                 const row = document.createElement('div');
                 row.className = 'chat-item-row';
                 row.dataset.groupId = child.key;
+                row.dataset.spaceId = g.spaceId || '';
                 let lastText = 'Nenhuma mensagem';
                 const msgKeys = g.messages ? Object.keys(g.messages) : [];
                 if (msgKeys.length > 0) {
@@ -3068,11 +3082,23 @@ document.getElementById('btn-save-edit-group').addEventListener('click', () => {
         });
 });
 
-// ─── ADICIONAR MEMBRO AO GRUPO ──────────────────────────────────────────────
-document.getElementById('btn-add-group-member').addEventListener('click', () => {
+// ─── MODAL "ADICIONAR MEMBRO" (genérico, com 2 modos) ──────────────────────
+// 'group-global'  → grupo (de espaço ou não): busca qualquer usuário pelo @, dono/admins podem adicionar
+// 'space-invite'  → espaço: busca qualquer usuário pelo @ para convidar
+let addMemberModalMode = 'group-global';
+
+function openAddMemberModal(mode) {
+    addMemberModalMode = mode;
     document.getElementById('add-member-modal').classList.remove('hidden');
     document.getElementById('add-member-search').value = '';
-    document.getElementById('add-member-results').innerHTML = '';
+    document.getElementById('add-member-modal-title').innerText = mode === 'space-invite' ? 'Convidar Pessoas' : 'Adicionar Membro';
+    document.getElementById('add-member-search-wrap').classList.remove('hidden');
+    document.getElementById('add-member-results').innerHTML = '<div class="empty-state" style="font-size:12px;padding:10px;">Digite pelo menos 3 letras</div>';
+}
+
+// Dono/admins do grupo podem adicionar qualquer pessoa, seja o grupo de um espaço ou não
+document.getElementById('btn-add-group-member').addEventListener('click', () => {
+    openAddMemberModal('group-global');
 });
 
 document.getElementById('btn-close-add-member').addEventListener('click', () => {
@@ -3096,7 +3122,15 @@ document.getElementById('add-member-search').addEventListener('input', () => {
             snap.forEach(child => {
                 const u = child.val();
                 if (!u || u.uid === currentUser.uid) return;
-                if (activeGroupData && activeGroupData.members && activeGroupData.members[u.uid]) return;
+
+                if (addMemberModalMode === 'space-invite') {
+                    const spaceData = activeSpaceRoomData;
+                    const alreadyInSpace = spaceData && (spaceData.ownerId === u.uid || (spaceData.members && spaceData.members[u.uid]));
+                    if (alreadyInSpace) return;
+                } else {
+                    if (activeGroupData && activeGroupData.members && activeGroupData.members[u.uid]) return;
+                }
+
                 if ((u.username || '').toLowerCase().includes(term)) {
                     count++;
                     const row = document.createElement('div');
@@ -3104,18 +3138,30 @@ document.getElementById('add-member-search').addEventListener('input', () => {
                     row.innerHTML = `
                         <img src="${u.avatar || ''}" alt="" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
                         <div class="chat-item-info"><h4>${u.nickname}</h4><p>${u.username}</p></div>
-                        <button style="margin-left:auto;font-size:12px;padding:5px 10px;border-radius:10px;border:none;background:#0a84ff;color:#fff;cursor:pointer;">Adicionar</button>
+                        <button style="margin-left:auto;font-size:12px;padding:5px 10px;border-radius:10px;border:none;background:#0a84ff;color:#fff;cursor:pointer;">${addMemberModalMode === 'space-invite' ? 'Convidar' : 'Adicionar'}</button>
                     `;
                     row.querySelector('button').addEventListener('click', () => {
-                        database.ref(`groups/${activeGroupId}/members/${u.uid}`).set(true).then(() => {
-                            document.getElementById('add-member-modal').classList.add('hidden');
-                            database.ref(`groups/${activeGroupId}`).once('value', s => {
-                                activeGroupData = s.val();
-                                const mc = activeGroupData.members ? Object.keys(activeGroupData.members).length : 0;
-                                document.getElementById('active-group-members-count').innerText = `${mc} membros`;
-                                openGroupInfoSheet();
+                        if (addMemberModalMode === 'space-invite') {
+                            if (!activeSpaceRoomId) return;
+                            database.ref(`spaces/${activeSpaceRoomId}/members/${u.uid}`).set(true).then(() => {
+                                document.getElementById('add-member-modal').classList.add('hidden');
+                                database.ref(`spaces/${activeSpaceRoomId}`).once('value', s => {
+                                    activeSpaceRoomData = s.val();
+                                    renderSpaceRoomHeader();
+                                    openSpaceInfoSheet();
+                                });
                             });
-                        });
+                        } else {
+                            database.ref(`groups/${activeGroupId}/members/${u.uid}`).set(true).then(() => {
+                                document.getElementById('add-member-modal').classList.add('hidden');
+                                database.ref(`groups/${activeGroupId}`).once('value', s => {
+                                    activeGroupData = s.val();
+                                    const mc = activeGroupData.members ? Object.keys(activeGroupData.members).length : 0;
+                                    document.getElementById('active-group-members-count').innerText = `${mc} membros`;
+                                    openGroupInfoSheet();
+                                });
+                            });
+                        }
                     });
                     results.appendChild(row);
                 }
@@ -3258,6 +3304,17 @@ function confirmCreateGroup() {
     const members = { [currentUser.uid]: true };
     selectedGroupMembers.forEach((u, uid) => { members[uid] = true; });
 
+    const spaceId = document.getElementById('group-space-select').value || null;
+    const spaceData = spaceId ? allSpaces[spaceId] : null;
+
+    // Regra do espaço: o dono do espaço é sempre admin dos grupos criados dentro dele,
+    // mesmo quando quem cria é outro admin do espaço.
+    const admins = { [currentUser.uid]: true };
+    if (spaceData && spaceData.ownerId && spaceData.ownerId !== currentUser.uid) {
+        members[spaceData.ownerId] = true;
+        admins[spaceData.ownerId] = true;
+    }
+
     const ref = database.ref('groups').push();
     const payload = {
         id: ref.key,
@@ -3267,16 +3324,20 @@ function confirmCreateGroup() {
         isMainGroup: false,
         onlyAdminsCanSend: false,
         ownerUid: currentUser.uid,
+        spaceId: spaceId,
         createdAt: firebase.database.ServerValue.TIMESTAMP,
         members: members,
-        admins: { [currentUser.uid]: true }
+        admins: admins
     };
 
     ref.set(payload).then(() => {
-        const spaceId = document.getElementById('group-space-select').value;
         if (spaceId) database.ref(`spaces/${spaceId}/groupIds/${ref.key}`).set(true);
         document.getElementById('create-group-modal').classList.add('hidden');
-        switchMainTab('groups');
+        if (spaceId && activeSpaceRoomId === spaceId) {
+            renderSpaceGroupsList();
+        } else {
+            switchMainTab('groups');
+        }
         loadGroupsList();
         triggerSystemPopup('Grupo criado!', `"${name}" foi criado com sucesso.`, payload.avatar);
     });
@@ -3305,7 +3366,6 @@ function applyChatFilter() {
 document.querySelectorAll('.filter-pill').forEach(btn => {
     btn.addEventListener('click', () => {
         const val = btn.dataset.filterValue;
-        if (val === 'grupos') { switchMainTab('groups'); return; }
         activeChatFilter = val;
         document.querySelectorAll('.filter-pill').forEach(b => b.classList.toggle('active', b.dataset.filterValue === val));
         applyChatFilter();
@@ -3313,24 +3373,31 @@ document.querySelectorAll('.filter-pill').forEach(btn => {
 });
 
 // ═════════════════════════════════════════════════════════════════════════
-// SIDEBAR DE ESPAÇOS (rail estilo FluffyChat — organiza grupos em coleções)
+// ESPAÇOS (rail estilo FluffyChat no PC + aba própria no celular)
 // ═════════════════════════════════════════════════════════════════════════
-let allSpaces = {};          // { spaceId: {name, color, ownerId, groupIds} }
-let activeSpaceFilterId = null;
+let allSpaces = {};          // { spaceId: {name, color, ownerId, groupIds, members, admins} }
+let activeSpaceFilterId = null;   // espaço selecionado no rail do PC (filtro dentro da aba Grupos)
+let activeSpaceRoomId = null;     // espaço aberto na "tela do espaço" (mobile e PC)
+let activeSpaceRoomData = null;
 
 function loadSpacesList() {
     if (!currentUser || currentUser.uid === 'offline_user') return;
     database.ref('spaces').on('value', snap => {
         allSpaces = {};
-        const railList = document.getElementById('spaces-rail-list');
-        const selectEl = document.getElementById('group-space-select');
+        const railList  = document.getElementById('spaces-rail-list');
+        const selectEl  = document.getElementById('group-space-select');
+        const mobileList = document.getElementById('spaces-mobile-list');
         railList.innerHTML = '';
         selectEl.innerHTML = '<option value="">Nenhum espaço</option>';
+        mobileList.innerHTML = '';
 
+        let count = 0;
         snap.forEach(child => {
             const s = child.val();
-            if (!s || s.ownerId !== currentUser.uid) return;
+            // Só aparece pra quem foi convidado (é dono ou está em members)
+            if (!s || !isSpaceMember(s)) return;
             allSpaces[child.key] = s;
+            count++;
 
             const btn = document.createElement('button');
             btn.className = 'space-rail-icon';
@@ -3346,7 +3413,33 @@ function loadSpacesList() {
             opt.value = child.key;
             opt.innerText = s.name || 'Espaço';
             selectEl.appendChild(opt);
+
+            const memberCount = s.members ? Object.keys(s.members).length : 0;
+            const row = document.createElement('div');
+            row.className = 'chat-item-row';
+            row.dataset.spaceId = child.key;
+            row.innerHTML = `
+                <div style="width:48px;height:48px;border-radius:50%;background:${s.color || '#0a84ff'};display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;flex-shrink:0;">${(s.name || '?').trim().charAt(0).toUpperCase()}</div>
+                <div class="chat-item-info">
+                    <div class="chat-item-header"><h4>${s.name || 'Espaço'}</h4></div>
+                    <p>${memberCount + 1} membros</p>
+                </div>
+            `;
+            row.addEventListener('click', () => openSpaceRoom(child.key));
+            mobileList.appendChild(row);
         });
+        if (count === 0) mobileList.innerHTML = '<div class="empty-state">Você ainda não faz parte de nenhum espaço.</div>';
+
+        // Se a tela do espaço estiver aberta, mantém os dados atualizados (ex: alguém te removeu)
+        if (activeSpaceRoomId) {
+            if (allSpaces[activeSpaceRoomId]) {
+                activeSpaceRoomData = allSpaces[activeSpaceRoomId];
+                renderSpaceRoomHeader();
+            } else {
+                closeSpaceRoom();
+            }
+        }
+        applyGroupsSpaceFilter();
     });
 }
 
@@ -3360,10 +3453,13 @@ function selectSpace(spaceId) {
 }
 
 function applyGroupsSpaceFilter() {
-    const space = activeSpaceFilterId ? allSpaces[activeSpaceFilterId] : null;
+    const activeSpace = activeSpaceFilterId ? allSpaces[activeSpaceFilterId] : null;
     document.querySelectorAll('#groups-list .chat-item-row').forEach(row => {
-        const show = !space || (space.groupIds && space.groupIds[row.dataset.groupId]);
-        row.classList.toggle('filtered-out', !show);
+        const rowSpaceId = row.dataset.spaceId || '';
+        // Um grupo de espaço só pode aparecer pra quem ainda é membro daquele espaço
+        const memberOfItsSpace = !rowSpaceId || !!allSpaces[rowSpaceId];
+        const matchesActiveFilter = !activeSpace || (activeSpace.groupIds && activeSpace.groupIds[row.dataset.groupId]);
+        row.classList.toggle('filtered-out', !memberOfItsSpace || !matchesActiveFilter);
     });
 }
 
@@ -3400,6 +3496,13 @@ document.getElementById('rail-add-space-btn').addEventListener('click', () => {
     openCreateModal(insideSpace);
 });
 
+// Botão "+" da aba Espaços no celular: sempre cria um espaço novo.
+document.getElementById('btn-new-space').addEventListener('click', () => {
+    if (currentUser.uid === 'offline_user') return alert('Indisponível no modo offline.');
+    openCreateModal(false);
+    setCreateType('space');
+});
+
 document.querySelectorAll('.space-color-swatch').forEach(btn => {
     btn.addEventListener('click', () => {
         selectedSpaceColor = btn.dataset.spaceColor;
@@ -3414,10 +3517,10 @@ function confirmCreateSpace() {
     const ref = database.ref('spaces').push();
     ref.set({
         id: ref.key, name, color: selectedSpaceColor, ownerId: currentUser.uid,
-        groupIds: {}, createdAt: firebase.database.ServerValue.TIMESTAMP
+        groupIds: {}, members: {}, admins: {}, createdAt: firebase.database.ServerValue.TIMESTAMP
     }).then(() => {
         document.getElementById('create-group-modal').classList.add('hidden');
-        triggerSystemPopup('Espaço criado!', `"${name}" já está na sua sidebar.`, DEFAULT_AVATAR);
+        triggerSystemPopup('Espaço criado!', `"${name}" já está disponível.`, DEFAULT_AVATAR);
     });
 }
 
@@ -3427,6 +3530,234 @@ loadGroupsList = function () {
     _origLoadGroupsList();
     setTimeout(applyGroupsSpaceFilter, 300);
 };
+
+// ═════════════════════════════════════════════════════════════════════════
+// TELA DO ESPAÇO (lista os grupos daquele espaço) — usada no celular e no PC
+// ═════════════════════════════════════════════════════════════════════════
+function openSpaceRoom(spaceId) {
+    activeSpaceRoomId = spaceId;
+    activeSpaceRoomData = allSpaces[spaceId];
+    if (!activeSpaceRoomData) return;
+
+    // Também vira o filtro "ativo" pra reaproveitar toda a lógica de grupos existente
+    activeSpaceFilterId = spaceId;
+
+    renderSpaceRoomHeader();
+    renderSpaceGroupsList();
+
+    document.getElementById('space-room-screen').classList.remove('hidden');
+    const emptyPanel = document.getElementById('empty-chat-panel');
+    if (emptyPanel) emptyPanel.classList.add('hidden');
+}
+
+function renderSpaceRoomHeader() {
+    if (!activeSpaceRoomData) return;
+    const s = activeSpaceRoomData;
+    document.getElementById('active-space-name').innerText = s.name || 'Espaço';
+    const avatarEl = document.getElementById('active-space-avatar');
+    avatarEl.style.background = s.color || '#0a84ff';
+    avatarEl.innerText = (s.name || '?').trim().charAt(0).toUpperCase();
+    const memberCount = (s.members ? Object.keys(s.members).length : 0) + 1;
+    document.getElementById('active-space-members-count').innerText = `${memberCount} membros`;
+    document.getElementById('btn-new-group-in-space').style.display = isSpaceAdmin(s) ? 'flex' : 'none';
+}
+
+function renderSpaceGroupsList() {
+    if (!activeSpaceRoomId) return;
+    const container = document.getElementById('space-groups-list');
+    container.innerHTML = '';
+    database.ref('groups').once('value', snap => {
+        let count = 0;
+        container.innerHTML = '';
+        snap.forEach(child => {
+            const g = child.val();
+            if (!g || !g.members || !g.members[currentUser.uid]) return;
+            if (g.spaceId !== activeSpaceRoomId) return;
+            count++;
+            const row = document.createElement('div');
+            row.className = 'chat-item-row';
+            row.dataset.groupId = child.key;
+            row.innerHTML = `
+                <img src="${g.avatar || DEFAULT_AVATAR}" alt="" style="width:48px;height:48px;border-radius:50%;object-fit:cover;">
+                <div class="chat-item-info">
+                    <div class="chat-item-header"><h4>${g.name}</h4></div>
+                    <p>${g.description || 'Toque para conversar'}</p>
+                </div>
+            `;
+            row.addEventListener('click', () => openGroupRoom(child.key, g));
+            container.appendChild(row);
+        });
+        if (count === 0) container.innerHTML = '<div class="empty-state">Nenhum grupo neste espaço ainda.</div>';
+    });
+}
+
+function closeSpaceRoom() {
+    document.getElementById('space-room-screen').classList.add('hidden');
+    document.getElementById('space-info-sheet').classList.add('hidden');
+    activeSpaceRoomId = null;
+    activeSpaceRoomData = null;
+}
+
+document.getElementById('btn-back-space').addEventListener('click', () => {
+    closeSpaceRoom();
+    const emptyPanel = document.getElementById('empty-chat-panel');
+    if (emptyPanel) emptyPanel.classList.remove('hidden');
+});
+
+// Criar grupo já vinculado a este espaço específico
+document.getElementById('btn-new-group-in-space').addEventListener('click', () => {
+    if (!activeSpaceRoomData || !isSpaceAdmin(activeSpaceRoomData)) {
+        return alert('Só admins do espaço podem criar grupos aqui.');
+    }
+    openCreateModal(true);
+});
+
+// ═════════════════════════════════════════════════════════════════════════
+// SHEET INFO DO ESPAÇO — membros, editar, convidar, remover, sair
+// ═════════════════════════════════════════════════════════════════════════
+function openSpaceInfoSheet() {
+    if (!activeSpaceRoomId || !activeSpaceRoomData) return;
+    const s = activeSpaceRoomData;
+    document.getElementById('sheet-space-name').innerText = s.name || 'Espaço';
+    const avatarEl = document.getElementById('sheet-space-avatar');
+    avatarEl.style.background = s.color || '#0a84ff';
+    avatarEl.innerText = (s.name || '?').trim().charAt(0).toUpperCase();
+
+    const canManage = isSpaceAdmin(s);
+    const adminActions = document.getElementById('space-admin-actions');
+    adminActions.classList.toggle('hidden', !canManage);
+    adminActions.style.display = canManage ? 'flex' : 'none';
+    document.getElementById('btn-leave-space').classList.toggle('hidden', s.ownerId === currentUser.uid);
+
+    const list = document.getElementById('sheet-space-members-list');
+    list.innerHTML = '<div style="padding:10px;color:var(--text-muted);font-size:12px;">Carregando membros...</div>';
+
+    const memberUids = Object.keys(s.members || {});
+    if (!memberUids.includes(s.ownerId)) memberUids.unshift(s.ownerId);
+    list.innerHTML = '';
+    let loaded = 0;
+    const memberEls = new Array(memberUids.length);
+
+    memberUids.forEach((uid, idx) => {
+        database.ref(`users/${uid}`).once('value', snap => {
+            const u = snap.val() || { nickname: 'Usuário', avatar: '', username: '' };
+            const isOwner = s.ownerId === uid;
+            const isAdmin = s.admins && s.admins[uid];
+            const tag = isOwner ? `<span class="member-role-tag owner-tag header-badge">Dono</span>`
+                      : isAdmin ? `<span class="member-role-tag admin-tag header-badge">Admin</span>`
+                      : '';
+            const row = document.createElement('div');
+            row.className = 'chat-item-row';
+            row.style.padding = '8px 4px';
+            row.innerHTML = `
+                <img src="${u.avatar || DEFAULT_AVATAR}" alt="" style="width:38px;height:38px;border-radius:50%;object-fit:cover;">
+                <div class="chat-item-info">
+                    <div class="chat-item-header"><h4>${u.nickname || 'Usuário'}</h4>${tag}</div>
+                    <p>${u.username || ''}</p>
+                </div>
+                ${canManage && !isOwner && uid !== currentUser.uid ? `
+                <div style="display:flex;flex-direction:column;gap:4px;margin-left:auto;">
+                    <button onclick="event.stopPropagation();toggleSpaceAdmin('${uid}','${isAdmin}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:1px solid var(--glass-border);background:var(--surface-3);color:var(--text-main);cursor:pointer;">
+                        ${isAdmin ? 'Remover Admin' : 'Tornar Admin'}
+                    </button>
+                    <button onclick="event.stopPropagation();removeSpaceMember('${uid}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:none;background:rgba(255,59,48,0.2);color:#ff3b30;cursor:pointer;">Remover</button>
+                </div>` : ''}
+            `;
+            memberEls[idx] = row;
+            loaded++;
+            if (loaded === memberUids.length) memberEls.forEach(el => { if (el) list.appendChild(el); });
+        });
+    });
+
+    document.getElementById('space-info-sheet').classList.remove('hidden');
+}
+
+document.getElementById('btn-close-space-info').addEventListener('click', () => {
+    document.getElementById('space-info-sheet').classList.add('hidden');
+});
+
+function toggleSpaceAdmin(uid, currentlyAdmin) {
+    if (!activeSpaceRoomId) return;
+    const ref = database.ref(`spaces/${activeSpaceRoomId}/admins/${uid}`);
+    if (currentlyAdmin === 'true' || currentlyAdmin === true) ref.remove(); else ref.set(true);
+    database.ref(`spaces/${activeSpaceRoomId}`).once('value', s => {
+        activeSpaceRoomData = s.val();
+        openSpaceInfoSheet();
+    });
+}
+
+function removeSpaceMember(uid) {
+    if (!activeSpaceRoomId) return;
+    if (!confirm('Remover esta pessoa do espaço? Ela também deixará de ver os grupos deste espaço.')) return;
+    const updates = {};
+    updates[`spaces/${activeSpaceRoomId}/members/${uid}`] = null;
+    updates[`spaces/${activeSpaceRoomId}/admins/${uid}`]  = null;
+    database.ref().update(updates).then(() => {
+        database.ref(`spaces/${activeSpaceRoomId}`).once('value', s => {
+            activeSpaceRoomData = s.val();
+            openSpaceInfoSheet();
+        });
+    });
+}
+
+document.getElementById('btn-leave-space').addEventListener('click', () => {
+    if (!activeSpaceRoomId) return;
+    if (!confirm('Sair deste espaço? Você deixará de ver os grupos dele.')) return;
+    const updates = {};
+    updates[`spaces/${activeSpaceRoomId}/members/${currentUser.uid}`] = null;
+    updates[`spaces/${activeSpaceRoomId}/admins/${currentUser.uid}`]  = null;
+    database.ref().update(updates).then(() => {
+        closeSpaceRoom();
+        switchMainTab('spaces');
+    });
+});
+
+// ── Editar Espaço (nome, cor) — só admin/dono ───────────────────────────────
+let editSpaceColor = '#D97757';
+document.getElementById('btn-edit-space').addEventListener('click', () => {
+    if (!activeSpaceRoomData || !isSpaceAdmin(activeSpaceRoomData)) return;
+    editSpaceColor = activeSpaceRoomData.color || '#D97757';
+    document.getElementById('edit-space-name-input').value = activeSpaceRoomData.name || '';
+    document.querySelectorAll('.edit-space-color-swatch').forEach(b => b.classList.toggle('active-space-color', b.dataset.spaceColor === editSpaceColor));
+    document.getElementById('edit-space-modal').classList.remove('hidden');
+});
+
+document.getElementById('btn-close-edit-space').addEventListener('click', () => {
+    document.getElementById('edit-space-modal').classList.add('hidden');
+});
+
+document.querySelectorAll('.edit-space-color-swatch').forEach(btn => {
+    btn.addEventListener('click', () => {
+        editSpaceColor = btn.dataset.spaceColor;
+        document.querySelectorAll('.edit-space-color-swatch').forEach(b => b.classList.remove('active-space-color'));
+        btn.classList.add('active-space-color');
+    });
+});
+
+document.getElementById('btn-save-edit-space').addEventListener('click', () => {
+    const name = document.getElementById('edit-space-name-input').value.trim();
+    if (!name) return alert('O espaço precisa de um nome.');
+    if (!activeSpaceRoomId) return;
+    const btn = document.getElementById('btn-save-edit-space');
+    btn.disabled = true; btn.innerText = 'Salvando...';
+    database.ref(`spaces/${activeSpaceRoomId}`).update({ name, color: editSpaceColor })
+        .then(() => {
+            activeSpaceRoomData = { ...activeSpaceRoomData, name, color: editSpaceColor };
+            document.getElementById('edit-space-modal').classList.add('hidden');
+            btn.disabled = false; btn.innerText = 'Salvar Alterações';
+            renderSpaceRoomHeader();
+            openSpaceInfoSheet();
+        })
+        .catch(err => {
+            btn.disabled = false; btn.innerText = 'Salvar Alterações';
+            alert('Erro ao salvar: ' + err.message);
+        });
+});
+
+// ── Convidar pessoas para o Espaço (busca global, exclui quem já é membro) ──
+document.getElementById('btn-invite-space-member').addEventListener('click', () => {
+    openAddMemberModal('space-invite');
+});
 
 // ═════════════════════════════════════════════════════════════════════════
 // CHAMADAS DE VOZ E VÍDEO (via Agora — só conversas diretas, sem grupo)
