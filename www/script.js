@@ -3406,7 +3406,7 @@ function loadSpacesList() {
             btn.dataset.spaceId = child.key;
             btn.innerText = (s.name || '?').trim().charAt(0).toUpperCase();
             if (activeSpaceFilterId === child.key) btn.classList.add('active-rail');
-            btn.addEventListener('click', () => selectSpace(child.key));
+            btn.addEventListener('click', () => openSpaceRoom(child.key));
             railList.appendChild(btn);
 
             const opt = document.createElement('option');
@@ -3542,6 +3542,11 @@ function openSpaceRoom(spaceId) {
     // Também vira o filtro "ativo" pra reaproveitar toda a lógica de grupos existente
     activeSpaceFilterId = spaceId;
 
+    // Realça o ícone certo na barra lateral do PC/tablet
+    document.getElementById('rail-home-btn').classList.remove('active-rail');
+    document.getElementById('rail-groups-btn').classList.remove('active-rail');
+    document.querySelectorAll('.space-rail-icon').forEach(b => b.classList.toggle('active-rail', b.dataset.spaceId === spaceId));
+
     renderSpaceRoomHeader();
     renderSpaceGroupsList();
 
@@ -3594,6 +3599,7 @@ function renderSpaceGroupsList() {
 function closeSpaceRoom() {
     document.getElementById('space-room-screen').classList.add('hidden');
     document.getElementById('space-info-sheet').classList.add('hidden');
+    document.querySelectorAll('.space-rail-icon').forEach(b => b.classList.remove('active-rail'));
     activeSpaceRoomId = null;
     activeSpaceRoomData = null;
 }
