@@ -151,7 +151,7 @@
             <div class="tab-item" id="tab-spaces">Espaços</div>
             <div class="tab-item" id="tab-groups">Grupos</div>
         </nav>
-        <div class="tab-content-container">
+        <div class="tab-content-container" id="main-panes-container">
             <div id="content-chats" class="tab-pane">
                 <div class="chat-filter-pills">
                     <button class="filter-pill active" data-filter-value="todas">Conversas</button>
@@ -440,6 +440,23 @@
                             <div class="bubble-blur-sample">Assim fica sua bolha ✨</div>
                         </div>
                         <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">Cor das suas mensagens enviadas — o texto se ajusta sozinho pra nunca ficar ilegível.</p>
+                    </div>
+                    <div class="settings-section-title" style="margin-top:16px;">Cor das Mensagens Recebidas</div>
+                    <div class="settings-section-group glass-premium" style="padding:14px;">
+                        <div id="bubble-picker-received" class="accent-picker">
+                            <button class="bubble-swatch" data-bubble-received-value="claude" style="background:#D97757;" title="Laranja Claude"></button>
+                            <button class="bubble-swatch" data-bubble-received-value="blue"   style="background:#0a84ff;"></button>
+                            <button class="bubble-swatch" data-bubble-received-value="green"  style="background:#30d158;"></button>
+                            <button class="bubble-swatch" data-bubble-received-value="purple" style="background:#bf5af2;"></button>
+                            <button class="bubble-swatch" data-bubble-received-value="pink"   style="background:#ff375f;"></button>
+                            <button class="bubble-swatch" data-bubble-received-value="orange" style="background:#ff9f0a;"></button>
+                            <button class="bubble-swatch" data-bubble-received-value="red"    style="background:#ff453a;"></button>
+                            <button class="bubble-swatch" data-bubble-received-value="yellow" style="background:#ffd60a;"></button>
+                            <button class="bubble-swatch" data-bubble-received-value="gray"   style="background:#8e8e93;"></button>
+                            <button class="bubble-swatch" data-bubble-received-value="white"  style="background:#f2f2f7;"></button>
+                            <button class="bubble-swatch" data-bubble-received-value="black"  style="background:#1c1c1e;"></button>
+                        </div>
+                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">Cor das mensagens que você recebe. Uma cor já usada na bolha enviada fica bloqueada aqui — enviada e recebida nunca podem ser a mesma cor.</p>
                     </div>
                     <div class="settings-section-title" style="margin-top:16px;">Tema da Conversa</div>
                     <div class="settings-section-group glass-premium" style="padding:14px;">
