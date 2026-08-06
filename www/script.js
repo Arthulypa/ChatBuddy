@@ -3511,10 +3511,12 @@ function loadSpacesList() {
     if (!currentUser || currentUser.uid === 'offline_user') return;
     database.ref('spaces').on('value', snap => {
         allSpaces = {};
-        const selectEl  = document.getElementById('group-space-select');
+        const selectEl   = document.getElementById('group-space-select');
         const mobileList = document.getElementById('spaces-mobile-list');
+        const railList   = document.getElementById('spaces-rail-list');
         selectEl.innerHTML = '<option value="">Nenhum espaço</option>';
         mobileList.innerHTML = '';
+        if (railList) railList.innerHTML = '';
 
         let count = 0;
         snap.forEach(child => {
@@ -3542,6 +3544,19 @@ function loadSpacesList() {
             `;
             row.addEventListener('click', () => openSpaceRoom(child.key));
             mobileList.appendChild(row);
+
+            // Bolinha colorida do espaço na sidebar (só aparece no PC/tablet via CSS)
+            if (railList) {
+                const railBtn = document.createElement('button');
+                railBtn.className = 'space-rail-icon';
+                railBtn.dataset.spaceId = child.key;
+                railBtn.title = s.name || 'Espaço';
+                railBtn.style.background = s.color || '#0a84ff';
+                railBtn.classList.toggle('active-rail', activeSpaceRoomId === child.key);
+                railBtn.innerText = (s.name || '?').trim().charAt(0).toUpperCase();
+                railBtn.addEventListener('click', () => openSpaceRoom(child.key));
+                railList.appendChild(railBtn);
+            }
         });
         if (count === 0) mobileList.innerHTML = '<div class="empty-state">Você ainda não faz parte de nenhum espaço.</div>';
 
@@ -3694,7 +3709,7 @@ function renderSpaceRoomHeader() {
     avatarEl.innerText = (s.name || '?').trim().charAt(0).toUpperCase();
     const memberCount = (s.members ? Object.keys(s.members).length : 0) + 1;
     document.getElementById('active-space-members-count').innerText = `${memberCount} membros`;
-    document.getElementById('btn-new-group-in-space').style.display = isSpaceAdmin(s) ? 'flex' : 'none';
+    document.getElementById('btn-new-group-in-space').style.setProperty('display', isSpaceAdmin(s) ? 'flex' : 'none', 'important');
 }
 
 function renderSpaceGroupsList() {
