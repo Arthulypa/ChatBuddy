@@ -1,17 +1,30 @@
+// Paleta de cores de bolha (enviada normal / recebida) — enviada e recebida nunca podem
+// ser a mesma cor, então essa lista é usada tanto pra aplicar o padrão quanto pra achar
+// uma alternativa quando as duas colidem.
+const BUBBLE_COLOR_NAMES = ['claude','blue','green','purple','pink','orange','red','yellow','gray','white','black'];
+
 // ─── PERSONALIZAÇÃO: TEMA E COR DE DESTAQUE (aplica antes de tudo pra não piscar) ──
 (function applyStoredTheme() {
     const savedTheme     = localStorage.getItem('chatbuddy_theme')     || 'dark';
     const savedAccent    = localStorage.getItem('chatbuddy_accent')    || 'blue';
     const savedFont      = localStorage.getItem('chatbuddy_font')      || 'padrao';
     const savedBubble    = localStorage.getItem('chatbuddy_bubble')    || 'blue';
+    let   savedBubbleReceived = localStorage.getItem('chatbuddy_bubble_received') || 'gray';
     const savedBubbleMode = localStorage.getItem('chatbuddy_bubble_mode') || 'normal';
     const savedBubbleGradient = localStorage.getItem('chatbuddy_bubble_gradient') || 'oceano';
     const savedAnimation = localStorage.getItem('chatbuddy_animation') || 'padrao';
     const savedWallpaper = localStorage.getItem('chatbuddy_wallpaper') || 'padrao';
+    // Enviada e recebida são exclusivas — se por algum motivo salvaram com a mesma cor, corrige.
+    if (savedBubbleReceived === savedBubble) {
+        const fallback = BUBBLE_COLOR_NAMES.find(c => c !== savedBubble) || 'gray';
+        savedBubbleReceived = fallback;
+        localStorage.setItem('chatbuddy_bubble_received', fallback);
+    }
     document.documentElement.setAttribute('data-theme', savedTheme);
     document.documentElement.setAttribute('data-accent', savedAccent);
     document.documentElement.setAttribute('data-font', savedFont);
     document.documentElement.setAttribute('data-bubble', savedBubble);
+    document.documentElement.setAttribute('data-bubble-received', savedBubbleReceived);
     document.documentElement.setAttribute('data-bubble-mode', savedBubbleMode);
     document.documentElement.setAttribute('data-bubble-gradient', savedBubbleGradient);
     document.documentElement.setAttribute('data-animation', savedAnimation);
@@ -1034,17 +1047,21 @@ function playAudioMessage(src, btn) {
 
 // ─── VISUALIZADOR DE MÍDIA COM CONTROLES E ZOOM PREMIUM ────────────────────
 function bindMediaViewerEvents() {
+    // Antes isso clonava e substituía TODOS os elementos de mídia da conversa inteira
+    // a cada mensagem enviada (só pra evitar listener duplicado), o que travava a tela
+    // e fazia as imagens "recarregarem" visualmente a cada envio. Agora só vincula o
+    // clique em elementos que ainda não foram vinculados (marcados via dataset), então
+    // enviar uma mensagem nova não mexe mais nas mídias já renderizadas.
     document.querySelectorAll('.media-target').forEach(media => {
-        // Remove listeners antigos para evitar duplicatas
-        const newMedia = media.cloneNode(true);
-        media.parentNode.replaceChild(newMedia, media);
-        
-        newMedia.addEventListener('click', (e) => {
+        if (media.dataset.viewerBound === '1') return;
+        media.dataset.viewerBound = '1';
+
+        media.addEventListener('click', (e) => {
             e.stopPropagation();
             e.preventDefault();
-            const src = newMedia.getAttribute('src') || newMedia.src;
+            const src = media.getAttribute('src') || media.src;
             if (!src) return;
-            const isVideo = newMedia.tagName === 'VIDEO' || newMedia.classList.contains('message-video');
+            const isVideo = media.tagName === 'VIDEO' || media.classList.contains('message-video');
             const viewer = document.getElementById('media-viewer');
             const container = document.getElementById('media-viewer-container');
             container.innerHTML = '';
@@ -2044,6 +2061,7 @@ function refreshPersonalizationUI() {
     const accent    = localStorage.getItem('chatbuddy_accent')    || 'blue';
     const font      = localStorage.getItem('chatbuddy_font')      || 'padrao';
     const bubble    = localStorage.getItem('chatbuddy_bubble')    || 'blue';
+    const bubbleReceived = localStorage.getItem('chatbuddy_bubble_received') || 'gray';
     const bubbleMode = localStorage.getItem('chatbuddy_bubble_mode') || 'normal';
     const bubbleGradient = localStorage.getItem('chatbuddy_bubble_gradient') || 'oceano';
     const animation = localStorage.getItem('chatbuddy_animation') || 'padrao';
@@ -2059,6 +2077,13 @@ function refreshPersonalizationUI() {
     });
     document.querySelectorAll('#bubble-picker-normal .bubble-swatch').forEach(btn => {
         btn.classList.toggle('active-bubble', btn.dataset.bubbleValue === bubble);
+        // Cor exclusiva: se essa cor já está em uso na bolha recebida, bloqueia aqui.
+        btn.classList.toggle('swatch-disabled', btn.dataset.bubbleValue === bubbleReceived);
+    });
+    document.querySelectorAll('#bubble-picker-received .bubble-swatch').forEach(btn => {
+        btn.classList.toggle('active-bubble', btn.dataset.bubbleReceivedValue === bubbleReceived);
+        // Cor exclusiva: se essa cor já está em uso na bolha enviada, bloqueia aqui.
+        btn.classList.toggle('swatch-disabled', btn.dataset.bubbleReceivedValue === bubble);
     });
     document.querySelectorAll('#bubble-picker-gradient .bubble-swatch').forEach(btn => {
         btn.classList.toggle('active-bubble', btn.dataset.bubbleGradientValue === bubbleGradient);
@@ -2107,8 +2132,19 @@ document.querySelectorAll('.font-option').forEach(btn => {
 document.querySelectorAll('#bubble-picker-normal .bubble-swatch').forEach(btn => {
     btn.addEventListener('click', () => {
         const bubble = btn.dataset.bubbleValue;
+        if (btn.classList.contains('swatch-disabled')) return; // já é a cor da recebida
         document.documentElement.setAttribute('data-bubble', bubble);
         localStorage.setItem('chatbuddy_bubble', bubble);
+        refreshPersonalizationUI();
+    });
+});
+
+document.querySelectorAll('#bubble-picker-received .bubble-swatch').forEach(btn => {
+    btn.addEventListener('click', () => {
+        if (btn.classList.contains('swatch-disabled')) return; // já é a cor da enviada
+        const bubbleReceived = btn.dataset.bubbleReceivedValue;
+        document.documentElement.setAttribute('data-bubble-received', bubbleReceived);
+        localStorage.setItem('chatbuddy_bubble_received', bubbleReceived);
         refreshPersonalizationUI();
     });
 });
@@ -2205,7 +2241,15 @@ document.getElementById('btn-logout').addEventListener('click', () => {
 // Navegação de abas nativa principal (Conversas, Espaços e Grupos)
 document.getElementById('tab-chats').addEventListener('click', () => switchMainTab('chats'));
 document.getElementById('tab-spaces').addEventListener('click', () => { switchMainTab('spaces'); loadSpacesList(); });
-document.getElementById('tab-groups').addEventListener('click', () => { switchMainTab('groups'); loadGroupsList(); });
+document.getElementById('tab-groups').addEventListener('click', () => {
+    // A aba "Grupos" da barra inferior deve sempre mostrar TODOS os grupos do usuário.
+    // Sem isso, se você tivesse entrado em um espaço antes, o filtro daquele espaço
+    // continuava "preso" e a aba Grupos só mostrava os grupos daquele espaço.
+    activeSpaceFilterId = null;
+    document.querySelectorAll('.space-rail-icon').forEach(b => b.classList.remove('active-rail'));
+    switchMainTab('groups');
+    loadGroupsList();
+});
 
 function switchMainTab(target) {
     // Se a tela de um espaço estiver aberta na área de seleção, fecha antes de trocar de aba
@@ -3593,15 +3637,20 @@ function applyGroupsSpaceFilter() {
 
         // Garante que o badge "Espaço: nome" apareça assim que os dados do espaço chegarem
         // (a lista de grupos pode renderizar antes da lista de espaços terminar de carregar)
+        // e mantém a cor/nome sempre atualizados — antes o badge só era criado uma vez,
+        // então editar a cor ou o nome do espaço não refletia aqui até recarregar a página.
         if (rowSpaceId && allSpaces[rowSpaceId]) {
             const header = row.querySelector('.chat-item-header');
-            if (header && !header.querySelector('.group-space-badge')) {
+            if (header) {
                 const s = allSpaces[rowSpaceId];
-                const span = document.createElement('span');
-                span.className = 'header-badge group-space-badge';
+                let span = header.querySelector('.group-space-badge');
+                if (!span) {
+                    span = document.createElement('span');
+                    span.className = 'header-badge group-space-badge';
+                    header.appendChild(span);
+                }
                 span.style.cssText = `font-size:10px;background:rgba(255,255,255,0.06);color:${s.color || '#0a84ff'};border:1px solid ${s.color || '#0a84ff'};border-radius:20px;padding:1px 8px;white-space:nowrap;`;
                 span.innerText = `Espaço: ${s.name || ''}`;
-                header.appendChild(span);
             }
         }
     });
@@ -3697,6 +3746,12 @@ function openSpaceRoom(spaceId) {
     // Esconde a aba atual (Conversas/Espaços/Grupos) e mostra a tela do espaço
     // no mesmo lugar — a lista de grupos do espaço fica na parte de selecionar o chat.
     document.querySelectorAll('.tab-pane').forEach(p => p.classList.add('hidden'));
+    // O container que envolve as abas (Conversas/Espaços/Grupos) continuava visível e
+    // "vazio" mesmo com as abas escondidas, então ele e a tela do espaço disputavam o
+    // mesmo espaço vertical (ambos com flex:1) e o espaço acabava aparecendo bem mais
+    // para baixo, com um vão em branco em cima. Escondendo o container inteiro isso some.
+    const mainPanes = document.getElementById('main-panes-container');
+    if (mainPanes) mainPanes.classList.add('hidden');
     document.getElementById('space-room-screen').classList.remove('hidden');
 }
 
@@ -3747,7 +3802,10 @@ function closeSpaceRoom() {
     document.querySelectorAll('.space-rail-icon').forEach(b => b.classList.remove('active-rail'));
     activeSpaceRoomId = null;
     activeSpaceRoomData = null;
-    // Volta a mostrar a lista da aba Espaços no lugar onde a tela do espaço estava
+    // Mostra de novo o container das abas (escondido em openSpaceRoom) e a lista da
+    // aba Espaços no lugar onde a tela do espaço estava
+    const mainPanes = document.getElementById('main-panes-container');
+    if (mainPanes) mainPanes.classList.remove('hidden');
     const spacesPane = document.getElementById('content-spaces');
     if (spacesPane) spacesPane.classList.remove('hidden');
 }
