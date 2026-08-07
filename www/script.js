@@ -874,6 +874,9 @@ function buildDirectMessageWrapper(data, idx, allMessages, recipientData) {
     const arrow = document.createElement('div');
     arrow.className = 'reply-arrow';
     arrow.innerHTML = `<svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>`;
+    // No PC o botãozinho de responder some/aparece suave ao passar o mouse (via CSS)
+    // e já responde direto no clique — só é clicável quando visível.
+    arrow.addEventListener('click', (e) => { e.stopPropagation(); triggerReplyAction(data); });
 
     const card = document.createElement('div');
     card.className = `message ${isSent ? 'sent' : 'received'}`;
@@ -1093,6 +1096,14 @@ document.getElementById('media-viewer-close').addEventListener('click', () => {
     document.getElementById('media-viewer').classList.add('hidden');
 });
 
+// ─── DETECÇÃO DE PLATAFORMA (PC x Android/celular) ───────────────────────────
+// Usado pra decidir: no PC o menu de mensagem abre com o botão direito do mouse
+// e aparece um botãozinho de responder ao passar o mouse (estilo Instagram);
+// no celular continua sendo segurar o dedo (long press) e arrastar (swipe).
+function isPC() {
+    return window.matchMedia('(hover: hover) and (pointer: fine)').matches;
+}
+
 // ─── LONG PRESS ─────────────────────────────────────────────────────────────
 function applyLongPress(element, callback, onStart, onCancel) {
     let timer = null; let startX = 0; let startY = 0; let cancelled = false;
@@ -1114,14 +1125,23 @@ function applyLongPress(element, callback, onStart, onCancel) {
         const { x, y } = getXY(e);
         if (Math.abs(x - startX) > MOVE_TOLERANCE || Math.abs(y - startY) > MOVE_TOLERANCE) cancel();
     };
-    element.addEventListener('touchstart',  start,  { passive: true });
-    element.addEventListener('touchend',    cancel, { passive: true });
-    element.addEventListener('touchmove',   move,   { passive: true });
-    element.addEventListener('mousedown',   start);
-    element.addEventListener('mouseup',     cancel);
-    element.addEventListener('mouseleave',  cancel);
-    element.addEventListener('mousemove',   move);
-    element.addEventListener('contextmenu', e => e.preventDefault());
+
+    if (isPC()) {
+        // No PC o menu da mensagem abre com o clique direito de verdade, não segurando o botão.
+        element.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            callback(e);
+        });
+    } else {
+        element.addEventListener('touchstart',  start,  { passive: true });
+        element.addEventListener('touchend',    cancel, { passive: true });
+        element.addEventListener('touchmove',   move,   { passive: true });
+        element.addEventListener('mousedown',   start);
+        element.addEventListener('mouseup',     cancel);
+        element.addEventListener('mouseleave',  cancel);
+        element.addEventListener('mousemove',   move);
+        element.addEventListener('contextmenu', e => e.preventDefault());
+    }
 }
 
 // ─── CORREÇÃO COMPLETA DO CORTE DO MENU DE CONTEXTO (MENSAGEM CENTRALIZADA) ───
@@ -2702,6 +2722,7 @@ function buildGroupMessageWrapper(data, idx, allMessages, groupData) {
     const arrow2 = document.createElement('div');
     arrow2.className = 'reply-arrow';
     arrow2.innerHTML = `<svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>`;
+    arrow2.addEventListener('click', (e) => { e.stopPropagation(); triggerGroupReplyAction(data); });
     applyGroupSwipeToReply(wrapper, card, arrow2, data);
 
     if (isSent) { wrapper.appendChild(card); wrapper.appendChild(arrow2); }
