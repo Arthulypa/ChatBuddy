@@ -1090,3 +1090,83 @@ html[data-animation="nenhuma"]  .message-wrapper { animation: none !important; }
 @keyframes splashFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes splashDotBlink { 0%, 100% { opacity: 0.3; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } }
 .empty-state { animation: fadeIn 0.3s ease; }
+
+/* ─── MATERIAL YOU 3 — botões redondos "morfam" pra quadrado (squircle) no toque ───
+   Círculo em repouso → no hover/press vira um quadrado arredondado, e volta suave
+   pro círculo ao soltar/tirar o mouse. É o "shape morph" clássico do Material You 3. */
+.btn-fab,
+.btn-send-round,
+.btn-mic-round,
+.media-viewer-close,
+.call-action-btn,
+.icon-btn-dots,
+.audio-play-btn {
+    transition: border-radius 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.2s ease,
+                background 0.2s ease;
+}
+.btn-fab:hover,
+.btn-send-round:hover,
+.btn-mic-round:hover,
+.media-viewer-close:hover,
+.call-action-btn:hover,
+.icon-btn-dots:hover,
+.audio-play-btn:hover {
+    border-radius: 16px;
+}
+.btn-fab:active,
+.btn-send-round:active,
+.btn-mic-round:active,
+.media-viewer-close:active,
+.call-action-btn:active,
+.icon-btn-dots:active,
+.audio-play-btn:active {
+    border-radius: 12px;
+    transform: scale(0.94);
+}
+
+/* Ícones no estilo Material You 3: contorno mais suave, peso de traço mais leve,
+   e o mesmo morph circular aplicado ao "fundo" do ícone (o container em volta do svg). */
+.m3-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.06);
+    transition: border-radius 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.2s ease,
+                transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer;
+}
+.m3-icon svg { width: 22px; height: 22px; stroke-width: 1.75; }
+.m3-icon:hover { border-radius: 14px; background: rgba(255,255,255,0.1); }
+.m3-icon:active { border-radius: 10px; transform: scale(0.92); }
+
+/* Ícone pequeno alinhado com texto, usado nos botões de Editar/Excluir/Bloquear/Adicionar */
+.m3-icon-inline { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-right: 6px; vertical-align: -3px; }
+.m3-icon-inline svg { width: 100%; height: 100%; }
+
+/* ─── MATERIAL YOU 3 — versão "quadrada arredondada" pros botões retangulares ───
+   Fica com cantos arredondados em repouso e aperta/afrouxa suave ao tocar,
+   o mesmo espírito do morph redondo→quadrado, só que aplicado a botões largos. */
+.ios-btn-primary,
+.action-danger-btn,
+.action-unblock-btn,
+.btn-profile-close,
+.filter-pill {
+    border-radius: 14px;
+    transition: border-radius 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                transform 0.15s ease,
+                background 0.2s ease;
+}
+.ios-btn-primary:active,
+.action-danger-btn:active,
+.action-unblock-btn:active,
+.btn-profile-close:active,
+.filter-pill:active {
+    border-radius: 20px;
+    transform: scale(0.98);
+}
