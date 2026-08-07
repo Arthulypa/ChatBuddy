@@ -3087,7 +3087,7 @@ function openGroupInfoSheet() {
                     <button onclick="event.stopPropagation();toggleGroupAdmin('${uid}','${isAdmin}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:1px solid var(--glass-border);background:var(--surface-3);color:var(--text-main);cursor:pointer;">
                         ${isAdmin ? 'Remover Admin' : 'Tornar Admin'}
                     </button>
-                    <button onclick="event.stopPropagation();removeGroupMember('${uid}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:none;background:rgba(255,59,48,0.2);color:#ff3b30;cursor:pointer;">Remover</button>
+                    <button onclick="event.stopPropagation();removeGroupMember('${uid}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:none;background:rgba(255,59,48,0.2);color:#ff3b30;cursor:pointer;"><svg viewBox="0 0 24 24" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"><path fill="currentColor" d="M10 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h9.5c-.32-.62-.5-1.32-.5-2.06 0-.72.16-1.4.44-2.02-.47-.05-.94-.08-1.44-.08z"/><path fill="currentColor" d="M14 15h8v2h-8z"/></svg>Remover</button>
                 </div>` : ''}
             `;
             // Clicar no membro abre o perfil dele
@@ -3870,7 +3870,7 @@ function openSpaceInfoSheet() {
                     <button onclick="event.stopPropagation();toggleSpaceAdmin('${uid}','${isAdmin}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:1px solid var(--glass-border);background:var(--surface-3);color:var(--text-main);cursor:pointer;">
                         ${isAdmin ? 'Remover Admin' : 'Tornar Admin'}
                     </button>
-                    <button onclick="event.stopPropagation();removeSpaceMember('${uid}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:none;background:rgba(255,59,48,0.2);color:#ff3b30;cursor:pointer;">Remover</button>
+                    <button onclick="event.stopPropagation();removeSpaceMember('${uid}')" style="font-size:10px;padding:3px 7px;border-radius:8px;border:none;background:rgba(255,59,48,0.2);color:#ff3b30;cursor:pointer;"><svg viewBox="0 0 24 24" style="width:11px;height:11px;vertical-align:-1px;margin-right:3px;"><path fill="currentColor" d="M10 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h9.5c-.32-.62-.5-1.32-.5-2.06 0-.72.16-1.4.44-2.02-.47-.05-.94-.08-1.44-.08z"/><path fill="currentColor" d="M14 15h8v2h-8z"/></svg>Remover</button>
                 </div>` : ''}
             `;
             memberEls[idx] = row;
@@ -4327,4 +4327,3 @@ function loadCallsList() {
         });
     });
 }
-
