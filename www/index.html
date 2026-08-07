@@ -153,12 +153,17 @@
         </nav>
         <div class="tab-content-container" id="main-panes-container">
             <div id="content-chats" class="tab-pane">
+                <div class="search-bar-wrapper">
+                    <input type="text" id="search-contacts-input" placeholder="Buscar conversas pelo nome...">
+                </div>
+                <div id="quick-spaces-row" class="quick-spaces-row">
+                    <button id="quick-space-add" class="quick-space-avatar quick-space-add" title="Criar espaço">
+                        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    </button>
+                </div>
                 <div class="chat-filter-pills">
                     <button class="filter-pill active" data-filter-value="todas">Conversas</button>
                     <button class="filter-pill" data-filter-value="nao-lidas">Não lidas</button>
-                </div>
-                <div class="search-bar-wrapper">
-                    <input type="text" id="search-contacts-input" placeholder="Buscar conversas pelo nome...">
                 </div>
                 <div id="chats-list" class="chats-list"></div>
                 <!-- Banner de solicitações pendentes -->
