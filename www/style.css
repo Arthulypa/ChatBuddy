@@ -1,1014 +1,1178 @@
-<!DOCTYPE html>
-<html lang="pt-br" translate="no">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ChatBuddy - Ultra Premium iOS</title>
-    <meta name="google" content="notranslate">
-    <link rel="stylesheet" href="style.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-</head>
-<body>
+:root {
+    --ios-bg: #000000;
+    --glass-bg: rgba(22, 22, 27, 0.75);
+    --glass-border: rgba(255, 255, 255, 0.08);
+    --ios-blue: #0a84ff;
+    --ios-red: #ff453a;
+    --ios-green: #30d158;
+    --ios-orange: #ff9f0a;
+    --text-main: #ffffff;
+    --text-muted: #8e8e93;
+    --msg-sent: rgba(10, 132, 255, 0.9);
+    --msg-sent-text: #ffffff;
+    --msg-received: rgba(36, 36, 38, 0.85);
+    --app-max-width: 600px;
+    /* Superfícies (permitem o tema claro trocar tudo de uma vez) */
+    --surface-1: #000000;      /* fundo das telas cheias */
+    --surface-2: #1c1c1e;      /* caixa de texto, cartões internos */
+    --surface-3: #2c2c2e;      /* placeholder de avatar, elementos menores */
+    --icon-color: #ffffff;     /* cor dos ícones mono */
+    --app-font: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif;
+}
 
-    <!-- SPLASH SCREEN (abertura animada, tipo WhatsApp) -->
-    <div id="app-splash-screen" class="app-splash-screen">
-        <div class="splash-icon-wrapper">
-            <svg viewBox="0 0 24 24" class="splash-icon"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.99 4.26L2 22l5.92-1.21C9.13 21.42 10.51 21.8 12 21.8c5.52 0 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
-            <div class="splash-ring"></div>
-        </div>
-        <h1 class="splash-title">ChatBuddy</h1>
-        <div class="splash-dots"><span></span><span></span><span></span></div>
-    </div>
+/* Estilos de texto (Personalização) */
+[data-font="padrao"]     { --app-font: -apple-system, BlinkMacSystemFont, 'Inter', sans-serif; }
+[data-font="arredondado"]{ --app-font: 'Trebuchet MS', 'Verdana', -apple-system, sans-serif; }
+[data-font="classico"]   { --app-font: Georgia, 'Times New Roman', serif; }
+[data-font="sistema"]    { --app-font: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 
-    <div id="popup-notification" class="popup-notification hidden">
-        <div class="popup-avatar-wrapper">
-            <img id="popup-avatar" src="" alt="">
-        </div>
-        <div class="popup-content">
-            <h5 id="popup-title">Nome</h5>
-            <p id="popup-text">Mensagem...</p>
-        </div>
-    </div>
+[data-theme="light"] {
+    --ios-bg: #f2f2f7;
+    --glass-bg: rgba(255, 255, 255, 0.75);
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --text-main: #1c1c1e;
+    --text-muted: #6e6e73;
+    --msg-received: rgba(0, 0, 0, 0.06);
+    --surface-1: #f2f2f7;
+    --surface-2: #ffffff;
+    --surface-3: #e5e5ea;
+    --icon-color: #1c1c1e;
+}
 
-    <!-- LOGIN -->
-    <div id="login-page" class="auth-container">
-        <div class="auth-box glass-premium">
-            <div class="auth-logo">
-                <div class="logo-icon-wrapper">
-                    <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 2.98.99 4.26L2 22l5.92-1.21C9.13 21.42 10.51 21.8 12 21.8c5.52 0 10-4.48 10-10S17.52 2 12 2zm1 14h-2v-2h2v2zm0-4h-2V7h2v5z"/></svg>
-                </div>
-                <h1 class="ios-title">ChatBuddy</h1>
-                <p class="ios-subtitle">Conectando você ao amanhã</p>
-            </div>
-            <div class="input-group-premium">
-                <input type="email" id="email-login" required placeholder=" ">
-                <label>E-mail</label>
-            </div>
-            <div class="input-group-premium">
-                <input type="password" id="password-login" required placeholder=" ">
-                <label>Senha</label>
-            </div>
-            <button id="btn-login" class="ios-btn-primary">Entrar</button>
-            <div class="divider-text">ou</div>
-            <button id="btn-google-login" class="ios-btn-google">
-                <img src="https://fonts.gstatic.com/s/i/productlogos/googleg/v6/24px.svg" alt="Google" width="18">
-                Entrar com o Google
-            </button>
-            <p class="auth-switch">Não tem uma conta? <span id="btn-to-register" style="cursor:pointer;">Criar conta</span></p>
-        </div>
-    </div>
+/* Cores de destaque (o "azul" vira o que a pessoa escolher) */
+[data-accent="claude"] { --ios-blue: #D97757; }
+[data-accent="blue"]   { --ios-blue: #0a84ff; }
+[data-accent="green"]  { --ios-blue: #30d158; }
+[data-accent="purple"] { --ios-blue: #bf5af2; }
+[data-accent="pink"]   { --ios-blue: #ff375f; }
+[data-accent="orange"] { --ios-blue: #ff9f0a; }
+[data-accent="red"]    { --ios-blue: #ff453a; }
 
-    <!-- REGISTRO -->
-    <div id="register-page" class="auth-container hidden">
-        <div class="auth-box glass-premium">
-            <h1 class="ios-title">Criar Conta</h1>
-            <p class="ios-subtitle" style="margin-bottom: 25px;">Rápido, seguro e privado na ChatBuddy.</p>
-            <div id="reg-step-1">
-                <div class="input-group-premium">
-                    <input type="email" id="email-reg" required placeholder=" ">
-                    <label>E-mail</label>
-                </div>
-                <div class="input-group-premium">
-                    <input type="password" id="password-reg" required placeholder=" ">
-                    <label>Senha</label>
-                </div>
-                <button id="btn-send-code" class="ios-btn-primary">Enviar Código</button>
-            </div>
-            <div id="reg-step-2" class="hidden">
-                <p id="reg-step-2-info" style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.5;">Enviamos um link de verificação para o seu e-mail. Após clicar no link, volte aqui e pressione o botão abaixo.</p>
-                <button id="btn-verify-and-register" class="ios-btn-primary">Já verifiquei ✓</button>
-            </div>
-            <p class="auth-switch" style="margin-top:20px;">Já tem uma conta? <span id="btn-to-login">Fazer Login</span></p>
-        </div>
-    </div>
+/* Cor do balão de mensagem enviada — com contraste de texto automático:
+   balões escuros → texto branco; balões claros → texto preto (nunca invisível) */
+[data-bubble="claude"] { --msg-sent: rgba(217, 119, 87, 0.94); --msg-sent-text: #ffffff; }
+[data-bubble="blue"]   { --msg-sent: rgba(10, 132, 255, 0.9);  --msg-sent-text: #ffffff; }
+[data-bubble="green"]  { --msg-sent: rgba(48, 209, 88, 0.9);   --msg-sent-text: #ffffff; }
+[data-bubble="purple"] { --msg-sent: rgba(191, 90, 242, 0.9);  --msg-sent-text: #ffffff; }
+[data-bubble="pink"]   { --msg-sent: rgba(255, 55, 95, 0.9);   --msg-sent-text: #ffffff; }
+[data-bubble="orange"] { --msg-sent: rgba(255, 159, 10, 0.92); --msg-sent-text: #1c1c1e; }
+[data-bubble="red"]    { --msg-sent: rgba(255, 69, 58, 0.9);   --msg-sent-text: #ffffff; }
+[data-bubble="yellow"] { --msg-sent: rgba(255, 214, 10, 0.95); --msg-sent-text: #1c1c1e; }
+[data-bubble="gray"]   { --msg-sent: rgba(142, 142, 147, 0.9); --msg-sent-text: #ffffff; }
+[data-bubble="white"]  { --msg-sent: rgba(242, 242, 247, 0.97); --msg-sent-text: #1c1c1e; }
+[data-bubble="black"]  { --msg-sent: rgba(28, 28, 30, 0.95);   --msg-sent-text: #ffffff; }
 
-    <!-- PERFIL INICIAL -->
-    <div id="profile-page" class="auth-container hidden">
-        <div class="auth-box glass-premium">
-            <h2 class="ios-title" style="font-size: 22px;">Configurar Perfil</h2>
-            <p class="ios-subtitle">Defina sua identidade no ChatBuddy</p>
-            <div class="avatar-upload-container-premium">
-                <div class="avatar-preview-wrapper">
-                    <img id="initial-avatar-preview" src="" class="hidden">
-                    <div id="initial-avatar-placeholder" class="avatar-placeholder-svg">
-                        <svg viewBox="0 0 24 24" class="mono-icon-gray"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                    </div>
-                </div>
-                <label for="initial-avatar-file" class="avatar-file-label-premium">Escolher Foto</label>
-                <input type="file" id="initial-avatar-file" accept="image/*" class="hidden">
-            </div>
-            <div class="input-group-premium">
-                <input type="text" id="display-name" required placeholder=" ">
-                <label>Apelido (Nickname)</label>
-            </div>
-            <div class="input-group-premium with-at-prefix">
-                <span class="at-prefix">@</span>
-                <input type="text" id="username" required placeholder=" ">
-                <label>Nome de usuário</label>
-            </div>
-            <div class="input-group-premium">
-                <input type="text" id="user-bio" placeholder=" " value="Disponível no ChatBuddy">
-                <label>Biografia (Bio)</label>
-            </div>
-            <button id="btn-save-profile" class="ios-btn-primary">Salvar e Entrar</button>
-        </div>
-    </div>
+/* Cor das mensagens RECEBIDAS — independente da cor de envio, pra dar pra escolher as duas. */
+[data-bubble-received="claude"] { --msg-received: rgba(217, 119, 87, 0.94); --msg-received-text: #ffffff; }
+[data-bubble-received="blue"]   { --msg-received: rgba(10, 132, 255, 0.9);  --msg-received-text: #ffffff; }
+[data-bubble-received="green"]  { --msg-received: rgba(48, 209, 88, 0.9);   --msg-received-text: #ffffff; }
+[data-bubble-received="purple"] { --msg-received: rgba(191, 90, 242, 0.9);  --msg-received-text: #ffffff; }
+[data-bubble-received="pink"]   { --msg-received: rgba(255, 55, 95, 0.9);   --msg-received-text: #ffffff; }
+[data-bubble-received="orange"] { --msg-received: rgba(255, 159, 10, 0.92); --msg-received-text: #1c1c1e; }
+[data-bubble-received="red"]    { --msg-received: rgba(255, 69, 58, 0.9);   --msg-received-text: #ffffff; }
+[data-bubble-received="yellow"] { --msg-received: rgba(255, 214, 10, 0.95); --msg-received-text: #1c1c1e; }
+[data-bubble-received="gray"]   { --msg-received: rgba(142, 142, 147, 0.9); --msg-received-text: #ffffff; }
+[data-bubble-received="white"]  { --msg-received: rgba(242, 242, 247, 0.97); --msg-received-text: #1c1c1e; }
+[data-bubble-received="black"]  { --msg-received: rgba(28, 28, 30, 0.95);   --msg-received-text: #ffffff; }
 
-    <!-- CHAT PRINCIPAL -->
-    <div id="chat-page" class="app-container hidden">
-        <!-- SIDEBAR DE ESPAÇOS (terceiro frame, só no modo PC) -->
-        <div id="spaces-rail" class="spaces-rail">
-            <button id="rail-home-btn" class="rail-icon-btn active-rail" title="Conversas">
-                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-            </button>
-            <button id="rail-groups-btn" class="rail-icon-btn" title="Grupos">
-                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-            </button>
-            <button id="rail-add-space-btn" class="rail-icon-btn rail-add-btn" title="Criar">
-                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            </button>
-            <!-- Espaços que a pessoa já faz parte aparecem aqui, como bolinhas coloridas -->
-            <div id="spaces-rail-list" class="spaces-rail-list"></div>
-            <div class="rail-spacer"></div>
-            <button id="rail-add-people-btn" class="rail-icon-btn rail-add-btn" title="Adicionar pessoas">
-                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-            </button>
-        </div>
+/* Swatch bloqueado por já estar em uso na outra bolha (enviada/recebida são exclusivas) */
+.bubble-swatch.swatch-disabled { opacity: 0.25; cursor: not-allowed; pointer-events: none; }
 
-        <header class="app-top-bar glass-premium">
-            <h2 class="app-title">ChatBuddy</h2>
-            <!-- INCLUSÃO DA SEÇÃO DE EXIBIÇÃO DE INFORMAÇÕES DO USUÁRIO LOGADO -->
-            <div id="current-user-header-profile" class="current-user-header-pill">
-                <img id="current-user-header-avatar" class="current-user-header-avatar" src="">
-                <span id="current-user-header-nick" class="current-user-header-nick">--</span>
-            </div>
-            <button id="btn-main-settings" class="config-icon-btn">
-                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65C14.46 2.18 14.25 2 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z"/></svg>
-            </button>
-        </header>
-        <nav class="app-tabs glass-premium">
-            <div class="tab-item active" id="tab-chats">Conversas <span id="requests-badge" class="requests-badge hidden"></span></div>
-            <div class="tab-item" id="tab-spaces">Espaços</div>
-            <div class="tab-item" id="tab-groups">Grupos</div>
-        </nav>
-        <div class="tab-content-container" id="main-panes-container">
-            <div id="content-chats" class="tab-pane">
-                <div class="chat-filter-pills">
-                    <button class="filter-pill active" data-filter-value="todas">Conversas</button>
-                    <button class="filter-pill" data-filter-value="nao-lidas">Não lidas</button>
-                </div>
-                <div class="search-bar-wrapper">
-                    <input type="text" id="search-contacts-input" placeholder="Buscar conversas pelo nome...">
-                </div>
-                <div id="chats-list" class="chats-list"></div>
-                <!-- Banner de solicitações pendentes -->
-                <div id="requests-banner" class="requests-banner hidden" onclick="document.getElementById('requests-modal').classList.remove('hidden')">
-                    <svg viewBox="0 0 24 24" style="width:18px;height:18px;flex-shrink:0;"><path fill="currentColor" d="M20 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm-8 9l-8-5V6l8 5 8-5v2l-8 5z"/></svg>
-                    <span id="requests-banner-text">Você tem solicitações de conversa</span>
-                    <svg viewBox="0 0 24 24" style="width:16px;height:16px;flex-shrink:0;opacity:0.5;"><path fill="currentColor" d="M8.59 16.59L13.17 12 8.59 7.41 10 6l6 6-6 6z"/></svg>
-                </div>
-                <button id="btn-new-chat" class="btn-fab">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                </button>
-            </div>
-            <!-- Lista de histórico de chamadas continua existindo fora da navegação principal (usada internamente) -->
-            <div id="calls-list" class="hidden"></div>
-            <!-- Aba ESPAÇOS (mobile) — lista dos espaços em que a pessoa é membro -->
-            <div id="content-spaces" class="tab-pane hidden">
-                <div id="spaces-mobile-list" class="chats-list"></div>
-                <button id="btn-new-space" class="btn-fab">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                </button>
-            </div>
-            <div id="content-groups" class="tab-pane hidden">
-                <div id="groups-list" class="chats-list"></div>
-                <button id="btn-new-group" class="btn-fab">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5c-1.66 0-3 1.34-3 3s1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5C6.34 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5c0-2.33-4.67-3.5-7-3.5zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
-                </button>
-            </div>
-        </div>
+/* Modo Gradiente (só entra em ação quando data-bubble-mode="gradient" está ativo) */
+html[data-bubble-mode="gradient"][data-bubble-gradient="oceano"]    { --msg-sent: linear-gradient(135deg,#0a84ff,#30d158); --msg-sent-text:#fff; }
+html[data-bubble-mode="gradient"][data-bubble-gradient="roxo-azul"] { --msg-sent: linear-gradient(135deg,#5e5ce6,#0a84ff); --msg-sent-text:#fff; }
+html[data-bubble-mode="gradient"][data-bubble-gradient="uva"]        { --msg-sent: linear-gradient(135deg,#bf5af2,#ff375f); --msg-sent-text:#fff; }
+html[data-bubble-mode="gradient"][data-bubble-gradient="menta"]      { --msg-sent: linear-gradient(135deg,#30d158,#64d2ff); --msg-sent-text:#1c1c1e; }
+html[data-bubble-mode="gradient"][data-bubble-gradient="por-do-sol"] { --msg-sent: linear-gradient(135deg,#ff9f0a,#ff375f); --msg-sent-text:#fff; }
+html[data-bubble-mode="gradient"][data-bubble-gradient="fogo"]       { --msg-sent: linear-gradient(135deg,#ff453a,#ff9f0a); --msg-sent-text:#fff; }
+html[data-bubble-mode="gradient"][data-bubble-gradient="dourado"]    { --msg-sent: linear-gradient(135deg,#ffd60a,#ff9f0a); --msg-sent-text:#1c1c1e; }
+html[data-bubble-mode="gradient"][data-bubble-gradient="carbono"]    { --msg-sent: linear-gradient(135deg,#8e8e93,#1c1c1e); --msg-sent-text:#fff; }
+html[data-bubble-mode="gradient"][data-bubble-gradient="aurora"]     { --msg-sent: linear-gradient(135deg,#5e5ce6,#30d158,#ffd60a); --msg-sent-text:#fff; }
 
-        <!-- EMPTY STATE PAINEL DIREITO -->
-        <div id="empty-chat-panel" class="empty-chat-panel">
-            <svg viewBox="0 0 24 24" style="width:56px;height:56px;opacity:0.2;margin-bottom:16px;"><path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/></svg>
-            <p style="color:#8e8e93;font-size:14px;font-weight:500;text-align:center;opacity:0.6;">Clique em qualquer mensagem para abrir</p>
-        </div>
+.bubble-mode-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+.bubble-mode-btn {
+    flex: 1; padding: 9px 0; border-radius: 10px; border: 1px solid var(--glass-border);
+    background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.bubble-mode-btn.active-bubble-mode { background: var(--ios-blue); color: #fff; border-color: var(--ios-blue); }
 
-        <!-- SALA DE CHAT -->
-        <div id="chat-room-screen" class="chat-room-screen hidden">
-            <header class="chat-header glass-premium">
-                <button id="btn-back-to-list" class="back-btn">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-                </button>
-                <div class="active-user-info" id="chat-header-user-area">
-                    <div class="header-avatar-container">
-                        <img id="active-chat-avatar" class="header-avatar" src="" alt="">
-                        <span id="active-chat-online-badge" class="online-indicator-dot hidden"></span>
-                        <div id="blocked-header-badge" class="blocked-header-badge hidden">BLOQ</div>
-                    </div>
-                    <div>
-                        <h2 id="active-chat-name" style="cursor:pointer;">Usuário</h2>
-                        <p id="active-chat-status">offline</p>
-                    </div>
-                </div>
-                <div class="call-btn-wrapper">
-                    <button id="btn-call-menu" class="icon-btn-dots">
-                        <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
-                    </button>
-                    <div id="call-type-menu" class="call-type-menu hidden">
-                        <button id="btn-start-voice-call" class="call-type-option">
-                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
-                            Chamada de voz
-                        </button>
-                        <button id="btn-start-video-call" class="call-type-option">
-                            <svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-                            Chamada de vídeo
-                        </button>
-                    </div>
-                </div>
-                <button id="btn-contact-menu" class="icon-btn-dots">
-                    <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
-                </button>
-            </header>
+/* ── SIDEBAR DE ESPAÇOS (terceiro frame, só no modo PC) ─────────────────────── */
+.spaces-rail { display: none; }
+@media (min-width: 768px) {
+    .spaces-rail {
+        display: flex; flex-direction: column; align-items: center; gap: 10px;
+        position: absolute; left: 10px; top: 10px; bottom: 10px; width: 64px;
+        padding: 12px 0; border-radius: 16px; border: 1px solid var(--glass-border);
+        background: var(--glass-bg); z-index: 10; overflow-y: auto; scrollbar-width: none;
+    }
+    .spaces-rail::-webkit-scrollbar { display: none; }
+}
+.rail-icon-btn {
+    width: 46px; height: 46px; border-radius: 15px; border: none; cursor: pointer;
+    background: rgba(255,255,255,0.06); color: var(--text-muted); flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center; transition: border-radius 0.15s ease, background 0.15s ease;
+}
+.rail-icon-btn svg { width: 22px; height: 22px; fill: currentColor; }
+.rail-icon-btn:hover { border-radius: 12px; }
+.rail-icon-btn.active-rail { background: var(--ios-blue); color: #fff; border-radius: 12px; }
+.rail-add-btn { background: transparent; border: 1.5px dashed var(--glass-border); color: var(--text-muted); }
+.rail-spacer { flex: 1; }
+.spaces-rail-list { display: flex; flex-direction: column; gap: 10px; align-items: center; width: 100%; }
+.space-rail-icon {
+    width: 46px; height: 46px; border-radius: 15px; border: none; cursor: pointer; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    color: #fff; font-weight: 700; font-size: 16px; transition: border-radius 0.15s ease;
+}
+.space-rail-icon:hover, .space-rail-icon.active-rail { border-radius: 12px; box-shadow: 0 0 0 2px var(--surface-1), 0 0 0 3.5px var(--ios-blue); }
 
-            <div id="blocked-chat-banner" class="blocked-chat-banner hidden">
-                <svg viewBox="0 0 24 24" style="width:16px;height:16px;margin-right:8px;flex-shrink:0;"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.68L5.68 16.9A7.902 7.902 0 014 12zm8 8c-1.85 0-3.55-.63-4.9-1.68L18.32 7.1A7.902 7.902 0 0120 12c0 4.42-3.58 8-8 8z"/></svg>
-                Você bloqueou este usuário
-                <button id="btn-unblock-banner" class="unblock-btn-inline">Desbloquear</button>
-            </div>
+/* ── Alternador Grupo / Espaço (modal de criação, estilo FluffyChat) ────────── */
+.type-toggle-wrap {
+    display: flex; gap: 4px; padding: 4px; margin: 0 auto 18px; width: fit-content;
+    background: rgba(255,255,255,0.06); border-radius: 20px; border: 1px solid var(--glass-border);
+}
+.type-toggle-btn {
+    display: flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 16px; border: none;
+    background: transparent; color: var(--text-muted); font-size: 13px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.type-toggle-btn.active-type-toggle { background: rgba(255,255,255,0.12); color: var(--text-main); }
 
-            <div id="messages-container" class="messages-container"></div>
+/* ── Filtros acima da busca (Conversas / Não lidas / Grupos) ────────────────── */
+.chat-filter-pills { display: flex; gap: 8px; padding: 10px 12px 4px; }
+.filter-pill {
+    padding: 7px 14px; border-radius: 20px; border: 1px solid var(--glass-border);
+    background: transparent; color: var(--text-muted); font-size: 12.5px; font-weight: 600; cursor: pointer;
+    white-space: nowrap;
+}
+.filter-pill.active { background: var(--ios-blue); color: #fff; border-color: var(--ios-blue); }
+.chat-item-row.filtered-out { display: none !important; }
+.unread-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ios-blue); flex-shrink: 0; margin-left: 6px; }
 
-            <div id="reply-bar" class="reply-bar hidden">
-                <div class="reply-bar-indicator"></div>
-                <div class="reply-bar-content">
-                    <span class="reply-bar-label">Respondendo</span>
-                    <p id="reply-bar-text" class="reply-bar-msg"></p>
-                </div>
-                <button id="btn-cancel-reply" class="reply-cancel-btn">
-                    <svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
-            </div>
+/* ── Modo Blur (contorno + brilho fino, cor que se adapta ao tema) ─────────── */
+html[data-bubble-mode="blur"] .message.sent {
+    background: rgba(255,255,255,0.07);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border: 1.4px solid rgba(255,255,255,0.92);
+    box-shadow: 0 0 3px rgba(255,255,255,0.9), 0 0 14px rgba(255,255,255,0.30);
+    color: var(--text-main);
+}
+html[data-theme="light"][data-bubble-mode="blur"] .message.sent {
+    background: rgba(0,0,0,0.045);
+    border: 1.4px solid rgba(28,28,30,0.85);
+    box-shadow: 0 0 3px rgba(0,0,0,0.55), 0 0 14px rgba(0,0,0,0.16);
+    color: var(--text-main);
+}
+.bubble-blur-preview-row { display: flex; justify-content: flex-end; padding: 6px 2px; }
+.bubble-blur-sample {
+    padding: 10px 16px; border-radius: 16px; font-size: 13.5px; font-weight: 500;
+    background: rgba(255,255,255,0.07); backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border: 1.4px solid rgba(255,255,255,0.92);
+    box-shadow: 0 0 3px rgba(255,255,255,0.9), 0 0 14px rgba(255,255,255,0.30);
+    color: var(--text-main);
+}
+html[data-theme="light"] .bubble-blur-sample {
+    background: rgba(0,0,0,0.045); border-color: rgba(28,28,30,0.85);
+    box-shadow: 0 0 3px rgba(0,0,0,0.55), 0 0 14px rgba(0,0,0,0.16);
+}
 
-            <footer id="chat-footer-area" class="chat-footer glass-premium">
-                <!-- MENU DE ANEXO -->
-                <div id="attach-menu" class="attach-menu hidden">
-                    <button class="attach-menu-item" id="attach-image">
-                        <span class="attach-menu-icon" style="background:#0a84ff;">
-                            <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-                        </span>
-                        <span>Foto</span>
-                    </button>
-                    <button class="attach-menu-item" id="attach-video">
-                        <span class="attach-menu-icon" style="background:#30d158;">
-                            <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-                        </span>
-                        <span>Vídeo</span>
-                    </button>
-                    <button class="attach-menu-item" id="attach-doc">
-                        <span class="attach-menu-icon" style="background:#ff9f0a;">
-                            <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-                        </span>
-                        <span>Arquivo</span>
-                    </button>
-                </div>
-                <div class="footer-input-row" id="footer-input-row">
-                    <button id="btn-attach" class="attach-btn" style="background:none; border:none; cursor:pointer;">
-                        <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-2.76 2.24-5 5-5s5 2.24 5 5v12.5c0 3.31-2.69 6-6 6s-6-2.69-6-6V6h2v11.5c0 2.21 1.79 4 4 4s4-1.79 4-4V5c0-1.66-1.34-3-3-3s-3 1.34-3 3v12.5c0 1.1.9 2 2 2s2-.9 2-2V6h2z"/></svg>
-                    </button>
-                    <input type="file" id="media-file-input" class="hidden" accept="image/*,video/*">
-                    <input type="file" id="doc-file-input" class="hidden" accept=".pdf,.doc,.docx,.txt,.zip,.xls,.xlsx,.ppt,.pptx">
-                    <input type="text" id="message-input" placeholder="Mensagem">
-                </div>
-                <button id="btn-send" class="btn-send-round hidden">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:16px;height:16px;transform: rotate(-45deg) translate(2px, -1px);"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-                </button>
-                <button id="btn-mic" class="btn-mic-round">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
-                </button>
-            </footer>
-        </div>
+/* ── Temas de fundo da conversa (se ajustam sozinhos ao tema claro/escuro) ─── */
+.wallpaper-picker { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 10px; }
+.wallpaper-option { display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; }
+.wallpaper-thumb { width: 100%; aspect-ratio: 1; border-radius: 12px; border: 2px solid transparent; background-color: var(--surface-1); position: relative; }
+.wallpaper-option.active-wallpaper .wallpaper-thumb { border-color: var(--ios-blue); }
+.wallpaper-option span { font-size: 11.5px; color: var(--text-muted); }
+.wallpaper-thumb-padrao { background: var(--surface-1); }
+.wallpaper-thumb-pontilhado { background-image: radial-gradient(rgba(128,128,128,0.5) 1px, transparent 1px); background-size: 8px 8px; }
+.wallpaper-thumb-gradiente { background: linear-gradient(160deg, rgba(10,132,255,0.35), transparent 70%), var(--surface-1); }
+.wallpaper-thumb-ondas { background: repeating-linear-gradient(135deg, rgba(128,128,128,0.35) 0 2px, transparent 2px 10px); }
 
-        <!-- CONFIGURAÇÕES (dentro do frame) -->
-        <div id="settings-screen" class="settings-screen hidden">
-            <header class="settings-screen-header glass-premium">
-                <button id="btn-back-settings" class="back-btn">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-                </button>
-                <h2>Configurações</h2>
-            </header>
-            <div class="settings-tabs-bar">
-                <div class="settings-tab active" data-tab="conta">Conta</div>
-                <div class="settings-tab" data-tab="notif">Notificações</div>
-                <div class="settings-tab" data-tab="priv">Privacidade</div>
-                <div class="settings-tab" data-tab="seg">Segurança</div>
-                <div class="settings-tab" data-tab="personalizacao">Personalização</div>
-            </div>
-            <div class="settings-screen-body">
-                <div id="stab-conta" class="settings-tab-pane">
-                    <div class="settings-section-title">Perfil</div>
-                    <div class="settings-section-group glass-premium">
-                        <div class="settings-avatar-row">
-                            <div class="settings-avatar-wrapper">
-                                <img id="settings-avatar-preview" src="" alt="">
-                            </div>
-                            <label for="settings-avatar-input" class="settings-avatar-label">Alterar Foto</label>
-                            <input type="file" id="settings-avatar-input" accept="image/*" class="hidden">
-                        </div>
-                    </div>
-                    <div class="settings-section-group glass-premium" style="margin-top:12px;">
-                        <div class="input-group-premium" style="margin:12px 0 4px;">
-                            <input type="text" id="settings-nickname" placeholder=" ">
-                            <label>Apelido (Nickname)</label>
-                        </div>
-                        <div class="input-group-premium with-at-prefix" style="margin-bottom:4px;">
-                            <span class="at-prefix">@</span>
-                            <input type="text" id="settings-username" placeholder=" ">
-                            <label>Nome de usuário</label>
-                        </div>
-                        <div class="input-group-premium" style="margin-bottom:12px;">
-                            <input type="text" id="settings-bio" placeholder=" ">
-                            <label>Biografia</label>
-                        </div>
-                    </div>
-                    <button id="btn-save-account" class="ios-btn-primary" style="margin-top:12px;">Salvar Alterações</button>
-                    <button id="btn-logout" class="ios-btn-primary" style="background:var(--ios-red);margin-top:10px;">Desconectar Conta</button>
-                </div>
-                <div id="stab-notif" class="settings-tab-pane hidden">
-                    <div class="settings-section-title">Notificações</div>
-                    <div class="settings-section-group glass-premium">
-                        <div class="settings-row-toggle">
-                            <div><p class="row-main-title">Silenciar Tudo</p><p class="row-sub-title">Nenhuma notificação será exibida</p></div>
-                            <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-mute-all"><span class="ios-switch-slider"></span></label>
-                        </div>
-                        <div style="height:1px;background:var(--glass-border);"></div>
-                        <div class="settings-row-toggle">
-                            <div><p class="row-main-title">Notificações Flutuantes</p><p class="row-sub-title">Bolinha que desce ao receber mensagem</p></div>
-                            <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-popup-global" checked><span class="ios-switch-slider"></span></label>
-                        </div>
-                    </div>
-                </div>
-                <div id="stab-priv" class="settings-tab-pane hidden">
-                    <div class="settings-section-title">Privacidade</div>
-                    <div class="settings-section-group glass-premium">
-                        <div class="settings-row-toggle">
-                            <div><p class="row-main-title">Confirmação de Leitura</p><p class="row-sub-title">Mostrar tique duplo verde ao ler</p></div>
-                            <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-read-receipts" checked><span class="ios-switch-slider"></span></label>
-                        </div>
-                        <div style="height:1px;background:var(--glass-border);"></div>
-                        <div class="settings-row-toggle">
-                            <div><p class="row-main-title">Confirmação de Online</p><p class="row-sub-title">Exibir "online" para outros usuários</p></div>
-                            <label class="ios-switch-wrapper"><input type="checkbox" id="toggle-show-online" checked><span class="ios-switch-slider"></span></label>
-                        </div>
-                    </div>
-                </div>
-                <div id="stab-seg" class="settings-tab-pane hidden">
-                    <div class="settings-section-title">Segurança</div>
-                    <div class="settings-section-group glass-premium">
-                        <button id="btn-change-password" class="ios-btn-primary" style="margin:12px 0 4px;">Alterar Senha</button>
-                        <button id="btn-active-sessions" class="ios-btn-primary" style="background:rgba(255,255,255,0.08);margin-bottom:12px;">Ver Sessões Ativas</button>
-                    </div>
-                </div>
-                <div id="stab-personalizacao" class="settings-tab-pane hidden">
-                    <div class="settings-section-title">Tema</div>
-                    <div class="settings-section-group glass-premium" style="padding:14px;">
-                        <div class="theme-picker">
-                            <button class="theme-option" data-theme-value="dark">
-                                <span class="theme-swatch theme-swatch-dark"></span>
-                                <span>Escuro</span>
-                            </button>
-                            <button class="theme-option" data-theme-value="light">
-                                <span class="theme-swatch theme-swatch-light"></span>
-                                <span>Claro</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="settings-section-title" style="margin-top:16px;">Cor de Destaque</div>
-                    <div class="settings-section-group glass-premium" style="padding:14px;">
-                        <div class="accent-picker">
-                            <button class="accent-swatch" data-accent-value="claude" style="background:#D97757;" title="Laranja Claude"></button>
-                            <button class="accent-swatch" data-accent-value="blue"   style="background:#0a84ff;"></button>
-                            <button class="accent-swatch" data-accent-value="green"  style="background:#30d158;"></button>
-                            <button class="accent-swatch" data-accent-value="purple" style="background:#bf5af2;"></button>
-                            <button class="accent-swatch" data-accent-value="pink"   style="background:#ff375f;"></button>
-                            <button class="accent-swatch" data-accent-value="orange" style="background:#ff9f0a;"></button>
-                            <button class="accent-swatch" data-accent-value="red"    style="background:#ff453a;"></button>
-                        </div>
-                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">Muda a cor dos botões, ícones e destaques do app.</p>
-                    </div>
-                    <div class="settings-section-title" style="margin-top:16px;">Estilo do Texto</div>
-                    <div class="settings-section-group glass-premium" style="padding:14px;">
-                        <div class="font-picker">
-                            <button class="font-option" data-font-value="padrao"      style="font-family:-apple-system,BlinkMacSystemFont,'Inter',sans-serif;">Padrão</button>
-                            <button class="font-option" data-font-value="arredondado" style="font-family:'Trebuchet MS','Verdana',sans-serif;">Arredondado</button>
-                            <button class="font-option" data-font-value="classico"    style="font-family:Georgia,'Times New Roman',serif;">Clássico</button>
-                            <button class="font-option" data-font-value="sistema"     style="font-family:system-ui,sans-serif;">Seguir Sistema</button>
-                        </div>
-                    </div>
-                    <div class="settings-section-title" style="margin-top:16px;">Cor do Balão</div>
-                    <div class="settings-section-group glass-premium" style="padding:14px;">
-                        <div class="bubble-mode-toggle">
-                            <button id="btn-bubble-mode-normal" class="bubble-mode-btn">Cor normal</button>
-                            <button id="btn-bubble-mode-gradient" class="bubble-mode-btn">Gradiente</button>
-                            <button id="btn-bubble-mode-blur" class="bubble-mode-btn">Blur</button>
-                        </div>
-                        <div id="bubble-picker-normal" class="accent-picker">
-                            <button class="bubble-swatch" data-bubble-value="claude" style="background:#D97757;" title="Laranja Claude"></button>
-                            <button class="bubble-swatch" data-bubble-value="blue"   style="background:#0a84ff;"></button>
-                            <button class="bubble-swatch" data-bubble-value="green"  style="background:#30d158;"></button>
-                            <button class="bubble-swatch" data-bubble-value="purple" style="background:#bf5af2;"></button>
-                            <button class="bubble-swatch" data-bubble-value="pink"   style="background:#ff375f;"></button>
-                            <button class="bubble-swatch" data-bubble-value="orange" style="background:#ff9f0a;"></button>
-                            <button class="bubble-swatch" data-bubble-value="red"    style="background:#ff453a;"></button>
-                            <button class="bubble-swatch" data-bubble-value="yellow" style="background:#ffd60a;"></button>
-                            <button class="bubble-swatch" data-bubble-value="gray"   style="background:#8e8e93;"></button>
-                            <button class="bubble-swatch" data-bubble-value="white"  style="background:#f2f2f7;"></button>
-                            <button class="bubble-swatch" data-bubble-value="black"  style="background:#1c1c1e;"></button>
-                        </div>
-                        <div id="bubble-picker-gradient" class="accent-picker hidden">
-                            <button class="bubble-swatch" data-bubble-gradient-value="oceano"    style="background:linear-gradient(135deg,#0a84ff,#30d158);" title="Oceano"></button>
-                            <button class="bubble-swatch" data-bubble-gradient-value="roxo-azul" style="background:linear-gradient(135deg,#5e5ce6,#0a84ff);" title="Roxo-azul"></button>
-                            <button class="bubble-swatch" data-bubble-gradient-value="uva"        style="background:linear-gradient(135deg,#bf5af2,#ff375f);" title="Uva"></button>
-                            <button class="bubble-swatch" data-bubble-gradient-value="menta"       style="background:linear-gradient(135deg,#30d158,#64d2ff);" title="Menta"></button>
-                            <button class="bubble-swatch" data-bubble-gradient-value="por-do-sol"  style="background:linear-gradient(135deg,#ff9f0a,#ff375f);" title="Pôr do sol"></button>
-                            <button class="bubble-swatch" data-bubble-gradient-value="fogo"         style="background:linear-gradient(135deg,#ff453a,#ff9f0a);" title="Fogo"></button>
-                            <button class="bubble-swatch" data-bubble-gradient-value="dourado"      style="background:linear-gradient(135deg,#ffd60a,#ff9f0a);" title="Dourado"></button>
-                            <button class="bubble-swatch" data-bubble-gradient-value="carbono"      style="background:linear-gradient(135deg,#8e8e93,#1c1c1e);" title="Carbono"></button>
-                            <button class="bubble-swatch" data-bubble-gradient-value="aurora"       style="background:linear-gradient(135deg,#5e5ce6,#30d158,#ffd60a);" title="Aurora"></button>
-                        </div>
-                        <div id="bubble-blur-preview" class="bubble-blur-preview-row hidden">
-                            <div class="bubble-blur-sample">Assim fica sua bolha ✨</div>
-                        </div>
-                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">Cor das suas mensagens enviadas — o texto se ajusta sozinho pra nunca ficar ilegível.</p>
-                    </div>
-                    <div class="settings-section-title" style="margin-top:16px;">Cor das Mensagens Recebidas</div>
-                    <div class="settings-section-group glass-premium" style="padding:14px;">
-                        <div id="bubble-picker-received" class="accent-picker">
-                            <button class="bubble-swatch" data-bubble-received-value="claude" style="background:#D97757;" title="Laranja Claude"></button>
-                            <button class="bubble-swatch" data-bubble-received-value="blue"   style="background:#0a84ff;"></button>
-                            <button class="bubble-swatch" data-bubble-received-value="green"  style="background:#30d158;"></button>
-                            <button class="bubble-swatch" data-bubble-received-value="purple" style="background:#bf5af2;"></button>
-                            <button class="bubble-swatch" data-bubble-received-value="pink"   style="background:#ff375f;"></button>
-                            <button class="bubble-swatch" data-bubble-received-value="orange" style="background:#ff9f0a;"></button>
-                            <button class="bubble-swatch" data-bubble-received-value="red"    style="background:#ff453a;"></button>
-                            <button class="bubble-swatch" data-bubble-received-value="yellow" style="background:#ffd60a;"></button>
-                            <button class="bubble-swatch" data-bubble-received-value="gray"   style="background:#8e8e93;"></button>
-                            <button class="bubble-swatch" data-bubble-received-value="white"  style="background:#f2f2f7;"></button>
-                            <button class="bubble-swatch" data-bubble-received-value="black"  style="background:#1c1c1e;"></button>
-                        </div>
-                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">Cor das mensagens que você recebe. Uma cor já usada na bolha enviada fica bloqueada aqui — enviada e recebida nunca podem ser a mesma cor.</p>
-                    </div>
-                    <div class="settings-section-title" style="margin-top:16px;">Tema da Conversa</div>
-                    <div class="settings-section-group glass-premium" style="padding:14px;">
-                        <div class="wallpaper-picker">
-                            <button class="wallpaper-option" data-wallpaper-value="padrao">
-                                <div class="wallpaper-thumb wallpaper-thumb-padrao"></div>
-                                <span>Padrão</span>
-                            </button>
-                            <button class="wallpaper-option" data-wallpaper-value="pontilhado">
-                                <div class="wallpaper-thumb wallpaper-thumb-pontilhado"></div>
-                                <span>Pontilhado</span>
-                            </button>
-                            <button class="wallpaper-option" data-wallpaper-value="gradiente">
-                                <div class="wallpaper-thumb wallpaper-thumb-gradiente"></div>
-                                <span>Gradiente</span>
-                            </button>
-                            <button class="wallpaper-option" data-wallpaper-value="ondas">
-                                <div class="wallpaper-thumb wallpaper-thumb-ondas"></div>
-                                <span>Ondas</span>
-                            </button>
-                            <button class="wallpaper-option" data-wallpaper-value="chatbuddy">
-                                <div class="wallpaper-thumb wallpaper-thumb-chatbuddy"></div>
-                                <span>ChatBuddy</span>
-                            </button>
-                        </div>
-                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">O fundo da conversa se ajusta sozinho entre o tema claro e escuro.</p>
-                    </div>
-                    <div class="settings-section-title" style="margin-top:16px;">Animações</div>
-                    <div class="settings-section-group glass-premium" style="padding:14px;">
-                        <div class="font-picker">
-                            <button class="anim-option" data-anim-value="padrao">Padrão (deslizar + fade)</button>
-                            <button class="anim-option" data-anim-value="suave">Suave (só fade)</button>
-                            <button class="anim-option" data-anim-value="dinamica">Dinâmica (bounce)</button>
-                            <button class="anim-option" data-anim-value="nenhuma">Nenhuma</button>
-                        </div>
-                        <p style="font-size:12px;color:var(--text-muted);margin-top:10px;">Controla a animação de entrada das mensagens no chat e nos grupos.</p>
-                    </div>
-                </div>
-            </div>
-        </div>
+html[data-chat-wallpaper="pontilhado"] .messages-container {
+    background-color: var(--surface-1);
+    background-image: radial-gradient(rgba(255,255,255,0.055) 1px, transparent 1px);
+    background-size: 22px 22px;
+}
+html[data-theme="light"][data-chat-wallpaper="pontilhado"] .messages-container {
+    background-image: radial-gradient(rgba(0,0,0,0.06) 1px, transparent 1px);
+}
+html[data-chat-wallpaper="gradiente"] .messages-container {
+    background: linear-gradient(165deg, rgba(10,132,255,0.10), transparent 55%), var(--surface-1);
+}
+html[data-chat-wallpaper="ondas"] .messages-container {
+    background-color: var(--surface-1);
+    background-image: repeating-linear-gradient(135deg, rgba(255,255,255,0.035) 0 2px, transparent 2px 22px);
+}
+html[data-theme="light"][data-chat-wallpaper="ondas"] .messages-container {
+    background-image: repeating-linear-gradient(135deg, rgba(0,0,0,0.035) 0 2px, transparent 2px 22px);
+}
 
-    <!-- TELA DE CHAT DE GRUPO -->
-    <div id="group-room-screen" class="chat-room-screen hidden">
-        <header class="chat-header glass-premium">
-            <button id="btn-back-group" class="back-btn">
-                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-            </button>
-            <div class="active-user-info" id="btn-open-group-info" style="cursor:pointer;">
-                <div class="header-avatar-container">
-                    <img id="active-group-avatar" class="header-avatar" src="" alt="">
-                </div>
-                <div>
-                    <h2 id="active-group-name">Grupo</h2>
-                    <p id="active-group-members-count" style="font-size:11px;color:var(--text-muted);">0 membros</p>
-                </div>
-            </div>
-            <button id="btn-group-menu" class="icon-btn-dots">
-                <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
-            </button>
-        </header>
-        <div id="group-messages-container" class="messages-container"></div>
-        <div id="group-reply-bar" class="reply-bar hidden">
-            <div class="reply-bar-indicator"></div>
-            <div class="reply-bar-content">
-                <span class="reply-bar-label">Respondendo</span>
-                <p id="group-reply-bar-text" class="reply-bar-msg"></p>
-            </div>
-            <button id="btn-cancel-group-reply" class="reply-cancel-btn">
-                <svg viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-            </button>
-        </div>
-        <div id="group-readonly-banner" class="blocked-chat-banner hidden" style="justify-content:center;">
-            <svg viewBox="0 0 24 24" style="width:15px;height:15px;margin-right:6px;"><path fill="currentColor" d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zM12 17c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-            Apenas admins podem enviar mensagens
-        </div>
-        <footer id="group-footer-area" class="chat-footer glass-premium">
-            <div id="group-attach-menu" class="attach-menu hidden">
-                <button class="attach-menu-item" id="group-attach-image">
-                    <span class="attach-menu-icon" style="background:#0a84ff;">
-                        <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/></svg>
-                    </span>
-                    <span>Foto</span>
-                </button>
-                <button class="attach-menu-item" id="group-attach-video">
-                    <span class="attach-menu-icon" style="background:#30d158;">
-                        <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-                    </span>
-                    <span>Vídeo</span>
-                </button>
-                <button class="attach-menu-item" id="group-attach-doc">
-                    <span class="attach-menu-icon" style="background:#ff9f0a;">
-                        <svg viewBox="0 0 24 24" style="width:20px;height:20px;"><path fill="#fff" d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
-                    </span>
-                    <span>Arquivo</span>
-                </button>
-            </div>
-            <div class="footer-input-row">
-                <button id="btn-group-attach" class="attach-btn" style="background:none;border:none;cursor:pointer;">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M16.5 6v11.5c0 2.21-1.79 4-4 4s-4-1.79-4-4V5c0-2.76 2.24-5 5-5s5 2.24 5 5v12.5c0 3.31-2.69 6-6 6s-6-2.69-6-6V6h2v11.5c0 2.21 1.79 4 4 4s4-1.79 4-4V5c0-1.66-1.34-3-3-3s-3 1.34-3 3v12.5c0 1.1.9 2 2 2s2-.9 2-2V6h2z"/></svg>
-                </button>
-                <input type="file" id="group-media-input" class="hidden" accept="image/*,video/*">
-                <input type="file" id="group-doc-input" class="hidden" accept=".pdf,.doc,.docx,.txt,.zip,.xls,.xlsx,.ppt,.pptx">
-                <input type="text" id="group-message-input" placeholder="Mensagem">
-            </div>
-            <button id="btn-group-send" class="btn-send-round hidden">
-                <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:16px;height:16px;transform:rotate(-45deg) translate(2px,-1px);"><path fill="currentColor" d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
-            </button>
-            <button id="btn-group-mic" class="btn-mic-round">
-                <svg class="mono-icon-light" viewBox="0 0 24 24" style="width:18px;height:18px;"><path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
-            </button>
-        </footer>
-    </div>
+/* Tema "ChatBuddy": doodle com balão de chat, chamada, reação e check de lido */
+html[data-chat-wallpaper="chatbuddy"] .messages-container {
+    background-color: var(--surface-1);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.11)' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 18h26a7 7 0 017 7v15a7 7 0 01-7 7H33l-7 8v-8h-8a7 7 0 01-7-7V25a7 7 0 017-7z'/%3E%3Cpath d='M112 24c-9 0-16 6-16 14 0 4 2 8 5 10l-2 9 9-4c1 0 2 1 4 1 9 0 16-6 16-14s-7-16-16-16z'/%3E%3Cpath d='M100 100l6 6 13-13'/%3E%3Cpath d='M35 108c-3-4-3-9 1-12 3-3 8-2 10 1 2-3 7-4 10-1 4 3 4 8 1 12l-11 11z'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 150px 150px;
+}
+html[data-theme="light"][data-chat-wallpaper="chatbuddy"] .messages-container {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150' viewBox='0 0 150 150'%3E%3Cg fill='none' stroke='rgba(0,0,0,0.11)' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 18h26a7 7 0 017 7v15a7 7 0 01-7 7H33l-7 8v-8h-8a7 7 0 01-7-7V25a7 7 0 017-7z'/%3E%3Cpath d='M112 24c-9 0-16 6-16 14 0 4 2 8 5 10l-2 9 9-4c1 0 2 1 4 1 9 0 16-6 16-14s-7-16-16-16z'/%3E%3Cpath d='M100 100l6 6 13-13'/%3E%3Cpath d='M35 108c-3-4-3-9 1-12 3-3 8-2 10 1 2-3 7-4 10-1 4 3 4 8 1 12l-11 11z'/%3E%3C/g%3E%3C/svg%3E");
+}
+.wallpaper-thumb-chatbuddy {
+    background-color: var(--surface-1);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 150 150'%3E%3Cg fill='none' stroke='rgba(128,128,128,0.55)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 18h26a7 7 0 017 7v15a7 7 0 01-7 7H33l-7 8v-8h-8a7 7 0 01-7-7V25a7 7 0 017-7z'/%3E%3Cpath d='M112 24c-9 0-16 6-16 14 0 4 2 8 5 10l-2 9 9-4c1 0 2 1 4 1 9 0 16-6 16-14s-7-16-16-16z'/%3E%3Cpath d='M100 100l6 6 13-13'/%3E%3Cpath d='M35 108c-3-4-3-9 1-12 3-3 8-2 10 1 2-3 7-4 10-1 4 3 4 8 1 12l-11 11z'/%3E%3C/g%3E%3C/svg%3E");
+    background-size: 60px 60px;
+}
 
-    <!-- TELA DO ESPAÇO (lista os grupos que pertencem a este espaço) -->
-    <!-- Reaproveita exatamente o mesmo posicionamento do painel de seleção (tab-content-container),
-         pra abrir DENTRO da parte de escolher o chat, e não no painel grande de conversa. -->
-    <div id="space-room-screen" class="tab-content-container space-room-as-list hidden">
-        <header class="chat-header glass-premium">
-            <button id="btn-back-space" class="back-btn">
-                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-            </button>
-            <div class="active-user-info" id="btn-open-space-info" style="cursor:pointer;">
-                <div class="header-avatar-container">
-                    <div id="active-space-avatar" style="width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;">?</div>
-                </div>
-                <div>
-                    <h2 id="active-space-name">Espaço</h2>
-                    <p id="active-space-members-count" style="font-size:11px;color:var(--text-muted);">0 membros</p>
-                </div>
-            </div>
-            <button id="btn-space-menu" class="icon-btn-dots" onclick="openSpaceInfoSheet()">
-                <svg viewBox="0 0 24 24" class="mono-icon-light"><path fill="currentColor" d="M6 10c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm12 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm-6 0c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
-            </button>
-        </header>
-        <div id="space-groups-list" class="chats-list" style="padding:8px 0;"></div>
-        <button id="btn-new-group-in-space" class="btn-fab" title="Criar grupo neste espaço">
-            <svg class="mono-icon-light" viewBox="0 0 24 24">
-                <path fill="currentColor" d="M6 2c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h9.17c.53 0 1.04-.21 1.41-.59l3.83-3.83c.38-.37.59-.88.59-1.41V4c0-1.1-.9-2-2-2H6zm0 2h12v10h-3.5c-.83 0-1.5.67-1.5 1.5V20H6V4zm2.5 4.5v1.5h7V8.5h-7zm0 3v1.5h7v-1.5h-7zm0 3v1.5h4v-1.5h-4z"/>
-            </svg>
-        </button>
-    </div>
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: var(--app-font); -webkit-tap-highlight-color: transparent; }
+body { background: var(--ios-bg); color: var(--text-main); height: 100dvh; width: 100vw; overflow: hidden; position: relative; display: flex; justify-content: center; transition: background 0.25s ease, color 0.25s ease; }
+body, body * { transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; }
+.hidden { display: none !important; }
 
-    <!-- SHEET INFO CONTATO (tela cheia, mesmo padrão das Configurações) -->
-    <div id="contact-info-sheet" class="settings-screen hidden">
-        <header class="settings-screen-header glass-premium">
-            <button id="btn-close-info-sheet" class="back-btn">
-                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-            </button>
-            <h2>Perfil</h2>
-        </header>
-        <div class="settings-screen-body">
-            <div class="profile-detail-header">
-                <div class="avatar-detail-wrapper">
-                    <img id="sheet-contact-avatar" src="" alt="" class="avatar-detail-large">
-                    <div id="sheet-blocked-badge" class="sheet-blocked-badge hidden">BLOQUEADO</div>
-                </div>
-                <h3 id="sheet-contact-nick">Nome</h3>
-                <p id="sheet-contact-user">@username</p>
-            </div>
-            <div class="profile-info-sections">
-                <div class="info-block">
-                    <span class="block-label">Biografia</span>
-                    <p id="sheet-contact-bio" class="block-content">Carregando...</p>
-                </div>
-                <div class="info-block">
-                    <span class="block-label">Status do Recado</span>
-                    <p id="sheet-contact-status" class="block-content">Disponível</p>
-                </div>
-            </div>
-            <div class="profile-actions-list">
-                <button id="btn-set-nickname" class="action-nickname-btn">
-                    <svg viewBox="0 0 24 24" style="width:16px;height:16px;margin-right:8px;"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                    Definir Apelido
-                </button>
-                <div class="action-row-toggle">
-                    <span>Silenciar Notificações</span>
-                    <label class="ios-switch-wrapper">
-                        <input type="checkbox" id="toggle-silence-user">
-                        <span class="ios-switch-slider"></span>
-                    </label>
-                </div>
-                <button id="btn-sheet-block" class="action-danger-btn"><span class="m3-icon-inline"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zM4 12c0-4.42 3.58-8 8-8 1.85 0 3.55.63 4.9 1.69L5.69 16.9C4.63 15.55 4 13.85 4 12zm8 8c-1.85 0-3.55-.63-4.9-1.69L18.31 7.1C19.37 8.45 20 10.15 20 12c0 4.42-3.58 8-8 8z"/></svg></span>Bloquear Usuário</button>
-                <button id="btn-sheet-unblock" class="action-unblock-btn hidden">Desbloquear Usuário</button>
-                <button id="btn-delete-contact" class="action-danger-btn"><span class="m3-icon-inline"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg></span>Excluir Contato</button>
-            </div>
-        </div>
-    </div>
+body > *:not(.modal):not(.blur-overlay):not(.popup-notification):not(.media-viewer) {
+    width: 100%;
+    max-width: var(--app-max-width);
+}
 
-    <!-- SHEET INFO DO GRUPO (tela cheia, mesmo padrão das Configurações) -->
-    <div id="group-info-sheet" class="settings-screen hidden">
-        <header class="settings-screen-header glass-premium">
-            <button id="btn-close-group-info" class="back-btn">
-                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-            </button>
-            <h2>Grupo</h2>
-        </header>
-        <div class="settings-screen-body">
-            <div class="profile-detail-header">
-                <img id="sheet-group-avatar" src="" alt="" class="avatar-detail-large">
-                <h3 id="sheet-group-name">Grupo</h3>
-                <p id="sheet-group-desc" style="font-size:13px;color:var(--text-muted);text-align:center;margin-top:4px;"></p>
-            </div>
-            <div id="sheet-group-members-list" class="chats-list" style="max-height:45dvh;overflow-y:auto;margin:10px 0;"></div>
-            <div id="group-admin-actions" class="hidden" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
-                <button id="btn-edit-group" class="ios-btn-primary" style="font-size:13px;padding:10px;background:rgba(255,255,255,0.08);"><span class="m3-icon-inline"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>Editar Grupo</button>
-                <button id="btn-add-group-member" class="ios-btn-primary" style="font-size:13px;padding:10px;"><span class="m3-icon-inline"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>Adicionar Membro</button>
-            </div>
-            <button id="btn-leave-group" class="action-danger-btn" style="margin-bottom:8px;">Sair do Grupo</button>
-        </div>
-    </div>
+.glass-premium {
+    background: var(--glass-bg);
+    backdrop-filter: blur(30px) saturate(200%);
+    -webkit-backdrop-filter: blur(30px) saturate(200%);
+    border: 1px solid var(--glass-border);
+}
 
-    <!-- SHEET INFO DO ESPAÇO (tela cheia, mesmo padrão das Configurações) -->
-    <div id="space-info-sheet" class="settings-screen hidden">
-        <header class="settings-screen-header glass-premium">
-            <button id="btn-close-space-info" class="back-btn">
-                <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-            </button>
-            <h2>Espaço</h2>
-        </header>
-        <div class="settings-screen-body">
-            <div class="profile-detail-header">
-                <div id="sheet-space-avatar" style="width:84px;height:84px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:30px;">?</div>
-                <h3 id="sheet-space-name">Espaço</h3>
-            </div>
-            <div id="sheet-space-members-list" class="chats-list" style="max-height:45dvh;overflow-y:auto;margin:10px 0;"></div>
-            <div id="space-admin-actions" class="hidden" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
-                <button id="btn-edit-space" class="ios-btn-primary" style="font-size:13px;padding:10px;background:rgba(255,255,255,0.08);"><span class="m3-icon-inline"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg></span>Editar Espaço</button>
-                <button id="btn-invite-space-member" class="ios-btn-primary" style="font-size:13px;padding:10px;"><span class="m3-icon-inline"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M15 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm-9-2V7H4v3H1v2h3v3h2v-3h3v-2H6zm9 4c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></span>Convidar Pessoas</button>
-            </div>
-            <button id="btn-leave-space" class="action-danger-btn" style="margin-bottom:8px;">Sair do Espaço</button>
-        </div>
-    </div>
+.mono-icon-light { width: 22px; height: 22px; color: var(--icon-color); }
+.mono-icon-gray  { width: 22px; height: 22px; color: #636366; }
 
-    <!-- TELA DE CHAMADA (chamando / recebendo / em andamento) -->
-    <div id="call-screen" class="call-screen hidden">
-        <video id="call-remote-video" class="call-remote-video hidden" autoplay playsinline></video>
-        <video id="call-local-video" class="call-local-video hidden" autoplay muted playsinline></video>
+.search-bar-wrapper { padding: 10px 16px; background: transparent; }
+.search-bar-wrapper input {
+    width: 100%; background: var(--surface-2); border: 1px solid var(--glass-border);
+    padding: 10px 14px; border-radius: 10px; color: var(--text-main); font-size: 14px; outline: none; transition: background 0.2s, border-color 0.2s;
+}
+.search-bar-wrapper input:focus { background: var(--surface-2); border-color: var(--ios-blue); }
 
-        <div class="call-content">
-            <span id="call-status-label" class="call-status-label">Chamando...</span>
-            <div class="call-avatar-wrapper">
-                <img id="call-remote-avatar" class="call-avatar-large" src="" alt="">
-                <div id="call-ring-pulse" class="call-ring-pulse"></div>
-            </div>
-            <h2 id="call-remote-name">Nome</h2>
-            <p id="call-timer" class="call-timer hidden">00:00</p>
-        </div>
+.active-desktop-chat { background: rgba(10, 132, 255, 0.15) !important; border-left: 4px solid var(--ios-blue); }
 
-        <div id="call-incoming-actions" class="call-actions-row hidden">
-            <button id="btn-call-decline" class="call-action-btn call-decline-btn">
-                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 01-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" transform="rotate(135 12 12)"/></svg>
-            </button>
-            <button id="btn-call-accept" class="call-action-btn call-accept-btn">
-                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M6.62 10.79c1.44 2.83 3.76 5.14 6.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1-9.39 0-17-7.61-17-17 0-.55.45-1 1-1h3.5c.55 0 1 .45 1 1 0 1.25.2 2.45.57 3.57.11.35.03.74-.25 1.02l-2.2 2.2z"/></svg>
-            </button>
-        </div>
+/* ─── DESKTOP E TABLET: AJUSTADO DENTRO DO FRAME ESTILOSO ─── */
+@media (min-width: 768px) {
+    :root { --app-max-width: 100vw; }
+    body {
+        background: #0a0a0f;
+        background-image: radial-gradient(ellipse at 20% 20%, rgba(10,132,255,0.06) 0%, transparent 50%),
+                          radial-gradient(ellipse at 80% 80%, rgba(48,209,88,0.04) 0%, transparent 50%);
+    }
+    body > .app-container {
+        flex-direction: row !important;
+        width: calc(100vw - 40px) !important;
+        max-width: none !important;
+        margin: 20px;
+        height: calc(100dvh - 40px) !important;
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 40px 80px rgba(0,0,0,0.8);
+        border: 1px solid var(--glass-border);
+        padding: 10px;
+        gap: 10px;
+    }
+    
+    .app-container > header, 
+    .app-container > nav, 
+    .app-container > .tab-content-container {
+        width: 320px !important;
+        flex-shrink: 0;
+        position: absolute;
+        left: 84px;
+    }
+    .app-container > header { top: 10px; height: 60px; z-index: 10; border-radius: 14px 14px 0 0; }
+    /* No PC/tablet a barra de abas (Conversas/Espaços/Grupos) não existe mais — Conversas e Grupos
+       ficam nos ícones fixos da sidebar de espaços, e cada espaço vira sua própria bolinha ali também. */
+    .app-container > nav { display: none !important; }
+    .app-container > .tab-content-container { top: 70px; bottom: 10px; height: auto !important; border-radius: 0 0 14px 14px; border: 1px solid var(--glass-border); border-top: none; }
 
-        <div id="call-active-actions" class="call-actions-row hidden">
-            <button id="btn-call-mute" class="call-mini-btn">
-                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3zm5.3-3c0 3-2.54 5.1-5.3 5.1S6.7 14 6.7 11H5c0 3.41 2.72 6.23 6 6.72V21h2v-3.28c3.28-.48 6-3.3 6-6.72h-1.7z"/></svg>
-            </button>
-            <button id="btn-call-camera" class="call-mini-btn hidden">
-                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M17 10.5V7c0-.55-.45-1-1-1H4c-.55 0-1 .45-1 1v10c0 .55.45 1 1 1h12c.55 0 1-.45 1-1v-3.5l4 4v-11l-4 4z"/></svg>
-            </button>
-            <button id="btn-call-end" class="call-action-btn call-decline-btn">
-                <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 9c-1.6 0-3.15.25-4.6.72v3.1c0 .39-.23.74-.56.9-.98.49-1.87 1.12-2.66 1.85-.18.18-.43.28-.7.28-.28 0-.53-.11-.71-.29L.29 13.08a.996.996 0 01-.29-.7c0-.28.11-.53.29-.71C3.34 8.78 7.46 7 12 7s8.66 1.78 11.71 4.67c.18.18.29.43.29.71 0 .28-.11.53-.29.71l-2.48 2.48c-.18.18-.43.29-.71.29-.27 0-.52-.11-.7-.28-.79-.74-1.69-1.36-2.67-1.85-.33-.16-.56-.5-.56-.9v-3.1C15.15 9.25 13.6 9 12 9z" transform="rotate(135 12 12)"/></svg>
-            </button>
-        </div>
-    </div>
+    /* O "+" flutuante some no PC/tablet: criar conversa/grupo/espaço já fica na sidebar.
+       Exceção: o botão de criar grupo DENTRO de um espaço aberto continua visível,
+       porque essa ação só existe ali dentro, não tem equivalente na sidebar. */
+    .btn-fab { display: none !important; }
+    #btn-new-group-in-space { display: flex !important; }
 
-    </div><!-- /chat-page -->
+    .chat-room-screen {
+        position: absolute !important;
+        left: auto !important;
+        right: 10px !important;
+        top: 10px !important;
+        bottom: 10px !important;
+        width: calc(100% - 424px) !important;
+        max-width: none !important;
+        height: auto !important;
+        transform: none !important;
+        animation: none !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 14px !important;
+        overflow: hidden;
+    }
+    .app-container .settings-screen {
+        position: absolute !important;
+        left: 414px !important;
+        right: 10px !important;
+        top: 10px !important;
+        bottom: 10px !important;
+        width: calc(100% - 424px) !important;
+        max-width: none !important;
+        height: auto !important;
+        border-radius: 14px !important;
+        border: 1px solid var(--glass-border) !important;
+        overflow-y: auto;
+    }
+    .chat-room-screen #btn-back-to-list { display: none !important; }
 
-    <!-- MODAL APELIDO -->
-    <div id="nickname-modal" class="modal hidden">
-        <div class="modal-content glass-premium" style="max-width:300px; text-align:center;">
-            <h3 style="margin-bottom:6px;">Definir Apelido</h3>
-            <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Visível apenas para você</p>
-            <div class="input-group-premium">
-                <input type="text" id="nickname-input" placeholder=" " maxlength="30">
-                <label>Apelido personalizado</label>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:4px;">
-                <button id="btn-cancel-nickname" class="btn-profile-close" style="flex:1;">Cancelar</button>
-                <button id="btn-save-nickname" class="ios-btn-primary" style="flex:1;">Salvar</button>
-            </div>
-        </div>
-    </div>
+    .empty-chat-panel {
+        position: absolute !important;
+        left: 414px !important;
+        right: 10px !important;
+        top: 10px !important;
+        bottom: 10px !important;
+        width: auto !important;
+        height: auto !important;
+        border: 1px solid var(--glass-border);
+        border-radius: 14px;
+        background: var(--surface-2);
+    }
+    
+    body > .auth-container,
+    body > .settings-screen {
+        position: absolute !important;
+        top: 10px !important;
+        bottom: 10px !important;
+        left: 414px !important;
+        right: 10px !important;
+        width: calc(100% - 424px) !important;
+        max-width: none !important;
+        height: auto !important;
+        border-radius: 14px !important;
+        border: 1px solid var(--glass-border) !important;
+        box-shadow: 0 40px 80px rgba(0,0,0,0.8);
+        overflow-y: auto;
+    }
+}
 
-    <!-- BLUR OVERLAY (Menu contexto corrigido) -->
-    <div id="blur-overlay" class="blur-overlay hidden">
-        <div id="focused-container" class="focused-container">
-            <div id="focused-message-wrapper" class="focused-message-wrapper"></div>
-            <div class="iphone-context-menu glass-premium" id="context-menu-box">
-                <div class="context-item" id="ctx-reply-msg">
-                    <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M10 9V5l-7 7 7 7v-4.1c5 0 8.5 1.6 11 5.1-1-5-4-10-11-11z"/></svg>
-                    Responder
-                </div>
-                <div class="context-item" id="ctx-info-msg">
-                    <svg viewBox="0 0 24 24" class="mono-icon-light" style="width:16px; margin-right:8px;"><path fill="currentColor" d="M11 9h2V7h-2v2zm1 11c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm0-18C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 13h2v-4h-2v4z"/></svg>
-                    Info da Mensagem
-                </div>
-                <div class="context-item" id="ctx-edit-msg">
-                    <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                    Editar Mensagem
-                </div>
-                <div class="context-item" id="ctx-copy-direct">
-                    <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
-                    Copiar Texto
-                </div>
-                <div class="context-item danger" id="ctx-delete-single">
-                    <svg viewBox="0 0 24 24" style="width:16px;margin-right:8px;"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                    Apagar Mensagem
-                </div>
-                <div class="context-item cancel" id="ctx-close-menu">Voltar</div>
-            </div>
-        </div>
-    </div>
+.config-icon-btn { background: transparent !important; border: none !important; outline: none !important; box-shadow: none !important; padding: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: opacity 0.2s; }
+.config-icon-btn:active { opacity: 0.6; }
 
-    <!-- MODAL APAGAR -->
-    <div id="delete-options-modal" class="modal hidden">
-        <div class="modal-content glass-premium" style="max-width:300px; text-align:center;">
-            <h3 style="margin-bottom:6px;">Apagar mensagem</h3>
-            <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px;">Escolha como deseja apagar</p>
-            <div style="display:flex;flex-direction:column;gap:8px;">
-                <button id="btn-delete-for-all" class="ios-btn-primary" style="background:var(--ios-red);">Apagar para todos</button>
-                <button id="btn-delete-for-me" class="ios-btn-primary" style="background:rgba(255,255,255,0.08);">Apagar só para mim</button>
-                <button id="btn-cancel-delete" class="btn-profile-close">Cancelar</button>
-            </div>
-        </div>
-    </div>
+.popup-notification {
+    position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+    width: 50px; height: 50px;
+    background: rgba(30, 30, 35, 0.95);
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    border-radius: 25px; border: 1px solid rgba(255,255,255,0.1);
+    z-index: 9999; display: flex; align-items: center; padding: 5px; overflow: hidden;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.7);
+    transition: width 0.45s cubic-bezier(0.16, 1, 0.3, 1), border-radius 0.4s ease;
+}
+.popup-notification.expanded { width: min(90vw, 340px); border-radius: 18px; padding: 8px 14px; }
+.popup-avatar-wrapper { width: 38px; height: 38px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+.popup-avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+.popup-content { margin-left: 10px; display: flex; flex-direction: column; opacity: 0; transition: opacity 0.2s ease; white-space: nowrap; overflow: hidden; }
+.popup-notification.expanded .popup-content { opacity: 1; }
+.popup-content h5 { font-size: 14px; font-weight: 600; color: var(--text-main); }
+.popup-content p  { font-size: 13px; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; max-width: 220px; }
 
-    <!-- MODAL INFO MENSAGEM -->
-    <div id="msg-info-modal" class="modal hidden">
-        <div class="modal-content glass-premium" style="max-width: 280px; text-align: center;">
-            <h3 style="margin-bottom:15px;">Detalhes do Envio</h3>
-            <p style="font-size:14px; margin-bottom:8px; color:var(--text-muted);">Enviado às: <span id="info-sent-time" style="color:var(--text-main); font-weight:600;">--:--</span></p>
-            <p id="info-read-time-row" style="font-size:14px; margin-bottom:20px; color:var(--text-muted);">Visto/Lido às: <span id="info-read-time" style="color:#30d158; font-weight:600;">--:--</span></p>
-            <div id="info-group-seen-list" class="hidden" style="text-align:left; max-height:240px; overflow-y:auto; margin-bottom:16px;"></div>
-            <button id="btn-close-msg-info" class="ios-btn-primary" style="padding:10px;">Fechar</button>
-        </div>
-    </div>
+.auth-container { width: 100%; max-width: var(--app-max-width); height: 100dvh; display: flex; justify-content: center; align-items: center; position: fixed; top: 0; left: 50%; transform: translateX(-50%); z-index: 500; background: var(--surface-1); }
+.auth-box { width: 90%; max-width: 360px; padding: 30px 24px; border-radius: 24px; text-align: center; animation: fadeInUp 0.4s ease; }
+.auth-logo { margin-bottom: 25px; }
+.logo-icon-wrapper { width: 56px; height: 56px; background: rgba(255,255,255,0.05); border-radius: 16px; display: flex; justify-content: center; align-items: center; margin: 0 auto 10px; border: 1px solid var(--glass-border); }
+.ios-title { font-size: 26px; font-weight: 700; letter-spacing: -0.5px; }
+.ios-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 
-    <!-- MODAL EDITAR MENSAGEM -->
-    <div id="edit-msg-modal" class="modal hidden">
-        <div class="modal-content glass-premium" style="max-width:320px;">
-            <h3 style="margin-bottom:12px; text-align:center;">Editar Mensagem</h3>
-            <div class="input-group-premium">
-                <input type="text" id="edit-msg-input" placeholder=" " maxlength="500">
-                <label>Novo texto</label>
-            </div>
-            <div style="display:flex;gap:8px;margin-top:4px;">
-                <button id="btn-cancel-edit" class="btn-profile-close" style="flex:1;">Cancelar</button>
-                <button id="btn-confirm-edit" class="ios-btn-primary" style="flex:1;">Salvar</button>
-            </div>
-        </div>
-    </div>
+.input-group-premium { position: relative; margin-bottom: 16px; width: 100%; }
+.input-group-premium input { width: 100%; background: var(--surface-2); border: 1px solid var(--glass-border); padding: 14px 16px; border-radius: 12px; color: var(--text-main); font-size: 15px; outline: none; transition: border-color 0.2s; }
+.input-group-premium input:focus { border-color: var(--ios-blue); }
+.input-group-premium label { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--text-muted); pointer-events: none; transition: 0.2s ease; font-size: 15px; }
+.input-group-premium input:focus ~ label, .input-group-premium input:not(:placeholder-shown) ~ label { top: 0; font-size: 11px; background: #16161a; padding: 2px 6px; border-radius: 4px; color: var(--ios-blue); transform: translateY(-50%); }
 
-    <!-- MODAL NOVA CONVERSA (Com Input de Busca Segura por @) -->
-    <div id="contacts-modal" class="modal hidden">
-        <div class="modal-content glass-premium">
-            <div class="modal-header" style="display:flex; justify-content:space-between; align-items:center; padding-bottom:15px;">
-                <h3>Nova Conversa</h3>
-                <button id="btn-close-modal" class="back-btn">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
-            </div>
-            <div class="search-bar-wrapper with-at-prefix" style="padding: 0 0 10px 0;">
-                <div class="at-input-wrap">
-                    <span class="at-prefix">@</span>
-                    <input type="text" id="search-by-username-input" placeholder="Digite o nome (ex: art)">
-                </div>
-            </div>
-            <div id="contacts-list-modal" class="chats-list"></div>
-        </div>
-    </div>
+/* ── PREFIXO FIXO "@" — impede digitar antes/depois do arroba ───────── */
+.input-group-premium.with-at-prefix input { padding-left: 30px; }
+.input-group-premium.with-at-prefix .at-prefix { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: rgba(255,255,255,0.65); font-weight: 600; font-size: 15px; pointer-events: none; z-index: 1; }
+.input-group-premium.with-at-prefix label { left: 34px; }
+.input-group-premium.with-at-prefix input:focus ~ label,
+.input-group-premium.with-at-prefix input:not(:placeholder-shown) ~ label { left: 16px; }
 
-    <!-- VISUALIZADOR DE MÍDIA PREMIUM (ZOOM) -->
-    <div id="media-viewer" class="media-viewer hidden">
-        <button id="media-viewer-close" class="media-viewer-close">&times;</button>
-        <div id="media-viewer-container" style="position:relative; overflow:hidden; display:flex; justify-content:center; align-items:center; width:100%; height:100%;"></div>
-    </div>
+.search-bar-wrapper.with-at-prefix { position: static; }
+.at-input-wrap { position: relative; display: flex; align-items: center; }
+.at-input-wrap .at-prefix { position: absolute; left: 14px; color: rgba(255,255,255,0.65); font-size: 14px; font-weight: 600; pointer-events: none; z-index: 1; }
+.at-input-wrap input { padding-left: 27px !important; }
 
-    <!-- MODAL SOLICITAÇÕES DE CONVERSA -->
-    <div id="requests-modal" class="modal hidden">
-        <div class="modal-content glass-premium" style="max-width:360px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:15px;">
-                <h3>Solicitações</h3>
-                <button id="btn-close-requests-modal" class="back-btn">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
-            </div>
-            <div id="requests-list" class="chats-list" style="max-height:60dvh;overflow-y:auto;"></div>
-        </div>
-    </div>
+.ios-btn-primary { width: 100%; background: var(--ios-blue); border: none; padding: 14px; border-radius: 14px; color: #fff; font-size: 16px; font-weight: 600; cursor: pointer; transition: transform 0.15s, opacity 0.15s; }
+.ios-btn-primary:active { transform: scale(0.97); opacity: 0.85; }
+.ios-btn-google { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid var(--glass-border); padding: 12px; border-radius: 14px; color: var(--text-main); font-size: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; cursor: pointer; margin-top: 5px; transition: background 0.2s; }
+.ios-btn-google:active { background: rgba(255,255,255,0.1); }
+.auth-switch { margin-top: 20px; font-size: 14px; color: var(--text-muted); }
+.auth-switch span { color: var(--ios-blue); cursor: pointer; font-weight: 500; }
+.divider-text { margin: 12px 0; color: rgba(255,255,255,0.15); font-size: 12px; display: flex; align-items: center; justify-content: center; gap: 10px; }
+.divider-text::before, .divider-text::after { content: ""; flex: 1; height: 1px; background: rgba(255,255,255,0.08); }
 
-    <!-- MODAL CRIAR GRUPO / ESPAÇO (unificado, estilo FluffyChat) -->
-    <div id="create-group-modal" class="modal hidden">
-        <div class="modal-content glass-premium" style="max-width:360px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:15px;">
-                <h3 id="create-modal-title">Criar Grupo</h3>
-                <button id="btn-close-create-group" class="back-btn">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
-            </div>
+.avatar-upload-container-premium { margin-bottom: 20px; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.avatar-preview-wrapper { width: 84px; height: 84px; border-radius: 50%; object-fit: cover; border: 1px solid var(--glass-border); display: flex; justify-content: center; align-items: center; overflow: hidden; background: var(--surface-2); }
+.avatar-preview-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-file-label-premium { font-size: 14px; color: var(--ios-blue); font-weight: 500; cursor: pointer; }
 
-            <!-- Alternador Grupo / Espaço (some quando já se está dentro de um espaço) -->
-            <div id="create-type-toggle" class="type-toggle-wrap">
-                <button type="button" id="toggle-type-group" class="type-toggle-btn active-type-toggle" data-type="group">
-                    <svg viewBox="0 0 24 24" style="width:14px;height:14px;"><path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
-                    Grupo
-                </button>
-                <button type="button" id="toggle-type-space" class="type-toggle-btn" data-type="space">Espaço</button>
-            </div>
+.app-container { width: 100%; max-width: var(--app-max-width); height: 100dvh; display: flex; flex-direction: column; background: var(--surface-1); position: relative; animation: fadeInUp 0.3s ease; }
+.app-top-bar { height: 60px; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0; }
+.app-tabs { display: flex; height: 44px; align-items: center; border-bottom: 1px solid var(--glass-border); flex-shrink: 0; }
+.tab-item { flex: 1; text-align: center; font-size: 14px; color: var(--text-muted); font-weight: 500; height: 100%; display: flex; align-items: center; justify-content: center; cursor: pointer; transition: color 0.2s; position: relative; }
+.tab-item.active { color: var(--ios-blue); }
+.tab-item.active::after { content: ''; position: absolute; bottom: 0; left: 10%; width: 80%; height: 2px; background: var(--ios-blue); border-radius: 2px; animation: tabSlide 0.2s ease; }
+@keyframes tabSlide { from { width: 0; left: 50%; } to { width: 80%; left: 10%; } }
 
-            <!-- Campos de GRUPO -->
-            <div id="group-fields-container">
-                <div class="avatar-upload-container-premium" style="margin-bottom:12px;">
-                    <div class="avatar-preview-wrapper">
-                        <img id="group-avatar-preview" src="" class="hidden" style="width:64px;height:64px;border-radius:50%;object-fit:cover;">
-                        <div id="group-avatar-placeholder" style="width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;">
-                            <svg viewBox="0 0 24 24" style="width:28px;height:28px;opacity:0.5;"><path fill="currentColor" d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
-                        </div>
-                    </div>
-                    <label for="group-avatar-file" class="avatar-file-label-premium" style="font-size:12px;">Foto do Grupo</label>
-                    <input type="file" id="group-avatar-file" accept="image/*" class="hidden">
-                </div>
-                <div class="input-group-premium" style="margin-bottom:12px;">
-                    <input type="text" id="group-name-input" placeholder=" " maxlength="50">
-                    <label>Nome do Grupo</label>
-                </div>
-                <div class="input-group-premium" style="margin-bottom:12px;">
-                    <input type="text" id="group-desc-input" placeholder=" " maxlength="120">
-                    <label>Descrição (opcional)</label>
-                </div>
-                <div class="input-group-premium" style="margin-bottom:12px;">
-                    <select id="group-space-select" style="width:100%;padding:12px 10px;background:transparent;border:none;color:var(--text-main);font-size:14px;">
-                        <option value="">Nenhum espaço</option>
-                    </select>
-                </div>
-                <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Adicionar membros (busque pelo @):</p>
-                <div class="search-bar-wrapper with-at-prefix" style="padding:0 0 8px 0;">
-                    <div class="at-input-wrap">
-                        <span class="at-prefix">@</span>
-                        <input type="text" id="group-member-search" placeholder="usuario">
-                    </div>
-                </div>
-                <div id="group-member-results" class="chats-list" style="max-height:140px;overflow-y:auto;margin-bottom:10px;"></div>
-                <div id="group-selected-members" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px;min-height:28px;"></div>
-            </div>
+.tab-content-container { flex: 1; overflow-y: auto; position: relative; }
+.chats-list { padding: 8px 0; }
+.chat-item-row { display: flex; align-items: center; padding: 12px 16px; border-bottom: 1px solid rgba(255,255,255,0.03); cursor: pointer; gap: 14px; position: relative; transition: background 0.15s; }
+.chat-item-row:active { background: rgba(255,255,255,0.04); }
+.chat-item-row img { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; background: var(--surface-3); flex-shrink: 0; }
+.chat-item-info { flex: 1; overflow: hidden; }
+.chat-item-header { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; min-width: 0; }
+.chat-item-header h4 { font-size: 16px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 1 auto; }
+.chat-item-header > span, .chat-item-header .header-badge { flex-shrink: 0; }
+.chat-item-info { min-width: 0; flex: 1 1 auto; overflow: hidden; }
+.chat-item-info p { font-size: 14px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-            <!-- Campos de ESPAÇO -->
-            <div id="space-fields-container" class="hidden">
-                <div class="input-group-premium" style="margin-bottom:14px;">
-                    <input type="text" id="space-name-input" placeholder=" " maxlength="30">
-                    <label>Nome do Espaço</label>
-                </div>
-                <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Cor do ícone</p>
-                <div class="accent-picker" style="margin-bottom:16px;">
-                    <button class="space-color-swatch active-space-color" data-space-color="#D97757" style="background:#D97757;"></button>
-                    <button class="space-color-swatch" data-space-color="#0a84ff" style="background:#0a84ff;"></button>
-                    <button class="space-color-swatch" data-space-color="#30d158" style="background:#30d158;"></button>
-                    <button class="space-color-swatch" data-space-color="#bf5af2" style="background:#bf5af2;"></button>
-                    <button class="space-color-swatch" data-space-color="#ff375f" style="background:#ff375f;"></button>
-                    <button class="space-color-swatch" data-space-color="#ff9f0a" style="background:#ff9f0a;"></button>
-                </div>
-            </div>
+.blocked-list-badge { font-size: 10px; font-weight: 700; color: var(--ios-red); background: rgba(255,69,58,0.15); border: 1px solid rgba(255,69,58,0.3); border-radius: 6px; padding: 2px 6px; margin-left: 6px; vertical-align: middle; letter-spacing: 0.5px; }
 
-            <button id="btn-confirm-create-group" class="ios-btn-primary">Criar Grupo</button>
-        </div>
-    </div>
+.header-avatar-container { position: relative; display: inline-block; flex-shrink: 0; }
+.online-indicator-dot { position: absolute; bottom: 1px; right: 1px; width: 11px; height: 11px; background-color: var(--ios-green); border-radius: 50%; border: 2px solid #000; }
+.blocked-header-badge { position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 700; background: var(--ios-red); color: #fff; border-radius: 4px; padding: 1px 4px; white-space: nowrap; letter-spacing: 0.3px; }
 
+.btn-fab { position: absolute; bottom: 24px; right: 24px; width: 54px; height: 54px; border-radius: 50%; background: var(--ios-blue); border: none; display: flex; justify-content: center; align-items: center; box-shadow: 0 8px 24px rgba(10,132,255,0.35); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; }
+.btn-fab:active { transform: scale(0.92); box-shadow: 0 4px 12px rgba(10,132,255,0.25); }
+.empty-state { text-align: center; padding-top: 60px; color: var(--text-muted); font-size: 15px; }
 
+.empty-chat-panel { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; width: calc(100% - 380px); height: 100%; pointer-events: none; user-select: none; position: absolute; left: 380px; top: 0; bottom: 0; }
+@media (max-width: 767px) { .empty-chat-panel { display: none !important; } }
 
-    <!-- MODAL EDITAR GRUPO (nome, descrição, foto — só admin/dono) -->
-    <div id="edit-group-modal" class="modal hidden">
-        <div class="modal-content glass-premium" style="max-width:360px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:15px;">
-                <h3>Editar Grupo</h3>
-                <button id="btn-close-edit-group" class="back-btn">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
-            </div>
-            <div class="avatar-upload-container-premium" style="margin-bottom:12px;">
-                <div class="avatar-preview-wrapper">
-                    <img id="edit-group-avatar-preview" src="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;">
-                </div>
-                <label for="edit-group-avatar-file" class="avatar-file-label-premium" style="font-size:12px;">Alterar Foto</label>
-                <input type="file" id="edit-group-avatar-file" accept="image/*" class="hidden">
-            </div>
-            <div class="input-group-premium" style="margin-bottom:12px;">
-                <input type="text" id="edit-group-name-input" placeholder=" " maxlength="50">
-                <label>Nome do Grupo</label>
-            </div>
-            <div class="input-group-premium" style="margin-bottom:12px;">
-                <input type="text" id="edit-group-desc-input" placeholder=" " maxlength="120">
-                <label>Descrição (opcional)</label>
-            </div>
-            <button id="btn-save-edit-group" class="ios-btn-primary">Salvar Alterações</button>
-        </div>
-    </div>
+.chat-room-screen { position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: var(--app-max-width); height: 100dvh; background: var(--surface-1); display: flex; flex-direction: column; z-index: 150; animation: slideInRight 0.3s cubic-bezier(0.25,0.46,0.45,0.94); }
+@keyframes slideInRight { from { transform: translateX(calc(-50% + 40px)); opacity: 0.6; } to { transform: translateX(-50%); opacity: 1; } }
 
-    <!-- MODAL ADICIONAR MEMBRO AO GRUPO -->
-    <div id="add-member-modal" class="modal hidden">
-        <div class="modal-content glass-premium" style="max-width:340px;">
-            <h3 id="add-member-modal-title" style="margin-bottom:12px;text-align:center;">Adicionar Membro</h3>
-            <div id="add-member-search-wrap" class="search-bar-wrapper with-at-prefix" style="padding:0 0 8px 0;">
-                <div class="at-input-wrap">
-                    <span class="at-prefix">@</span>
-                    <input type="text" id="add-member-search" placeholder="usuario">
-                </div>
-            </div>
-            <div id="add-member-results" class="chats-list" style="max-height:200px;overflow-y:auto;"></div>
-            <button id="btn-close-add-member" class="btn-profile-close" style="margin-top:10px;">Cancelar</button>
-        </div>
-    </div>
+/* Tela do espaço abrindo dentro do painel de seleção (mesma "caixa" do tab-content-container),
+   em vez do painel grande de chat. Herda toda a responsividade (mobile cheio / 320px no PC)
+   e só empilha header + lista de grupos verticalmente por dentro. */
+.space-room-as-list { display: flex; flex-direction: column; background: var(--surface-1); }
+.space-room-as-list .chat-header { background: transparent; }
 
-    <!-- MODAL EDITAR ESPAÇO (nome, cor — só admin/dono) -->
-    <div id="edit-space-modal" class="modal hidden">
-        <div class="modal-content glass-premium" style="max-width:360px;">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:15px;">
-                <h3>Editar Espaço</h3>
-                <button id="btn-close-edit-space" class="back-btn">
-                    <svg class="mono-icon-light" viewBox="0 0 24 24"><path fill="currentColor" d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-                </button>
-            </div>
-            <div class="input-group-premium" style="margin-bottom:12px;">
-                <input type="text" id="edit-space-name-input" placeholder=" " maxlength="30">
-                <label>Nome do Espaço</label>
-            </div>
-            <p style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">Cor do ícone</p>
-            <div class="accent-picker" style="margin-bottom:16px;">
-                <button class="edit-space-color-swatch active-space-color" data-space-color="#D97757" style="background:#D97757;"></button>
-                <button class="edit-space-color-swatch" data-space-color="#0a84ff" style="background:#0a84ff;"></button>
-                <button class="edit-space-color-swatch" data-space-color="#30d158" style="background:#30d158;"></button>
-                <button class="edit-space-color-swatch" data-space-color="#bf5af2" style="background:#bf5af2;"></button>
-                <button class="edit-space-color-swatch" data-space-color="#ff375f" style="background:#ff375f;"></button>
-                <button class="edit-space-color-swatch" data-space-color="#ff9f0a" style="background:#ff9f0a;"></button>
-            </div>
-            <button id="btn-save-edit-space" class="ios-btn-primary">Salvar Alterações</button>
-        </div>
-    </div>
+.chat-header { height: 64px; display: flex; align-items: center; padding: 0 12px; gap: 8px; flex-shrink: 0; }
+.active-user-info { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; overflow: hidden; cursor: pointer; }
+.active-user-info > div { min-width: 0; overflow: hidden; }
+.active-user-info h2 { font-size: 16px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.active-user-info p { font-size: 12px; color: var(--text-muted); transition: color 0.3s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.active-user-info.is-online p { color: var(--ios-green); }
 
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-storage-compat.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/agora-rtc-sdk-ng@4.24.4/AgoraRTC_N-production.min.js"></script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(() => {});
-        }
-    </script>
-    <script src="script.js"></script>
-</body>
-</html>
+.current-user-header-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: rgba(255,255,255,0.05);
+    padding: 4px 10px 4px 4px; border-radius: 20px;
+    border: 1px solid var(--glass-border);
+    transition: background 0.15s ease, transform 0.1s ease, border-color 0.2s ease;
+}
+[data-theme="light"] .current-user-header-pill { background: rgba(0,0,0,0.04); }
+.current-user-header-pill:active { transform: scale(0.96); }
+.current-user-header-avatar { width: 26px; height: 26px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.current-user-header-nick {
+    font-size: 12px; font-weight: 500; color: var(--text-main);
+    max-width: 80px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.header-avatar { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: var(--surface-3); }
+.icon-btn-dots { background: none; border: none; cursor: pointer; padding: 8px; display: flex; align-items: center; }
+
+.blocked-chat-banner { display: flex; align-items: center; justify-content: center; background: rgba(255,69,58,0.12); border-bottom: 1px solid rgba(255,69,58,0.2); padding: 8px 16px; font-size: 13px; color: var(--ios-red); flex-shrink: 0; animation: fadeInDown 0.3s ease; }
+.unblock-btn-inline { margin-left: 12px; background: var(--ios-red); color: #fff; border: none; border-radius: 8px; padding: 4px 10px; font-size: 12px; font-weight: 600; cursor: pointer; }
+
+/* ── MODO BLOQUEADO: desabilita visualmente o footer de envio ───────── */
+.chat-footer.blocked-mode { opacity: 0.4; pointer-events: none; filter: grayscale(1); }
+.chat-footer.blocked-mode input { cursor: not-allowed; }
+
+.messages-container { flex: 1; padding: 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+.messages-container::-webkit-scrollbar { width: 3px; }
+.messages-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
+
+.message-wrapper { display: flex; align-items: center; position: relative; transition: transform 0.2s; touch-action: pan-y; margin-bottom: 2px; }
+.message-wrapper.sent    { justify-content: flex-end;   }
+.message-wrapper.received { justify-content: flex-start; }
+
+.message {
+    max-width: 72%; padding: 10px 14px; border-radius: 18px; font-size: 15px; line-height: 1.45; display: flex; flex-direction: column; position: relative; word-break: break-word; transition: transform 0.15s ease, box-shadow 0.15s ease; user-select: none; -webkit-user-select: none;
+    touch-action: manipulation; -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent; cursor: pointer;
+}
+.message.sent     { background: var(--msg-sent);     align-self: flex-end;   border-bottom-right-radius: 4px; color: var(--msg-sent-text); }
+.message.received { background: var(--msg-received); align-self: flex-start; border-bottom-left-radius: 4px;  color: var(--msg-received-text, var(--text-main)); }
+.message.deleted-msg { opacity: 0.45; font-style: italic; color: var(--text-muted); }
+.message.pressing { transform: scale(0.97); box-shadow: 0 6px 24px rgba(0,0,0,0.4); }
+
+.message.is-offline-pending { animation: offlineBlink 1.5s infinite alternate; opacity: 0.7; }
+@keyframes offlineBlink { from { opacity: 0.4; } to { opacity: 0.9; } }
+
+.message-img, .message-video { max-width: 200px; border-radius: 12px; margin-bottom: 4px; display: block; cursor: pointer; }
+
+/* ─── ESTILO INSTAGRAM PREMIUM PARA O ÁUDIO ─── */
+.audio-message-container { display: flex; align-items: center; gap: 10px; padding: 6px 4px; min-width: 210px; }
+.audio-play-btn { width: 34px; height: 34px; border-radius: 50%; background: rgba(255, 255, 255, 0.2); border: none; color: #ffffff; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.2s; }
+.audio-play-btn:hover { background: rgba(255, 255, 255, 0.3); }
+.audio-play-btn svg { width: 16px; height: 16px; fill: currentColor; }
+.audio-progress-bar-wrapper { flex: 1; height: 4px; background: rgba(255, 255, 255, 0.2); border-radius: 2px; position: relative; overflow: hidden; }
+.audio-progress-bar-fill { height: 100%; width: 0%; background: #ffffff; border-radius: 2px; transition: width 0.1s linear; }
+.audio-duration-tag { font-size: 11px; color: rgba(255, 255, 255, 0.7); font-variant-numeric: tabular-nums; flex-shrink: 0; margin-left: 2px; }
+
+.edited-tag { font-size: 10px; color: rgba(255,255,255,0.45); margin-top: 2px; align-self: flex-end; font-style: italic; }
+.message.sent .edited-tag { color: rgba(255,255,255,0.5); }
+
+.msg-meta-row { display: flex; align-items: center; justify-content: flex-end; gap: 4px; margin-top: 4px; min-height: 8px; }
+.status-dot-wrapper { display: flex; align-items: center; gap: 2.5px; }
+.status-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; transition: background-color 0.4s ease, transform 0.3s ease; }
+.dot-sending  { background-color: rgba(255,255,255,0.5); animation: pulseDot 0.7s infinite alternate; }
+.dot-sent     { background-color: #8e8e93; }
+.dot-delivered { background-color: #8e8e93; }
+.dot-read     { background-color: var(--ios-green); animation: dotPop 0.35s cubic-bezier(0.36,0.07,0.19,0.97); }
+
+/* ── VISUALIZAÇÕES DE MENSAGEM EM GRUPO (bolinhas com foto de quem viu) ── */
+.group-seen-row { display: flex; align-items: center; justify-content: flex-end; gap: 5px; margin-top: 4px; min-height: 14px; }
+.seen-avatars-stack { display: flex; flex-direction: row; align-items: center; }
+.seen-avatar {
+    width: 14px; height: 14px; border-radius: 50%; object-fit: cover;
+    border: 1.5px solid var(--surface-1); background: #555; margin-left: -5px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 6.5px; font-weight: 700; color: #fff; flex-shrink: 0;
+    animation: dotPop 0.3s cubic-bezier(0.36,0.07,0.19,0.97);
+}
+.seen-avatars-stack .seen-avatar:first-child { margin-left: 0; }
+.seen-avatar-more { background: #3a3a3c; letter-spacing: -0.3px; }
+
+.chat-footer { padding: 8px 12px; display: flex; align-items: center; gap: 10px; padding-bottom: calc(8px + env(safe-area-inset-bottom)); flex-shrink: 0; position: relative; }
+.footer-input-row { flex: 1; background: var(--surface-2); border-radius: 20px; display: flex; align-items: center; padding: 0 12px; border: 1px solid var(--glass-border); transition: border-color 0.2s; height: 40px; }
+.footer-input-row:focus-within { border-color: rgba(10,132,255,0.3); }
+.footer-input-row input { flex: 1; background: none; border: none; padding: 10px 0; color: var(--text-main); outline: none; font-size: 15px; margin-left: 8px; }
+.btn-send-round, .btn-mic-round { width: 36px; height: 36px; border-radius: 50%; background: var(--ios-blue); border: none; display: flex; justify-content: center; align-items: center; cursor: pointer; flex-shrink: 0; transition: transform 0.15s, background 0.15s; color: #fff; }
+.btn-send-round:active, .btn-mic-round:active { transform: scale(0.86); }
+.btn-mic-round { background: var(--surface-3); }
+.btn-mic-round.recording { background: var(--ios-red); animation: pulseRecord 1s infinite alternate; }
+
+.audio-recorder-overlay {
+    position: absolute; left: 12px; right: 58px; height: 40px;
+    background: var(--surface-2); border-radius: 20px;
+    display: flex; align-items: center; padding: 0 14px;
+    z-index: 10; animation: fadeIn 0.2s ease;
+    overflow: hidden;
+}
+.audio-recorder-overlay.discarding { animation: recorderPoof 0.32s ease forwards; }
+@keyframes recorderPoof {
+    0%   { opacity: 1; transform: scale(1); }
+    100% { opacity: 0; transform: scale(0.85) translateX(-40px); }
+}
+
+/* Blur/glow vermelho que cresce conforme você arrasta pra cancelar */
+.recorder-red-blur {
+    position: absolute; inset: 0; border-radius: 20px; pointer-events: none;
+    background: radial-gradient(circle at 20px 50%, rgba(255,59,48,0.55), rgba(255,59,48,0.12) 60%, transparent 75%);
+    filter: blur(6px);
+    opacity: 0; transition: opacity 0.12s linear;
+    z-index: 1;
+}
+.audio-recorder-overlay.cancel-armed .recorder-red-blur { opacity: 1; }
+.audio-recorder-overlay.cancel-armed { background: rgba(255,59,48,0.14); }
+
+/* Ícone de lixeira fixo à esquerda, que "acorda" conforme você se aproxima do cancelamento */
+.recorder-trash-icon {
+    position: relative; z-index: 2; flex-shrink: 0;
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--text-muted);
+    transform: scale(1); transition: transform 0.12s ease, color 0.12s ease;
+}
+.recorder-trash-icon.trash-armed {
+    color: #fff; background: var(--ios-red);
+    animation: trashShake 0.35s ease;
+}
+@keyframes trashShake {
+    0%, 100% { transform: scale(1.4) rotate(0deg); }
+    25%      { transform: scale(1.4) rotate(-12deg); }
+    75%      { transform: scale(1.4) rotate(12deg); }
+}
+
+/* Conteúdo (timer + dica) que acompanha o dedo ao arrastar pra esquerda */
+.recorder-content {
+    position: relative; z-index: 2; flex: 1;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-left: 10px;
+    transition: transform 0.05s linear;
+}
+.recorder-info { display: flex; align-items: center; gap: 8px; color: var(--ios-red); font-size: 14px; font-weight: 500; flex-shrink: 0; }
+.recorder-blink { width: 8px; height: 8px; background: var(--ios-red); border-radius: 50%; animation: pulseDot 0.5s infinite alternate; }
+.recorder-slide-tip { color: var(--text-muted); font-size: 13px; font-weight: 400; pointer-events: none; white-space: nowrap; }
+.audio-recorder-overlay.cancel-armed .recorder-slide-tip { color: #fff; font-weight: 600; }
+.audio-recorder-overlay.cancel-armed .recorder-info { color: #fff; }
+
+.ios-dropdown-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; z-index: 400; background: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; animation: fadeIn 0.2s ease; }
+.profile-detail-card { width: 90%; max-width: 340px; border-radius: 24px; padding: 24px; display: flex; flex-direction: column; align-items: center; box-shadow: 0 20px 50px rgba(0,0,0,0.8); animation: scaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1); }
+.profile-detail-header { text-align: center; margin-bottom: 20px; }
+.avatar-detail-wrapper { position: relative; display: inline-block; margin-bottom: 10px; }
+.avatar-detail-large { width: 90px; height: 90px; border-radius: 50%; object-fit: cover; border: 2px solid var(--glass-border); background: var(--surface-2); display: block; }
+.sheet-blocked-badge { position: absolute; bottom: 0; left: 50%; transform: translateX(-50%); font-size: 10px; font-weight: 700; background: var(--ios-red); color: #fff; border-radius: 6px; padding: 2px 7px; white-space: nowrap; letter-spacing: 0.5px; }
+.profile-detail-header h3 { font-size: 20px; font-weight: 700; color: var(--text-main); max-width: 100%; overflow-wrap: break-word; word-break: break-word; }
+.profile-detail-header p  { font-size: 14px; color: var(--text-muted); margin-top: 2px; max-width: 100%; overflow-wrap: break-word; word-break: break-word; }
+
+.profile-info-sections { width: 100%; display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+.info-block { background: rgba(255,255,255,0.04); padding: 12px 16px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.03); }
+.block-label { font-size: 11px; font-weight: 600; color: var(--ios-blue); text-transform: uppercase; letter-spacing: 0.5px; display: block; margin-bottom: 4px; }
+.block-content { font-size: 14px; color: var(--text-main); line-height: 1.4; }
+
+.profile-actions-list { width: 100%; display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; }
+.action-row-toggle { width: 100%; background: rgba(255,255,255,0.04); padding: 14px 16px; border-radius: 14px; display: flex; justify-content: space-between; align-items: center; font-size: 15px; }
+.action-danger-btn   { width: 100%; background: rgba(255,69,58,0.1);   border: none; padding: 14px; border-radius: 14px; color: var(--ios-red);   font-size: 15px; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.2s; }
+.action-unblock-btn  { width: 100%; background: rgba(48,209,88,0.1);   border: none; padding: 14px; border-radius: 14px; color: var(--ios-green); font-size: 15px; font-weight: 600; cursor: pointer; text-align: center; transition: background 0.2s; }
+.btn-profile-close   { width: 100%; background: rgba(255,255,255,0.08); border: none; padding: 12px; border-radius: 14px; color: var(--text-main); font-size: 15px; font-weight: 500; cursor: pointer; margin-top: 5px; transition: background 0.2s; }
+
+.ios-switch-wrapper { position: relative; display: inline-block; width: 46px; height: 26px; }
+.ios-switch-wrapper input { opacity: 0; width: 0; height: 0; }
+.ios-switch-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #3a3a3c; transition: .3s; border-radius: 26px; }
+.ios-switch-slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+.ios-switch-wrapper input:checked + .ios-switch-slider { background-color: var(--ios-green); }
+.ios-switch-wrapper input:checked + .ios-switch-slider:before { transform: translateX(20px); }
+
+.blur-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.5); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); z-index: 600; animation: fadeIn 0.2s ease; }
+
+/* ─── CORREÇÃO COMPLETA DO CORTE DO MENU DE CONTEXTO E POSIÇÃO CENTRALIZADA NA ALTURA DA MENSAGEM ─── */
+.focused-container { position: absolute; display: flex; flex-direction: column; gap: 14px; width: 240px; pointer-events: none; max-height: calc(100dvh - 20px); overflow-y: auto; scrollbar-width: none; }
+.focused-container::-webkit-scrollbar { display: none; }
+.focused-container > * { pointer-events: auto; }
+.focused-message-wrapper { width: 100%; }
+.focused-message-wrapper .message-wrapper { width: 100%; display: flex; }
+.focused-container.align-right .focused-message-wrapper .message-wrapper { justify-content: flex-end; }
+.focused-container.align-left .focused-message-wrapper .message-wrapper { justify-content: flex-start; }
+/* Impede que foto/vídeo grandes estourem o menu e empurrem os botões pra fora da tela */
+.focused-message-wrapper .message-img,
+.focused-message-wrapper .message-video { max-height: 220px; width: auto; }
+
+.focused-message-wrapper .message { max-width: 100%; box-shadow: 0 12px 36px rgba(0,0,0,0.6); transform: scale(1.03); animation: msgPopUp 0.25s cubic-bezier(0.34,1.56,0.64,1); }
+@keyframes msgPopUp { from { transform: scale(0.92); opacity: 0.6; } to { transform: scale(1.03); opacity: 1; } }
+
+.iphone-context-menu { border-radius: 16px; padding: 4px; display: flex; flex-direction: column; width: 100%; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.context-item { padding: 13px 16px; font-size: 15px; display: flex; align-items: center; cursor: pointer; border-radius: 10px; border-bottom: 1px solid rgba(255,255,255,0.04); transition: background 0.15s; }
+.context-item:last-child { border-bottom: none; }
+.context-item:active { background: rgba(255,255,255,0.08); }
+.context-item.danger { color: var(--ios-red); }
+.context-item.cancel { background: rgba(255,255,255,0.06); justify-content: center; font-weight: 500; margin-top: 4px; }
+
+.modal { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.65); z-index: 700; display: flex; justify-content: center; align-items: center; animation: fadeIn 0.2s ease; }
+.modal-content { width: 90%; max-width: 340px; border-radius: 20px; padding: 20px; max-height: 80dvh; display: flex; flex-direction: column; animation: scaleIn 0.25s cubic-bezier(0.34,1.56,0.64,1); }
+
+.settings-screen { position: absolute; top: 0; left: 0; right: 0; bottom: 0; width: 100% !important; max-width: 100% !important; height: 100%; background: var(--surface-1); z-index: 400; display: flex; flex-direction: column; animation: slideInRight 0.3s cubic-bezier(0.25,0.46,0.45,0.94); overflow-y: auto; }
+.settings-screen-header { height: 60px; display: flex; align-items: center; padding: 0 16px; gap: 10px; flex-shrink: 0; }
+.settings-screen-body { padding: 16px; display: flex; flex-direction: column; gap: 16px; flex: 1; overflow-y: auto; }
+.settings-section-group { border-radius: 14px; padding: 4px 16px; }
+.settings-row-toggle { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; }
+.row-main-title { font-size: 16px; font-weight: 500; color: var(--text-main); }
+.row-sub-title  { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.back-btn { background: none; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--ios-blue); padding: 4px; }
+.settings-section-title { font-size: 13px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; padding-left: 4px; }
+.settings-avatar-row { display: flex; flex-direction: column; align-items: center; padding: 16px 0; gap: 8px; }
+.settings-avatar-wrapper { width: 72px; height: 72px; border-radius: 50%; overflow: hidden; background: var(--surface-3); border: 1px solid var(--glass-border); }
+.settings-avatar-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+.settings-avatar-label { font-size: 14px; color: var(--ios-blue); cursor: pointer; font-weight: 500; }
+
+.settings-tabs-bar { display: flex; border-bottom: 1px solid var(--glass-border); background: var(--glass-bg); overflow-x: auto; scrollbar-width: none; flex-shrink: 0; }
+.settings-tabs-bar::-webkit-scrollbar { display: none; }
+.settings-tab { flex: 1; min-width: 75px; text-align: center; padding: 12px 4px; font-size: 13px; font-weight: 500; color: var(--text-muted); cursor: pointer; white-space: nowrap; border-bottom: 2px solid transparent; transition: color 0.2s, border-color 0.2s; }
+.settings-tab.active { color: var(--ios-blue); border-bottom: 2px solid var(--ios-blue); }
+.settings-tab-pane { display: flex; flex-direction: column; gap: 0; }
+.settings-tab-pane .input-group-premium { margin-top: 12px; margin-bottom: 12px; }
+
+.reply-arrow { position: absolute; display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: 50%; background: rgba(10,132,255,0.18); opacity: 0; transition: opacity 0.15s ease; pointer-events: none; }
+.message-wrapper.sent     .reply-arrow { right: -40px; }
+.message-wrapper.received .reply-arrow { left:  -40px; }
+.reply-arrow svg { color: var(--ios-blue); }
+.reply-arrow.visible { opacity: 1; }
+.reply-arrow.bounce { animation: arrowBounce 0.3s cubic-bezier(0.36,0.07,0.19,0.97); }
+
+/* No PC (tem mouse de verdade) o botão de responder aparece suave ao passar o mouse
+   por cima da mensagem, tipo Instagram — sem precisar arrastar como no celular. */
+@media (hover: hover) and (pointer: fine) {
+    .reply-arrow {
+        top: 50%;
+        transform: translateY(-50%) scale(0.4);
+        pointer-events: auto;
+        cursor: pointer;
+        transition: opacity 0.2s ease, transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.15s ease;
+    }
+    .message-wrapper:hover .reply-arrow { opacity: 0.85; transform: translateY(-50%) scale(1); }
+    .reply-arrow:hover { opacity: 1 !important; background: rgba(10,132,255,0.3); transform: translateY(-50%) scale(1.15) !important; }
+    .reply-arrow:active { transform: translateY(-50%) scale(0.95) !important; }
+}
+
+.reply-bar { display: flex; align-items: center; background: rgba(10,132,255,0.1); border-top: 2px solid var(--ios-blue); padding: 8px 16px; gap: 10px; animation: slideUp 0.2s ease; flex-shrink: 0; }
+.reply-bar-indicator { width: 3px; height: 32px; background: var(--ios-blue); border-radius: 4px; flex-shrink: 0; }
+.reply-bar-content { flex: 1; overflow: hidden; }
+.reply-bar-label { font-size: 11px; font-weight: 600; color: var(--ios-blue); display: block; margin-bottom: 2px; }
+.reply-bar-msg { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.reply-cancel-btn { background: none; border: none; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; }
+
+.quoted-msg { background: rgba(255,255,255,0.07); border-left: 3px solid var(--ios-blue); border-radius: 8px; padding: 6px 10px; margin-bottom: 6px; font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.quoted-msg span { display: block; font-size: 11px; color: var(--ios-blue); font-weight: 600; margin-bottom: 2px; }
+
+.action-nickname-btn { width: 100%; background: rgba(10,132,255,0.1); border: none; padding: 14px 16px; border-radius: 14px; color: var(--ios-blue); font-size: 15px; font-weight: 600; cursor: pointer; }
+
+.media-viewer { position: fixed; top: 0; left: 0; width: 100vw; height: 100dvh; background: rgba(0,0,0,0.98); z-index: 10000; display: flex; justify-content: center; align-items: center; animation: fadeIn 0.2s ease; }
+.media-viewer-content { max-width: 95vw; max-height: 85dvh; object-fit: contain; transition: transform 0.2s cubic-bezier(0.1, 0.3, 0.3, 1); user-select: none; animation: mediaViewerIn 0.25s cubic-bezier(0.25,0.46,0.45,0.94); }
+@keyframes mediaViewerIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+.media-viewer-close { position: absolute; top: 20px; right: 20px; z-index: 20; background: rgba(255,255,255,0.15); border: none; border-radius: 50%; width: 40px; height: 40px; color: #fff; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.15s ease, transform 0.15s ease; }
+.media-viewer-close:active { transform: scale(0.9); background: rgba(255,255,255,0.28); }
+#media-viewer-container { z-index: 1; pointer-events: none; }
+#media-viewer-container > * { pointer-events: auto; }
+
+.requests-badge { display: inline-flex; align-items: center; justify-content: center; background: var(--ios-red); color: #fff; font-size: 10px; font-weight: 700; border-radius: 8px; min-width: 16px; height: 16px; padding: 0 4px; margin-left: 4px; vertical-align: middle; }
+.requests-banner { display: flex; align-items: center; gap: 10px; margin: 4px 12px 4px; padding: 12px 14px; background: rgba(10,132,255,0.1); border: 1px solid rgba(10,132,255,0.25); border-radius: 12px; cursor: pointer; font-size: 13px; font-weight: 500; color: var(--ios-blue); transition: background 0.2s; }
+.requests-banner:active { background: rgba(10,132,255,0.18); }
+
+.request-row { display: flex; align-items: center; padding: 12px 16px; gap: 12px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.request-row img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+.request-row-info { flex: 1; overflow: hidden; }
+.request-row-info h4 { font-size: 15px; font-weight: 600; color: var(--text-main); }
+.request-row-info p  { font-size: 13px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.request-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.btn-req-accept { background: var(--ios-green); border: none; border-radius: 20px; color: #fff; font-size: 13px; font-weight: 600; padding: 6px 14px; cursor: pointer; }
+.btn-req-decline { background: rgba(255,69,58,0.15); border: none; border-radius: 20px; color: var(--ios-red); font-size: 13px; font-weight: 600; padding: 6px 14px; cursor: pointer; }
+
+/* ── AGRUPAMENTO DE MENSAGENS ESTILO INSTAGRAM ─────────────────── */
+.message-wrapper.grouped-msg {
+    margin-top: 2px !important;
+}
+
+/* Enviadas - bordas arredondadas por posição no grupo */
+.message.sent.bubble-first-sent {
+    border-radius: 18px 18px 6px 18px;
+}
+.message.sent.bubble-mid-sent {
+    border-radius: 18px 6px 6px 18px;
+}
+.message.sent.bubble-last-sent {
+    border-radius: 18px 6px 18px 18px;
+}
+
+/* Recebidas - bordas arredondadas por posição no grupo */
+.message.received.bubble-first-received {
+    border-radius: 18px 18px 18px 6px;
+}
+.message.received.bubble-mid-received {
+    border-radius: 6px 18px 18px 6px;
+}
+.message.received.bubble-last-received {
+    border-radius: 6px 18px 18px 18px;
+}
+
+/* ── DESABILITAR SELEÇÃO DE TEXTO NAS MENSAGENS ────────────────── */
+.message,
+.message *,
+.message p,
+.message-wrapper,
+.messages-container,
+.group-messages-container,
+.quoted-msg,
+.audio-message-container,
+.doc-message-link,
+.chat-item-row,
+.chat-item-info,
+.chats-list {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+/* ── DESABILITAR SELEÇÃO DE TEXTO NO MENU DE CONTEXTO (long-press) ────── */
+.blur-overlay,
+.focused-container,
+.focused-message-wrapper,
+.iphone-context-menu,
+.context-item {
+    -webkit-user-select: none !important;
+    -moz-user-select: none !important;
+    -ms-user-select: none !important;
+    user-select: none !important;
+    -webkit-touch-callout: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+/* Imagens/vídeos dentro das mensagens: sem "salvar imagem" nativo do iOS nem arrastar */
+.message img,
+.message video,
+.message-img,
+.message-video {
+    -webkit-user-drag: none !important;
+    -webkit-touch-callout: none !important;
+    pointer-events: auto;
+}
+
+/* ── MENU DE ANEXO ────────────────────────────────────────────────── */
+.attach-menu {
+    position: absolute;
+    bottom: 70px;
+    left: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--glass-border);
+    border-radius: 16px;
+    padding: 10px;
+    display: flex;
+    gap: 8px;
+    z-index: 200;
+    backdrop-filter: blur(20px);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+.attach-menu-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-main);
+    font-size: 11px;
+    padding: 4px 8px;
+}
+.attach-menu-icon {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* ── DOCUMENTO NA MENSAGEM ─────────────────────────────────────────── */
+.doc-message-link { display: flex; align-items: center; gap: 8px; background: rgba(127,127,127,0.15); border-radius: 10px; padding: 8px 10px; text-decoration: none; color: inherit; margin-bottom: 4px; }
+.doc-name { display: block; font-size: 13px; font-weight: 500; }
+.doc-size { display: block; font-size: 11px; opacity: 0.6; }
+
+/* ── NOME DO REMETENTE NO GRUPO ────────────────────────────────────── */
+.group-sender-name {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #0a84ff;
+    margin-bottom: 3px;
+}
+
+/* ── TAGS DE ROLE (Dono / Admin) ──────────────────────────────────── */
+.member-role-tag {
+    font-size: 10px;
+    border-radius: 8px;
+    padding: 1px 6px;
+    margin-left: 5px;
+    font-weight: 600;
+}
+.owner-tag  { background: rgba(255,159,10,0.25); color: #ff9f0a; }
+.admin-tag  { background: rgba(10,132,255,0.25); color: #0a84ff; }
+
+/* ── GROUP ROOM (dentro do frame, mesmo posicionamento do chat-room-screen) ── */
+#group-room-screen {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100%;
+    max-width: var(--app-max-width);
+    height: 100dvh;
+    background: var(--surface-1);
+    display: flex;
+    flex-direction: column;
+    z-index: 150;
+    animation: slideInRight 0.3s cubic-bezier(0.25,0.46,0.45,0.94);
+}
+#group-room-screen.hidden { display: none !important; }
+
+@media (min-width: 768px) {
+    #group-room-screen {
+        position: absolute !important;
+        left: auto !important;
+        right: 10px !important;
+        top: 10px !important;
+        bottom: 10px !important;
+        width: calc(100% - 424px) !important;
+        max-width: none !important;
+        height: auto !important;
+        transform: none !important;
+        animation: none !important;
+        border: 1px solid var(--glass-border) !important;
+        border-radius: 14px !important;
+        overflow: hidden;
+    }
+    #group-room-screen #btn-back-group { display: none !important; }
+}
+
+/* ── CHIP DE MEMBRO SELECIONADO ───────────────────────────────────── */
+#group-selected-members { min-height: 28px; }
+
+/* ── PERSONALIZAÇÃO: TEMA E COR DE DESTAQUE ──────────────────────────── */
+.theme-picker { display: flex; gap: 12px; }
+.theme-option { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; background: none; border: 2px solid var(--glass-border); border-radius: 14px; padding: 12px; cursor: pointer; color: var(--text-muted); font-size: 13px; transition: border-color 0.2s, transform 0.15s; }
+.theme-option:active { transform: scale(0.96); }
+.theme-option.active-theme { border-color: var(--ios-blue); color: var(--text-main); }
+.theme-swatch { width: 48px; height: 48px; border-radius: 12px; display: block; border: 1px solid var(--glass-border); }
+.theme-swatch-dark  { background: linear-gradient(135deg, #1c1c1e, #000000); }
+.theme-swatch-light { background: linear-gradient(135deg, #ffffff, #e5e5ea); }
+
+.accent-picker { display: flex; gap: 12px; flex-wrap: wrap; }
+.accent-swatch, .bubble-swatch { width: 40px; height: 40px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; transition: transform 0.15s ease, border-color 0.15s ease; position: relative; }
+.accent-swatch:active, .bubble-swatch:active { transform: scale(0.88); }
+.accent-swatch.active-accent, .bubble-swatch.active-bubble { border-color: var(--text-main); transform: scale(1.08); }
+.accent-swatch.active-accent::after, .bubble-swatch.active-bubble::after { content: "✓"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; font-weight: 700; text-shadow: 0 1px 2px rgba(0,0,0,0.4); }
+.bubble-swatch[data-bubble-value="white"]::after, .bubble-swatch[data-bubble-value="yellow"]::after { color: #1c1c1e; text-shadow: none; }
+
+.font-picker { display: flex; flex-direction: column; gap: 8px; }
+.font-option { background: none; border: 2px solid var(--glass-border); border-radius: 12px; padding: 12px 14px; text-align: left; color: var(--text-main); font-size: 15px; cursor: pointer; transition: border-color 0.2s, transform 0.15s; }
+.font-option:active { transform: scale(0.98); }
+.font-option.active-font { border-color: var(--ios-blue); background: rgba(10,132,255,0.08); }
+
+.anim-option { background: none; border: 2px solid var(--glass-border); border-radius: 12px; padding: 12px 14px; text-align: left; color: var(--text-main); font-size: 15px; cursor: pointer; transition: border-color 0.2s, transform 0.15s; }
+.anim-option:active { transform: scale(0.98); }
+.anim-option.active-anim { border-color: var(--ios-blue); background: rgba(10,132,255,0.08); }
+
+/* ══════════════════════════════════════════════════════════════════
+   REFINAMENTOS DE UI E NOVAS ANIMAÇÕES
+   ══════════════════════════════════════════════════════════════════ */
+
+/* Entrada suave e escalonada para linhas de listas (conversas, grupos,
+   resultados de busca, membros) — dá vida ao carregar sem interferir
+   nas mensagens (que são redesenhadas com frequência demais pra isso). */
+@keyframes rowFadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+.chat-item-row, .request-row { animation: rowFadeIn 0.28s ease both; }
+.chats-list .chat-item-row:nth-child(1)  { animation-delay: 0.02s; }
+.chats-list .chat-item-row:nth-child(2)  { animation-delay: 0.05s; }
+.chats-list .chat-item-row:nth-child(3)  { animation-delay: 0.08s; }
+.chats-list .chat-item-row:nth-child(4)  { animation-delay: 0.11s; }
+.chats-list .chat-item-row:nth-child(5)  { animation-delay: 0.14s; }
+.chats-list .chat-item-row:nth-child(n+6) { animation-delay: 0.16s; }
+
+/* Avatares surgem com um leve fade em vez de "estalar" na tela ao carregar */
+.chat-item-row img, .profile-detail-header img, .avatar-detail-large { animation: fadeIn 0.25s ease; }
+
+/* Pop sutil nos badges de contagem (não lidas / solicitações) */
+@keyframes badgePop { 0% { transform: scale(0.4); opacity: 0; } 60% { transform: scale(1.15); opacity: 1; } 100% { transform: scale(1); } }
+#requests-badge, .unread-badge { animation: badgePop 0.3s cubic-bezier(0.34,1.56,0.64,1); }
+
+/* Feedback de toque consistente em botões secundários que ainda não tinham */
+.back-btn, .settings-tab, .tab-item { transition: transform 0.12s ease, opacity 0.12s ease; }
+.back-btn:active { transform: scale(0.9); opacity: 0.7; }
+
+/* Troca de aba nas Configurações com leve deslize, em vez de aparecer seco */
+@keyframes tabPaneIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+.settings-tab-pane:not(.hidden) { animation: tabPaneIn 0.22s ease; }
+
+/* ── ANIMAÇÃO DE MENSAGENS CONFIGURÁVEL (aba Personalização) ─────────
+   Controlada via atributo data-animation no <html>, trocado em tempo
+   real pelo seletor "Animações" nas Configurações. */
+@keyframes msgAnimPadrao  { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes msgAnimSuave   { from { opacity: 0; } to { opacity: 1; } }
+@keyframes msgAnimDinamica{ 0% { opacity: 0; transform: scale(0.8) translateY(6px); } 70% { opacity: 1; transform: scale(1.03); } 100% { transform: scale(1); } }
+
+html[data-animation="padrao"]   .message-wrapper { animation: msgAnimPadrao 0.22s ease both; }
+html[data-animation="suave"]    .message-wrapper { animation: msgAnimSuave 0.35s ease both; }
+html[data-animation="dinamica"] .message-wrapper { animation: msgAnimDinamica 0.28s cubic-bezier(0.34,1.56,0.64,1) both; }
+html[data-animation="nenhuma"]  .message-wrapper { animation: none !important; }
+/* Bolha que já apareceu antes não deve repetir a animação de entrada quando a lista é recarregada */
+.message-wrapper.no-anim { animation: none !important; }
+
+/* Botão "Editar Grupo" e outras ações de admin entram junto com o card */
+#group-admin-actions:not(.hidden) { animation: fadeIn 0.25s ease; }
+
+/* Estado vazio (sem conversas/grupos) com uma leve respiração no ícone */
+/* ── CHAMADAS DE VOZ E VÍDEO (Agora) ─────────────────────────────────────── */
+.call-btn-wrapper { position: relative; }
+
+.call-type-menu {
+    position: absolute; top: calc(100% + 8px); right: 0; z-index: 60;
+    background: var(--surface-2, #1c1c1e); border: 1px solid var(--glass-border);
+    border-radius: 14px; padding: 6px; min-width: 190px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    animation: scaleIn 0.15s ease;
+}
+.call-type-option {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    background: none; border: none; color: var(--text-main, #fff);
+    font-size: 14px; font-weight: 500; padding: 11px 10px; border-radius: 9px;
+    cursor: pointer; text-align: left;
+}
+.call-type-option svg { width: 18px; height: 18px; fill: var(--ios-blue, #0a84ff); flex-shrink: 0; }
+.call-type-option:hover, .call-type-option:active { background: rgba(255,255,255,0.08); }
+
+.call-screen {
+    position: absolute; inset: 0; width: 100%; height: 100%; z-index: 500;
+    background: linear-gradient(180deg, #1a1a1d 0%, #0a0a0c 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: space-between;
+    padding: 60px 24px 50px; overflow: hidden;
+    animation: fadeIn 0.25s ease;
+}
+.call-remote-video {
+    position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 1;
+}
+.call-local-video {
+    position: absolute; top: 16px; right: 16px; width: 100px; height: 140px; z-index: 3;
+    object-fit: cover; border-radius: 14px; border: 2px solid rgba(255,255,255,0.25);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+.call-content {
+    position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center;
+    gap: 10px; margin-top: 20px;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.6);
+}
+.call-status-label { font-size: 14px; font-weight: 600; color: var(--ios-blue, #0a84ff); letter-spacing: 0.4px; text-transform: uppercase; }
+.call-avatar-wrapper { position: relative; width: 128px; height: 128px; margin: 10px 0; display: flex; align-items: center; justify-content: center; }
+.call-avatar-large { width: 116px; height: 116px; border-radius: 50%; object-fit: cover; border: 3px solid rgba(255,255,255,0.15); position: relative; z-index: 2; }
+.call-ring-pulse { position: absolute; inset: 0; border-radius: 50%; border: 2px solid var(--ios-blue, #0a84ff); animation: splashRing 1.8s ease-out infinite; }
+.call-content h2 { font-size: 24px; font-weight: 700; color: #fff; margin: 0; }
+.call-timer { font-size: 15px; color: rgba(255,255,255,0.65); font-variant-numeric: tabular-nums; }
+
+.call-actions-row { position: relative; z-index: 2; display: flex; align-items: center; justify-content: center; gap: 26px; width: 100%; }
+.call-action-btn {
+    width: 62px; height: 62px; border-radius: 50%; border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.4); transition: transform 0.15s ease;
+}
+.call-action-btn:active { transform: scale(0.92); }
+.call-action-btn svg { width: 26px; height: 26px; fill: #fff; }
+.call-accept-btn { background: #30d158; }
+.call-decline-btn { background: #ff453a; }
+.call-mini-btn {
+    width: 50px; height: 50px; border-radius: 50%; border: none; cursor: pointer;
+    background: rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: center;
+}
+.call-mini-btn svg { width: 22px; height: 22px; fill: #fff; }
+.call-mini-btn.active-mute, .call-mini-btn.active-off { background: #fff; }
+.call-mini-btn.active-mute svg, .call-mini-btn.active-off svg { fill: #1c1c1e; }
+
+/* Lista de chamadas (aba Chamadas) */
+.call-row-icon { display: flex; align-items: center; gap: 4px; font-size: 12.5px; }
+.call-row-icon.missed, .call-row-icon.declined { color: #ff453a; }
+.call-row-icon.answered { color: var(--text-muted, #8e8e93); }
+.call-row-icon svg { width: 13px; height: 13px; }
+
+@keyframes emptyBreathe { 0%, 100% { opacity: 0.6; transform: scale(1); } 50% { opacity: 1; transform: scale(1.04); } }
+
+/* ── SPLASH SCREEN (abertura animada) ───────────────────────────────────── */
+.app-splash-screen {
+    position: fixed; inset: 0; width: 100vw; height: 100dvh; z-index: 9999;
+    background: var(--surface-1, #0a0a0c);
+    background-image: radial-gradient(circle at 50% 30%, rgba(10,132,255,0.18), transparent 60%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px;
+    transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+.app-splash-screen.splash-hide { opacity: 0; visibility: hidden; pointer-events: none; }
+.splash-icon-wrapper {
+    position: relative; width: 88px; height: 88px;
+    display: flex; align-items: center; justify-content: center;
+    animation: splashPop 0.6s cubic-bezier(0.34,1.56,0.64,1) both;
+}
+.splash-icon {
+    width: 46px; height: 46px; color: #0a84ff;
+    filter: drop-shadow(0 0 14px rgba(10,132,255,0.65));
+    animation: splashPulse 1.6s ease-in-out infinite;
+}
+.splash-ring {
+    position: absolute; inset: 0; border-radius: 50%;
+    border: 2px solid rgba(10,132,255,0.35);
+    animation: splashRing 1.8s ease-out infinite;
+}
+.splash-title {
+    font-size: 22px; font-weight: 700; letter-spacing: 0.3px; color: var(--text-main, #fff);
+    animation: splashFadeUp 0.6s ease 0.15s both;
+}
+.splash-dots { display: flex; gap: 6px; animation: splashFadeUp 0.6s ease 0.3s both; }
+.splash-dots span {
+    width: 6px; height: 6px; border-radius: 50%; background: #0a84ff; opacity: 0.35;
+    animation: splashDotBlink 1.2s ease-in-out infinite;
+}
+.splash-dots span:nth-child(2) { animation-delay: 0.15s; }
+.splash-dots span:nth-child(3) { animation-delay: 0.3s; }
+
+@keyframes splashPop { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes splashPulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.08); opacity: 0.85; } }
+@keyframes splashRing { 0% { transform: scale(0.85); opacity: 0.8; } 100% { transform: scale(1.6); opacity: 0; } }
+@keyframes splashFadeUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes splashDotBlink { 0%, 100% { opacity: 0.3; transform: scale(0.9); } 50% { opacity: 1; transform: scale(1.1); } }
+.empty-state { animation: fadeIn 0.3s ease; }
+
+/* ─── MATERIAL YOU 3 — botões redondos "morfam" pra quadrado (squircle) no toque ───
+   Círculo em repouso → no hover/press vira um quadrado arredondado, e volta suave
+   pro círculo ao soltar/tirar o mouse. É o "shape morph" clássico do Material You 3. */
+.btn-fab,
+.btn-send-round,
+.btn-mic-round,
+.media-viewer-close,
+.call-action-btn,
+.icon-btn-dots,
+.audio-play-btn {
+    transition: border-radius 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1),
+                box-shadow 0.2s ease,
+                background 0.2s ease;
+}
+.btn-fab:hover,
+.btn-send-round:hover,
+.btn-mic-round:hover,
+.media-viewer-close:hover,
+.call-action-btn:hover,
+.icon-btn-dots:hover,
+.audio-play-btn:hover {
+    border-radius: 16px;
+}
+.btn-fab:active,
+.btn-send-round:active,
+.btn-mic-round:active,
+.media-viewer-close:active,
+.call-action-btn:active,
+.icon-btn-dots:active,
+.audio-play-btn:active {
+    border-radius: 12px;
+    transform: scale(0.94);
+}
+
+/* Ícones no estilo Material You 3: contorno mais suave, peso de traço mais leve,
+   e o mesmo morph circular aplicado ao "fundo" do ícone (o container em volta do svg). */
+.m3-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.06);
+    transition: border-radius 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+                background 0.2s ease,
+                transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    cursor: pointer;
+}
+.m3-icon svg { width: 22px; height: 22px; stroke-width: 1.75; }
+.m3-icon:hover { border-radius: 14px; background: rgba(255,255,255,0.1); }
+.m3-icon:active { border-radius: 10px; transform: scale(0.92); }
+
+/* Ícone pequeno alinhado com texto, usado nos botões de Editar/Excluir/Bloquear/Adicionar */
+.m3-icon-inline { display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; margin-right: 6px; vertical-align: -3px; }
+.m3-icon-inline svg { width: 100%; height: 100%; }
+
+/* ─── MATERIAL YOU 3 — versão "quadrada arredondada" pros botões retangulares ───
+   Fica com cantos arredondados em repouso e aperta/afrouxa suave ao tocar,
+   o mesmo espírito do morph redondo→quadrado, só que aplicado a botões largos. */
+.ios-btn-primary,
+.action-danger-btn,
+.action-unblock-btn,
+.btn-profile-close,
+.filter-pill {
+    border-radius: 14px;
+    transition: border-radius 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+                transform 0.15s ease,
+                background 0.2s ease;
+}
+.ios-btn-primary:active,
+.action-danger-btn:active,
+.action-unblock-btn:active,
+.btn-profile-close:active,
+.filter-pill:active {
+    border-radius: 20px;
+    transform: scale(0.98);
+}
