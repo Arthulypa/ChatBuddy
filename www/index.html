@@ -153,6 +153,7 @@
         </nav>
         <div class="tab-content-container" id="main-panes-container">
             <div id="content-chats" class="tab-pane">
+                <div id="notes-row" class="notes-row"></div>
                 <div class="search-bar-wrapper">
                     <input type="text" id="search-contacts-input" placeholder="Buscar conversas pelo nome...">
                 </div>
@@ -747,6 +748,35 @@
                 <button id="btn-cancel-nickname" class="btn-profile-close" style="flex:1;">Cancelar</button>
                 <button id="btn-save-nickname" class="ios-btn-primary" style="flex:1;">Salvar</button>
             </div>
+        </div>
+    </div>
+
+    <!-- STATUS / NOTA rápida, estilo Instagram Notes — some sozinha depois de 24h -->
+    <div id="note-composer-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:320px; text-align:center;">
+            <h3 style="margin-bottom:6px;">Sua nota</h3>
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px;">Só quem já tem conversa com você vê. Some sozinha em 24h.</p>
+            <div class="input-group-premium">
+                <input type="text" id="note-composer-input" placeholder=" " maxlength="60">
+                <label>O que você está pensando?</label>
+            </div>
+            <p style="font-size:11px;color:var(--text-muted);text-align:right;margin-top:-8px;margin-bottom:12px;"><span id="note-char-count">0</span>/60</p>
+            <div style="display:flex;gap:8px;">
+                <button id="btn-delete-note" class="action-danger-btn hidden" style="flex:1;">Remover</button>
+                <button id="btn-cancel-note" class="btn-profile-close" style="flex:1;">Cancelar</button>
+                <button id="btn-post-note" class="ios-btn-primary" style="flex:1;">Postar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Visualizador de nota de um contato -->
+    <div id="note-viewer-modal" class="modal hidden">
+        <div class="modal-content glass-premium" style="max-width:300px; text-align:center;">
+            <img id="note-viewer-avatar" src="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;margin-bottom:10px;">
+            <h3 id="note-viewer-name" style="margin-bottom:4px;"></h3>
+            <p id="note-viewer-text" style="font-size:15px;margin-bottom:6px;"></p>
+            <p id="note-viewer-time" style="font-size:12px;color:var(--text-muted);margin-bottom:16px;"></p>
+            <button id="btn-close-note-viewer" class="btn-profile-close" style="width:100%;">Fechar</button>
         </div>
     </div>
 
