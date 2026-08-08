@@ -939,8 +939,8 @@ function buildDirectMessageWrapper(data, idx, allMessages, recipientData) {
 
     applySwipeToReply(wrapper, card, arrow, data);
 
-    if (isSent) { wrapper.appendChild(card); wrapper.appendChild(arrow); }
-    else        { wrapper.appendChild(arrow); wrapper.appendChild(card); }
+    card.appendChild(arrow); // ancorado na bolha, não no wrapper inteiro (senão ficava longe, fora da tela)
+    wrapper.appendChild(card);
     return wrapper;
 }
 
@@ -1435,6 +1435,7 @@ function loadChatList() {
         });
 
         rawChats.sort((a,b) => b.lastTimestamp - a.lastTimestamp);
+        window.currentRawChats = rawChats; // usado pela fileira de notas/status, pra saber com quem você já tem chat
 
         const listContainer = document.getElementById('chats-list');
 
@@ -1465,6 +1466,7 @@ function loadChatList() {
             // (era isso que fazia a lista "piscar" toda vez que uma mensagem era enviada)
             reconcileChatListDOM(rawChats);
             applyChatFilter();
+            loadNotesRow(); // agora que sabemos com quem você tem conversa, dá pra montar a fileira de notas
         }
 
         if (waiting === 0) { finishRender(); return; }
@@ -1522,6 +1524,124 @@ function reconcileChatListDOM(rawChats) {
         listContainer.innerHTML = `<div class="empty-state">Nenhuma conversa ativa.</div>`;
     }
 }
+
+// ─── STATUS / NOTAS rápidas (estilo Instagram Notes) ───────────────────────
+// Só mostra pessoas com quem você já tem uma conversa (window.currentRawChats),
+// e a nota some sozinha depois de 24h.
+const NOTE_LIFETIME_MS = 24 * 60 * 60 * 1000;
+let myActiveNote = null;
+
+function timeAgoShort(ts) {
+    const diffMin = Math.floor((Date.now() - ts) / 60000);
+    if (diffMin < 1) return 'agora';
+    if (diffMin < 60) return `há ${diffMin}min`;
+    const diffH = Math.floor(diffMin / 60);
+    if (diffH < 24) return `há ${diffH}h`;
+    return `há ${Math.floor(diffH / 24)}d`;
+}
+
+function loadNotesRow() {
+    if (!currentUser || currentUser.uid === 'offline_user') return;
+    database.ref('notes').on('value', snap => {
+        const row = document.getElementById('notes-row');
+        if (!row) return;
+
+        const contactIds = new Set((window.currentRawChats || []).map(c => c.recipientId));
+        const allNotes = snap.val() || {};
+        const now = Date.now();
+
+        // Sua própria nota (se ainda não expirou)
+        const mine = allNotes[currentUser.uid];
+        myActiveNote = (mine && (now - mine.createdAt) < NOTE_LIFETIME_MS) ? mine : null;
+
+        // Notas de contatos com quem você já tem chat (exclui a sua e as expiradas)
+        const contactNotes = Object.keys(allNotes)
+            .filter(uid => uid !== currentUser.uid && contactIds.has(uid) && (now - allNotes[uid].createdAt) < NOTE_LIFETIME_MS)
+            .map(uid => ({ uid, ...allNotes[uid] }))
+            .sort((a, b) => b.createdAt - a.createdAt);
+
+        row.innerHTML = '';
+
+        // Primeiro item: sua nota / botão de adicionar nota
+        const myItem = document.createElement('div');
+        myItem.className = 'note-item';
+        const myAvatarSrc = (() => {
+            const cached = localStorage.getItem(`profile_${currentUser.uid}`);
+            if (cached) { try { return JSON.parse(cached).avatar || DEFAULT_AVATAR; } catch(e) {} }
+            return DEFAULT_AVATAR;
+        })();
+        myItem.innerHTML = `
+            <div class="note-avatar-wrap">
+                ${myActiveNote ? `<div class="note-bubble">${escapeHtml(myActiveNote.text)}</div>` : ''}
+                <img src="${myAvatarSrc}" alt="">
+                ${!myActiveNote ? `<div class="note-add-badge"><svg viewBox="0 0 24 24"><path fill="currentColor" d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></div>` : ''}
+            </div>
+            <span class="note-item-name">Sua nota</span>
+        `;
+        myItem.addEventListener('click', openNoteComposer);
+        row.appendChild(myItem);
+
+        // Depois, as notas dos seus contatos
+        contactNotes.forEach(n => {
+            const uData = recipientProfileCache[n.uid];
+            if (!uData) return;
+            const item = document.createElement('div');
+            item.className = 'note-item';
+            item.innerHTML = `
+                <div class="note-avatar-wrap">
+                    <div class="note-bubble">${escapeHtml(n.text)}</div>
+                    <img src="${uData.avatar || ''}" alt="">
+                </div>
+                <span class="note-item-name">${(uData.nickname || uData.username || 'Usuário')}</span>
+            `;
+            item.addEventListener('click', () => openNoteViewer(uData, n));
+            row.appendChild(item);
+        });
+    });
+}
+
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.innerText = str || '';
+    return div.innerHTML;
+}
+
+function openNoteComposer() {
+    const input = document.getElementById('note-composer-input');
+    input.value = myActiveNote ? myActiveNote.text : '';
+    document.getElementById('note-char-count').innerText = input.value.length;
+    document.getElementById('btn-delete-note').classList.toggle('hidden', !myActiveNote);
+    document.getElementById('note-composer-modal').classList.remove('hidden');
+    input.focus();
+}
+
+document.getElementById('note-composer-input').addEventListener('input', (e) => {
+    document.getElementById('note-char-count').innerText = e.target.value.length;
+});
+document.getElementById('btn-cancel-note').addEventListener('click', () => {
+    document.getElementById('note-composer-modal').classList.add('hidden');
+});
+document.getElementById('btn-post-note').addEventListener('click', () => {
+    const text = document.getElementById('note-composer-input').value.trim();
+    if (!text) return;
+    database.ref(`notes/${currentUser.uid}`).set({ text, createdAt: firebase.database.ServerValue.TIMESTAMP });
+    document.getElementById('note-composer-modal').classList.add('hidden');
+});
+document.getElementById('btn-delete-note').addEventListener('click', () => {
+    database.ref(`notes/${currentUser.uid}`).remove();
+    document.getElementById('note-composer-modal').classList.add('hidden');
+});
+
+function openNoteViewer(uData, note) {
+    document.getElementById('note-viewer-avatar').src = uData.avatar || '';
+    document.getElementById('note-viewer-name').innerText = uData.nickname || uData.username || 'Usuário';
+    document.getElementById('note-viewer-text').innerText = note.text;
+    document.getElementById('note-viewer-time').innerText = timeAgoShort(note.createdAt);
+    document.getElementById('note-viewer-modal').classList.remove('hidden');
+}
+document.getElementById('btn-close-note-viewer').addEventListener('click', () => {
+    document.getElementById('note-viewer-modal').classList.add('hidden');
+});
 
 function renderChatListRows(cachedObject) {
     const listContainer = document.getElementById('chats-list');
@@ -2725,8 +2845,8 @@ function buildGroupMessageWrapper(data, idx, allMessages, groupData) {
     arrow2.addEventListener('click', (e) => { e.stopPropagation(); triggerGroupReplyAction(data); });
     applyGroupSwipeToReply(wrapper, card, arrow2, data);
 
-    if (isSent) { wrapper.appendChild(card); wrapper.appendChild(arrow2); }
-    else        { wrapper.appendChild(arrow2); wrapper.appendChild(card); }
+    card.appendChild(arrow2); // ancorado na bolha, não no wrapper inteiro
+    wrapper.appendChild(card);
     return wrapper;
 }
 
@@ -3579,6 +3699,9 @@ function loadSpacesList() {
         const selectEl   = document.getElementById('group-space-select');
         const mobileList = document.getElementById('spaces-mobile-list');
         const railList   = document.getElementById('spaces-rail-list');
+        const quickRow   = document.getElementById('quick-spaces-row');
+        // Limpa mantendo o botão "+" de criar espaço, que é fixo (não é um espaço em si)
+        if (quickRow) quickRow.querySelectorAll('.quick-space-avatar:not(.quick-space-add)').forEach(el => el.remove());
         selectEl.innerHTML = '<option value="">Nenhum espaço</option>';
         mobileList.innerHTML = '';
         if (railList) railList.innerHTML = '';
@@ -3621,6 +3744,17 @@ function loadSpacesList() {
                 railBtn.innerText = (s.name || '?').trim().charAt(0).toUpperCase();
                 railBtn.addEventListener('click', () => openSpaceRoom(child.key));
                 railList.appendChild(railBtn);
+            }
+
+            // Bolinha na fileira estilo "stories" em cima da lista de conversas
+            if (quickRow) {
+                const quickBtn = document.createElement('button');
+                quickBtn.className = 'quick-space-avatar';
+                quickBtn.style.background = s.color || '#0a84ff';
+                quickBtn.title = s.name || 'Espaço';
+                quickBtn.innerText = (s.name || '?').trim().charAt(0).toUpperCase();
+                quickBtn.addEventListener('click', () => openSpaceRoom(child.key));
+                quickRow.appendChild(quickBtn);
             }
         });
         if (count === 0) mobileList.innerHTML = '<div class="empty-state">Você ainda não faz parte de nenhum espaço.</div>';
@@ -3708,6 +3842,12 @@ document.getElementById('rail-add-space-btn').addEventListener('click', () => {
     if (currentUser.uid === 'offline_user') return alert('Indisponível no modo offline.');
     const insideSpace = typeof activeSpaceFilterId !== 'undefined' && !!activeSpaceFilterId;
     openCreateModal(insideSpace);
+});
+
+// Botão "+" da fileira de espaços em cima da lista de conversas
+document.getElementById('quick-space-add').addEventListener('click', () => {
+    if (currentUser.uid === 'offline_user') return alert('Indisponível no modo offline.');
+    openCreateModal(false);
 });
 
 // Botão "+" da aba Espaços no celular: sempre cria um espaço novo.
